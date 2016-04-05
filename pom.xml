@@ -32,10 +32,10 @@
         <relativePath/>
     </parent>
     <groupId>org.jenkins-ci.plugins.workflow</groupId>
-    <artifactId>workflow-durable-task-step</artifactId>
+    <artifactId>workflow-cps-global-lib</artifactId>
     <version>2.0-SNAPSHOT</version>
     <packaging>hpi</packaging>
-    <name>Pipeline: Durable Task Step</name>
+    <name>Pipeline: Global Shared Library for CPS pipeline</name>
     <url>https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Plugin</url>
     <licenses>
         <license>
@@ -44,9 +44,9 @@
         </license>
     </licenses>
     <scm>
-        <connection>scm:git:git://github.com/jenkinsci/workflow-plugin.git</connection>
-        <developerConnection>scm:git:git@github.com:jenkinsci/workflow-plugin.git</developerConnection>
-        <url>https://github.com/jenkinsci/workflow-plugin</url>
+        <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
     </scm>
     <repositories>
         <repository>
@@ -66,28 +66,25 @@
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>workflow-step-api</artifactId>
+            <artifactId>workflow-cps</artifactId>
             <version>1.15</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
-            <artifactId>durable-task</artifactId>
+            <artifactId>git-server</artifactId>
             <version>1.5</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.workflow</groupId>
-            <artifactId>workflow-api</artifactId>
-            <version>2.0-SNAPSHOT</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.httpcomponents</groupId>
+                    <artifactId>httpclient</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-support</artifactId>
             <version>1.15</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.workflow</groupId>
-            <artifactId>workflow-cps</artifactId>
-            <version>1.15</version>
+            <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -100,13 +97,6 @@
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-basic-steps</artifactId>
             <version>1.15</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.workflow</groupId>
-            <artifactId>workflow-support</artifactId>
-            <version>1.15</version>
-            <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>
     </dependencies>
