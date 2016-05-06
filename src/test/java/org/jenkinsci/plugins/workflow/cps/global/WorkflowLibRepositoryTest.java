@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.workflow.cps.global;
 
+import hudson.model.Result;
 import java.io.File;
 import java.util.Arrays;
 
@@ -16,7 +17,10 @@ import org.jvnet.hudson.test.RestartableJenkinsRule;
 import javax.inject.Inject;
 import org.apache.commons.io.FileUtils;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
+import org.junit.ClassRule;
 import org.junit.runners.model.Statement;
+import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 /**
@@ -26,6 +30,7 @@ import org.jvnet.hudson.test.JenkinsRule;
  */
 public class WorkflowLibRepositoryTest {
 
+    @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     @Rule public RestartableJenkinsRule story = new RestartableJenkinsRule();
 
     @Inject
@@ -143,4 +148,55 @@ public class WorkflowLibRepositoryTest {
             }
         });
     }
+
+    /** Global libraries should run outside the sandbox, regardless of whether the caller is sandboxed. */
+    @Issue("JENKINS-34650")
+    @Test public void sandbox() {
+        story.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                FileUtils.write(new File(new File(repo.workspace, "src/pkg"), "Privileged.groovy"),
+                    "package pkg\n" +
+                    "class Privileged {\n" +
+                    "  void write(String content) {\n" +
+                    "    new File(jenkins.model.Jenkins.instance.rootDir, 'f').text = content\n" +
+                    "  }\n" +
+                    "  void callback(Closure body) {\n" +
+                    "    body()\n" +
+                    "  }\n" +
+                    "}");
+                FileUtils.write(new File(new File(repo.workspace, UserDefinedGlobalVariable.PREFIX), "record.groovy"),
+                    "def call() {new pkg.Privileged().write(jenkins.model.Jenkins.instance.systemMessage)}");
+                WorkflowJob p = jenkins.createProject(WorkflowJob.class, "p");
+
+                p.setDefinition(new CpsFlowDefinition("new pkg.Privileged().write('direct-false')", false));
+                story.j.assertBuildStatusSuccess(p.scheduleBuild2(0));
+                assertEquals("direct-false", FileUtils.readFileToString(new File(jenkins.getRootDir(), "f")));
+
+                jenkins.setSystemMessage("indirect-false");
+                p.setDefinition(new CpsFlowDefinition("record()", false));
+                story.j.assertBuildStatusSuccess(p.scheduleBuild2(0));
+                assertEquals("indirect-false", FileUtils.readFileToString(new File(jenkins.getRootDir(), "f")));
+
+                p.setDefinition(new CpsFlowDefinition("new pkg.Privileged().callback({jenkins.model.Jenkins.instance.systemMessage = 'callback-false'})", false));
+                story.j.assertBuildStatusSuccess(p.scheduleBuild2(0));
+                assertEquals("callback-false", jenkins.getSystemMessage());
+
+                /* TODO does not work, these get RejectedAccessException in Privileged.groovy or record.groovy, respectively:
+                p.setDefinition(new CpsFlowDefinition("new pkg.Privileged().write('direct-true')", true));
+                story.j.assertBuildStatusSuccess(p.scheduleBuild2(0));
+                assertEquals("direct-true", FileUtils.readFileToString(new File(jenkins.getRootDir(), "f")));
+
+                jenkins.setSystemMessage("indirect-true");
+                p.setDefinition(new CpsFlowDefinition("record()", true));
+                story.j.assertBuildStatusSuccess(p.scheduleBuild2(0));
+                assertEquals("indirect-true", FileUtils.readFileToString(new File(jenkins.getRootDir(), "f")));
+                */
+
+                p.setDefinition(new CpsFlowDefinition("new pkg.Privileged().callback({jenkins.model.Jenkins.instance.systemMessage = 'callback-true'})", true));
+                story.j.assertLogContains("RejectedAccessException: Scripts not permitted to use staticMethod jenkins.model.Jenkins getInstance", story.j.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0).get()));
+                assertEquals("callback-false", jenkins.getSystemMessage());
+            }
+        });
+    }
+
 }
