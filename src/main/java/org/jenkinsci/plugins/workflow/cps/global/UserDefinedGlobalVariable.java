@@ -46,7 +46,13 @@ public class UserDefinedGlobalVariable extends GlobalVariable {
             if (c==null)
                 throw new IllegalStateException("Expected to be called from CpsThread");
 
-            instance = c.getExecution().getShell().getClassLoader().parseClass(source(".groovy")).newInstance();
+            instance = c.getExecution().getShell().getClassLoader().loadClass(getName()).newInstance();
+            /* We could also skip registration of vars in GroovyShellDecoratorImpl and use:
+                 instance = c.getExecution().getShell().parse(source(".groovy"));
+               But then the source will appear in CpsFlowExecution.loadedScripts and be offered up for ReplayAction.
+               We might *want* to support replay of global vars & classes at some point, but to make it actually work
+               we would also need to start calling LoadStepExecution.Replacer.
+            */
             binding.setVariable(getName(), instance);
         }
         return instance;

@@ -124,6 +124,9 @@ public class WorkflowLibRepositoryTest {
                         "  echo 'title was '+config.title",
                         "}")
                         , "\n"));
+                FileUtils.writeStringToFile(new File(vars, "acmeClass.groovy"), StringUtils.join(Arrays.asList(
+                        "@groovy.transform.Field int answer = 42")
+                        , "\n"));
 
                 // simulate the effect of push
                 uvl.rebuild();
@@ -135,7 +138,8 @@ public class WorkflowLibRepositoryTest {
                         "acmeVar.foo('seed');" +
                         "echo '['+acmeVar.bar()+']';"+
                         "acmeFunc(1,2);"+
-                        "acmeBody { title = 'yolo' }",
+                        "acmeBody { title = 'yolo' };"+
+                        "echo \"the answer is ${acmeClass.answer}\"",
                     true));
 
                 // build this workflow
@@ -145,6 +149,31 @@ public class WorkflowLibRepositoryTest {
                 story.j.assertLogContains("[seed-set-get]", b);
                 story.j.assertLogContains("call(1,2)", b);
                 story.j.assertLogContains("title was yolo", b);
+                story.j.assertLogContains("the answer is 42", b);
+            }
+        });
+    }
+
+    @Issue("JENKINS-34517")
+    @Test public void restartGlobalVar() {
+        story.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                File vars = new File(repo.workspace, UserDefinedGlobalVariable.PREFIX);
+                vars.mkdirs();
+                FileUtils.writeStringToFile(new File(vars, "block.groovy"), "def call(body) {node {body()}}");
+                uvl.rebuild();
+                WorkflowJob p = jenkins.createProject(WorkflowJob.class, "p");
+                p.setDefinition(new CpsFlowDefinition("block {semaphore 'wait'}"));
+                WorkflowRun b = p.scheduleBuild2(0).waitForStart();
+                SemaphoreStep.waitForStart("wait/1", b);
+            }
+        });
+        story.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                WorkflowJob p = jenkins.getItemByFullName("p", WorkflowJob.class);
+                WorkflowRun b = p.getBuildByNumber(1);
+                SemaphoreStep.success("wait/1", null);
+                story.j.assertBuildStatusSuccess(story.j.waitForCompletion(b));
             }
         });
     }
