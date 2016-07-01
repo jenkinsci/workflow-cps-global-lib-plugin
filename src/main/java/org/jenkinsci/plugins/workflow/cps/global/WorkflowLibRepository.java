@@ -1,6 +1,7 @@
 package org.jenkinsci.plugins.workflow.cps.global;
 
 import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.model.RootAction;
 import jenkins.model.Jenkins;
 import org.eclipse.jgit.lib.Repository;
@@ -28,7 +29,16 @@ public class WorkflowLibRepository extends FileBackedHttpGitRepository implement
         super(workspace());
     }
 
-    private static File workspace() {
+    /**
+     * Get the root of the {@link WorkflowLibRepository} git repository on the master.
+     *
+     * To use the repository for things other than {@link UserDefinedGlobalVariable}s, call this to get the repository,
+     * and extend {@link WorkflowLibRepositoryListener} to listen for pushes to the repository in order to respond to
+     * those pushes by rebuilding stored classes/scripts, etc.
+     *
+     * @return A {@link File} pointing to the {@link WorkflowLibRepository} git repository on the master.
+     */
+    public static File workspace() {
         return new File(Jenkins.getActiveInstance().root, "workflow-libs");
     }
 
@@ -71,7 +81,9 @@ public class WorkflowLibRepository extends FileBackedHttpGitRepository implement
             @Override
             public void onPostReceive(ReceivePack rp, Collection<ReceiveCommand> commands) {
                 base.onPostReceive(rp,commands);
-                globalVariableList.rebuild();
+                for (WorkflowLibRepositoryListener hookListener: ExtensionList.lookup(WorkflowLibRepositoryListener.class)) {
+                    hookListener.repositoryUpdated();
+                }
             }
         });
 
