@@ -11,9 +11,10 @@ import java.io.File;
 import java.net.MalformedURLException;
 
 /**
- * Adds the global shared library space into {@link GroovyClassLoader} classpath.
+ * Adds the global shared library space into classpath of the trusted {@link GroovyClassLoader}.
  *
  * @author Kohsuke Kawaguchi
+ * @see CpsFlowExecution#getTrustedShell()
  */
 @Extension
 public class GroovyShellDecoratorImpl extends GroovyShellDecorator {
@@ -21,12 +22,17 @@ public class GroovyShellDecoratorImpl extends GroovyShellDecorator {
     WorkflowLibRepository repo;
 
     @Override
-    public void configureShell(CpsFlowExecution context, GroovyShell shell) {
-        try {
-            shell.getClassLoader().addURL(new File(repo.workspace,"src").toURI().toURL());
-            shell.getClassLoader().addURL(new File(repo.workspace, UserDefinedGlobalVariable.PREFIX).toURI().toURL());
-        } catch (MalformedURLException e) {
-            throw new AssertionError(e);
-        }
+    public GroovyShellDecorator forTrusted() {
+        return new GroovyShellDecorator() {
+            @Override
+            public void configureShell(CpsFlowExecution context, GroovyShell shell) {
+                try {
+                    shell.getClassLoader().addURL(new File(repo.workspace,"src").toURI().toURL());
+                    shell.getClassLoader().addURL(new File(repo.workspace, UserDefinedGlobalVariable.PREFIX).toURI().toURL());
+                } catch (MalformedURLException e) {
+                    throw new AssertionError(e);
+                }
+            }
+        };
     }
 }
