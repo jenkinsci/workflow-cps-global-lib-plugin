@@ -183,6 +183,8 @@ public class WorkflowLibRepositoryTest {
     @Test public void sandbox() {
         story.addStep(new Statement() {
             @Override public void evaluate() throws Throwable {
+                File f = new File(jenkins.getRootDir(), "f");   // marker file to write from Pipeline Script
+
                 FileUtils.write(new File(new File(repo.workspace, "src/pkg"), "Privileged.groovy"),
                     "package pkg\n" +
                     "class Privileged {\n" +
@@ -199,31 +201,30 @@ public class WorkflowLibRepositoryTest {
 
                 p.setDefinition(new CpsFlowDefinition("new pkg.Privileged().write('direct-false')", false));
                 story.j.assertBuildStatusSuccess(p.scheduleBuild2(0));
-                assertEquals("direct-false", FileUtils.readFileToString(new File(jenkins.getRootDir(), "f")));
+                assertEquals("direct-false", FileUtils.readFileToString(f));
 
                 jenkins.setSystemMessage("indirect-false");
                 p.setDefinition(new CpsFlowDefinition("record()", false));
                 story.j.assertBuildStatusSuccess(p.scheduleBuild2(0));
-                assertEquals("indirect-false", FileUtils.readFileToString(new File(jenkins.getRootDir(), "f")));
+                assertEquals("indirect-false", FileUtils.readFileToString(f));
 
                 p.setDefinition(new CpsFlowDefinition("new pkg.Privileged().callback({jenkins.model.Jenkins.instance.systemMessage = 'callback-false'})", false));
                 story.j.assertBuildStatusSuccess(p.scheduleBuild2(0));
                 assertEquals("callback-false", jenkins.getSystemMessage());
 
-                /* TODO does not work, these get RejectedAccessException in Privileged.groovy or record.groovy, respectively:
                 p.setDefinition(new CpsFlowDefinition("new pkg.Privileged().write('direct-true')", true));
                 story.j.assertBuildStatusSuccess(p.scheduleBuild2(0));
-                assertEquals("direct-true", FileUtils.readFileToString(new File(jenkins.getRootDir(), "f")));
+                assertEquals("direct-true", FileUtils.readFileToString(f));
 
                 jenkins.setSystemMessage("indirect-true");
                 p.setDefinition(new CpsFlowDefinition("record()", true));
                 story.j.assertBuildStatusSuccess(p.scheduleBuild2(0));
-                assertEquals("indirect-true", FileUtils.readFileToString(new File(jenkins.getRootDir(), "f")));
-                */
+                assertEquals("indirect-true", FileUtils.readFileToString(f));
 
+                jenkins.setSystemMessage("untouched");
                 p.setDefinition(new CpsFlowDefinition("new pkg.Privileged().callback({jenkins.model.Jenkins.instance.systemMessage = 'callback-true'})", true));
                 story.j.assertLogContains("RejectedAccessException: Scripts not permitted to use staticMethod jenkins.model.Jenkins getInstance", story.j.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0).get()));
-                assertEquals("callback-false", jenkins.getSystemMessage());
+                assertEquals("untouched", jenkins.getSystemMessage());
             }
         });
     }
