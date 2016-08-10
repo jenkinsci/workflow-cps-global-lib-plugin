@@ -46,6 +46,7 @@ public class GitLoader implements Loader, Parser {
 
     protected String repositoryUrl;
     protected String branch;
+    protected String clPath;
 
     @Override
     public List<Loader> parse(String script) {
@@ -66,6 +67,9 @@ public class GitLoader implements Loader, Parser {
         GitLoader loader = new GitLoader();
         loader.repositoryUrl = splitted[1];
         loader.branch = splitted[2];
+        if(splitted.length > 2) {
+            loader.clPath = splitted[3];
+        }
         return loader;
     }
 
@@ -80,6 +84,9 @@ public class GitLoader implements Loader, Parser {
                     .setBranch(branch)
                     .setDirectory(targetFile)
                     .call();
+            if(clPath != null) {
+                targetFile = new File(targetFile, clPath);
+            }
             return targetFile.toURI().toURL();
         } catch (GitAPIException ex) {
             Logger.getLogger(GitLoader.class.getName()).log(Level.SEVERE, null, ex);
