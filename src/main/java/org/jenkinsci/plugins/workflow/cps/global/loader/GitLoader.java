@@ -67,7 +67,7 @@ public class GitLoader implements Loader, Parser {
         GitLoader loader = new GitLoader();
         loader.repositoryUrl = splitted[1];
         loader.branch = splitted[2];
-        if(splitted.length > 2) {
+        if(splitted.length > 3) {
             loader.clPath = splitted[3];
         }
         return loader;
