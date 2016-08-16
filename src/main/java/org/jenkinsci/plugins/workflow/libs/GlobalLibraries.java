@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.List;
 import javax.annotation.Nonnull;
 import jenkins.model.GlobalConfiguration;
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -58,8 +59,11 @@ import org.kohsuke.stapler.StaplerRequest;
     }
 
     public void setLibraries(List<LibraryConfiguration> libraries) {
-        this.libraries = libraries;
-        save();
+        if (!libraries.equals(this.libraries)) {
+            Jenkins.getActiveInstance().checkPermission(Jenkins.RUN_SCRIPTS);
+            this.libraries = libraries;
+            save();
+        }
     }
 
     // TODO https://github.com/jenkinsci/jenkins/pull/2509 delete
