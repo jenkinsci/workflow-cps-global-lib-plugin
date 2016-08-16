@@ -25,7 +25,9 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import hudson.Extension;
+import hudson.model.Job;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import javax.annotation.Nonnull;
 import jenkins.model.GlobalConfiguration;
@@ -66,6 +68,16 @@ import org.kohsuke.stapler.StaplerRequest;
         return true;
     }
 
-    // TODO binder
+    @Extension/* TODO consider ordinal */ public static class ForJob implements LibraryConfiguration.LibrariesForJob {
+
+        @Override public boolean isTrusted() {
+            return true;
+        }
+
+        @Override public Collection<LibraryConfiguration> forJob(Job<?, ?> job) {
+            return GlobalLibraries.get().getLibraries();
+        }
+
+    }
 
 }

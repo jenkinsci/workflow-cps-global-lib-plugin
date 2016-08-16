@@ -25,9 +25,13 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import hudson.Extension;
+import hudson.ExtensionPoint;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
+import hudson.model.Job;
+import java.util.Collection;
+import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
@@ -107,6 +111,25 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
         }
 
         // TODO form validation: name not blank; defaultVersion valid in scm (if feasible); defaultVersion nonblank if implicit || !allowVersionOverride
+
+    }
+
+    /**
+     * Allows a provider of libraries to indicate which libraries should be visible to a given job.
+     */
+    public interface LibrariesForJob extends ExtensionPoint {
+
+        /**
+         * Whether these libraries should be run outside the sandbox.
+         */
+        boolean isTrusted();
+
+        /**
+         * Check for libraries visible to a given job.
+         * @param job a job
+         * @return a possibly empty collection of associated libraries
+         */
+        @Nonnull Collection<LibraryConfiguration> forJob(@Nonnull Job<?,?> job);
 
     }
 
