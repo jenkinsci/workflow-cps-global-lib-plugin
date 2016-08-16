@@ -40,6 +40,7 @@ public class GlobalLibrariesTest {
     @Rule public JenkinsRule r = new JenkinsRule();
 
     @Test public void configRoundtrip() throws Exception {
+        r.configRoundtrip();
         GlobalLibraries gl = GlobalLibraries.get();
         assertEquals(Collections.emptyList(), gl.getLibraries());
         LibraryConfiguration foo = new LibraryConfiguration("foo", new GitSCMSource(null, "https://nowhere.net/foo.git", null, null, null, true));
