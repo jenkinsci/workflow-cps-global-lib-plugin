@@ -26,12 +26,14 @@ THE SOFTWARE.
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
     <f:section title="${%Global Pipeline Libraries}">
-        <f:repeatableProperty field="libraries" header="${%Library}">
-            <f:entry title="">
-                <div align="right">
-                    <f:repeatableDeleteButton/>
-                </div>
-            </f:entry>
-        </f:repeatableProperty>
+        <f:entry>
+            <f:repeatableProperty field="libraries" header="${%Library}">
+                <f:entry title="">
+                    <div align="right">
+                        <f:repeatableDeleteButton/>
+                    </div>
+                </f:entry>
+            </f:repeatableProperty>
+        </f:entry>
     </f:section>
 </j:jelly>

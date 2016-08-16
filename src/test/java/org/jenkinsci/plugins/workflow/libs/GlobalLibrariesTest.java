@@ -43,7 +43,7 @@ public class GlobalLibrariesTest {
         r.configRoundtrip();
         GlobalLibraries gl = GlobalLibraries.get();
         assertEquals(Collections.emptyList(), gl.getLibraries());
-        LibraryConfiguration foo = new LibraryConfiguration("foo", new GitSCMSource(null, "https://nowhere.net/foo.git", null, null, null, true));
+        LibraryConfiguration foo = new LibraryConfiguration("foo", new GitSCMSource("foo", "https://nowhere.net/foo.git", "", "*", "", true));
         LibraryConfiguration bar = new LibraryConfiguration("bar", new SingleSCMSource("bar", "bar", new GitSCM("https://nowhere.net/bar.git")));
         bar.setDefaultVersion("master");
         bar.setImplicit(true);
