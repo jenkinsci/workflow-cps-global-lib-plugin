@@ -25,12 +25,17 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import groovy.lang.GroovyShell;
+import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.ExtensionPoint;
+import hudson.model.TaskListener;
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.AnnotationNode;
@@ -47,6 +52,7 @@ import org.codehaus.groovy.control.Phases;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.customizers.CompilationCustomizer;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
+import org.codehaus.groovy.control.messages.Message;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
 
@@ -93,7 +99,20 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
                             shell.getClassLoader().addURL(addition.url);
                         }
                     } catch (Exception x) {
-                        throw new CompilationFailedException(Phases.CONVERSION, source, x);
+                        // Merely throwing CompilationFailedException does not cause compilation to…fail. Gotta love Groovy!
+                        source.getErrorCollector().addErrorAndContinue(Message.create("Loading libraries failed", source));
+                        try {
+                            TaskListener listener = execution.getOwner().getListener();
+                            if (x instanceof AbortException) {
+                                listener.error(x.getMessage());
+                            } else {
+                                x.printStackTrace(listener.getLogger());
+                            }
+                            throw new CompilationFailedException(Phases.CONVERSION, source);
+                        } catch (IOException x2) {
+                            Logger.getLogger(LibraryDecorator.class.getName()).log(Level.WARNING, null, x2);
+                            throw new CompilationFailedException(Phases.CONVERSION, source, x); // reported at least in Jenkins 2
+                        }
                     }
                 }
             }

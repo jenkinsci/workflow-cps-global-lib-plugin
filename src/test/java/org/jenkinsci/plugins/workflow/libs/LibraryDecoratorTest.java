@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import hudson.AbortException;
 import hudson.model.Result;
 import java.io.File;
 import java.util.ArrayList;
@@ -77,4 +78,14 @@ public class LibraryDecoratorTest {
         r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
     }
 
+    @Test public void adderError() throws Exception {
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff') import /* irrelevant */ java.lang.Void", true));
+        r.assertLogContains("failed to load [stuff]", r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
+    }
+    @TestExtension("adderError") public static class ErroneousAdder implements LibraryDecorator.Adder {
+        @Override public List<LibraryDecorator.Adder.Addition> add(CpsFlowExecution execution, List<String> libraries) throws Exception {
+            throw new AbortException("failed to load " + libraries);
+        }
+    }
 }
