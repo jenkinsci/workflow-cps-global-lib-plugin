@@ -38,7 +38,11 @@ import org.kohsuke.stapler.StaplerRequest;
 @Extension public class GlobalLibraries extends GlobalConfiguration {
 
     public static @Nonnull GlobalLibraries get() {
-        return GlobalConfiguration.all().get(GlobalLibraries.class);
+        GlobalLibraries instance = GlobalConfiguration.all().get(GlobalLibraries.class);
+        if (instance == null) { // TODO would be useful to have an ExtensionList.getOrFail
+            throw new IllegalStateException();
+        }
+        return instance;
     }
 
     private List<LibraryConfiguration> libraries = new ArrayList<>();
