@@ -66,6 +66,12 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
     }
 
     @Override public void configureCompiler(final CpsFlowExecution execution, CompilerConfiguration cc) {
+        if (execution == null) {
+            // TODO cannot inject libraries during form validation.
+            // Adder could have a method to look up libraries from the last build,
+            // but the current GroovyShellDecorator API does not allow us to even detect the Job!
+            return;
+        }
         cc.addCompilationCustomizers(new CompilationCustomizer(CompilePhase.CONVERSION) {
             @Override public void call(final SourceUnit source, GeneratorContext context, ClassNode classNode) throws CompilationFailedException {
                 final List<String> libraries = new ArrayList<>();
