@@ -127,6 +127,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
         }
 
         // TODO form validation: name not blank; defaultVersion valid in scm (if feasible); defaultVersion nonblank if implicit || !allowVersionOverride
+        // TODO autocompletion on defaultVersion requires a new SCMSource method; AbstractGitSCMSource could call client.getRemoteBranches() + client.getTagNames("*") + (perhaps) client.getRefNames("")
 
     }
 
