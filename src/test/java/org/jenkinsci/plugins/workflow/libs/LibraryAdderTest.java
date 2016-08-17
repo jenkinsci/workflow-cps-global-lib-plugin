@@ -30,6 +30,7 @@ import hudson.plugins.git.SubmoduleConfig;
 import hudson.plugins.git.UserRemoteConfig;
 import hudson.plugins.git.extensions.GitSCMExtension;
 import java.util.Collections;
+import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.scm.impl.SingleSCMSource;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
@@ -53,16 +54,19 @@ public class LibraryAdderTest {
         sampleRepo.git("commit", "--message=init");
         GlobalLibraries.get().setLibraries(Collections.singletonList(
             new LibraryConfiguration("stuff",
-                new SingleSCMSource("", "",
-                    new GitSCM(Collections.singletonList(new UserRemoteConfig(sampleRepo.fileUrl(), null, null, null)),
-                               Collections.singletonList(new BranchSpec("${library.stuff.version}")),
-                               false, Collections.<SubmoduleConfig>emptyList(), null, null, Collections.<GitSCMExtension>emptyList())))));
+                new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
         r.assertLogContains("using constant", r.buildAndAssertSuccess(p));
+        sampleRepo.git("tag", "1.0");
+        sampleRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String CONST = 'modified'}");
+        sampleRepo.git("commit", "--all", "--message=modified");
+        r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff@1.0') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
+        r.assertLogContains("using constant", r.buildAndAssertSuccess(p));
     }
 
-    @Test public void tagUsingInterpolation() throws Exception {
+    @Test public void usingInterpolation() throws Exception {
         sampleRepo.init();
         sampleRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String CONST = 'initial'}");
         sampleRepo.git("add", "src");
