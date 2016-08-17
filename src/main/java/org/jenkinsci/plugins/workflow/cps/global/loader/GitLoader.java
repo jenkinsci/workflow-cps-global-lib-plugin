@@ -74,8 +74,9 @@ public class GitLoader implements Loader, Parser {
     }
 
     @Override
-    public URL load() {
-        File targetFile = new File(Jenkins.getActiveInstance().root, "global-library-git");
+    public URL load(File storageDir) {
+        File targetFile = new File(storageDir, "global-library-git");
+        Logger.getLogger(GitLoader.class.getName()).log(Level.INFO, "clone git repo into " + targetFile);
         try {
             FileUtils.deleteDirectory(targetFile);
             Git result = Git

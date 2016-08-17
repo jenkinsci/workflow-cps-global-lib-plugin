@@ -23,6 +23,7 @@
  */
 package org.jenkinsci.plugins.workflow.cps.global.loader;
 
+import java.io.File;
 import java.net.URL;
 
 /**
@@ -33,5 +34,5 @@ import java.net.URL;
  */
 public interface Loader {
 
-    URL load();
+    URL load(File storageDir);
 }

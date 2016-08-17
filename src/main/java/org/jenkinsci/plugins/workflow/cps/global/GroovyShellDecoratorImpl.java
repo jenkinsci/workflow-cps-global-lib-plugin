@@ -1,22 +1,24 @@
 package org.jenkinsci.plugins.workflow.cps.global;
 
-import org.jenkinsci.plugins.workflow.cps.global.loader.LoadUrl;
-import org.jenkinsci.plugins.workflow.cps.global.loader.GitLoader;
-import org.jenkinsci.plugins.workflow.cps.global.loader.Loader;
 import com.google.common.collect.Lists;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyShell;
 import hudson.Extension;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
+import org.jenkinsci.plugins.workflow.cps.global.loader.GitLoader;
+import org.jenkinsci.plugins.workflow.cps.global.loader.Loader;
+import org.jenkinsci.plugins.workflow.cps.global.loader.Parser;
 
 import javax.inject.Inject;
 import java.io.File;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import org.jenkinsci.plugins.workflow.cps.global.loader.Parser;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Adds the global shared library space into classpath of the trusted
@@ -38,7 +40,6 @@ public class GroovyShellDecoratorImpl extends GroovyShellDecorator {
         return new GroovyShellDecorator() {
             @Override
             public void configureShell(CpsFlowExecution context, GroovyShell shell) {
-                System.out.println("#################### cps-globa-library");
                 final List<Loader> loaders = new ArrayList<>();
                 for (Parser parser : PARSERS) {
                     if(null != context) {
@@ -46,8 +47,14 @@ public class GroovyShellDecoratorImpl extends GroovyShellDecorator {
                     }
                 }
                 for (Loader loader : loaders) {
-                    URL targetUrl = loader.load();
+                    URL targetUrl = null;
+                    try {
+                        targetUrl = loader.load(context != null ? context.getStorageDir() : null);
+                    } catch (IOException e) {
+                        Logger.getLogger(GroovyShellDecoratorImpl.class.getName()).log(Level.SEVERE, null, e);
+                    }
                     if (targetUrl != null) {
+                        Logger.getLogger(GroovyShellDecoratorImpl.class.getName()).log(Level.INFO, "add path to classLoader " + targetUrl);
                         shell.getClassLoader().addURL(targetUrl);
                     }
                 }

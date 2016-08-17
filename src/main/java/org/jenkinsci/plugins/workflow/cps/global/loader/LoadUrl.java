@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.workflow.cps.global.loader;
 
+import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
@@ -24,7 +25,7 @@ public class LoadUrl implements Loader, Parser {
         }
     }
     
-    public URL load() {
+    public URL load(File storageDir) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
