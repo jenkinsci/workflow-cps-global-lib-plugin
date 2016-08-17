@@ -62,6 +62,31 @@ public class LibraryAdderTest {
         r.assertLogContains("using constant", r.buildAndAssertSuccess(p));
     }
 
-    // TODO test using the variable interpolation trick to specify a tag
+    @Test public void tagUsingInterpolation() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String CONST = 'initial'}");
+        sampleRepo.git("add", "src");
+        sampleRepo.git("commit", "--message=init");
+        sampleRepo.git("tag", "initial");
+        sampleRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String CONST = 'modified'}");
+        sampleRepo.git("commit", "--all", "--message=modified");
+        LibraryConfiguration stuff = new LibraryConfiguration("stuff",
+            new SingleSCMSource("", "",
+                    new GitSCM(Collections.singletonList(new UserRemoteConfig(sampleRepo.fileUrl(), null, null, null)),
+                            Collections.singletonList(new BranchSpec("${library.stuff.version}")),
+                            false, Collections.<SubmoduleConfig>emptyList(), null, null, Collections.<GitSCMExtension>emptyList())));
+        stuff.setDefaultVersion("master");
+        stuff.setImplicit(true);
+        GlobalLibraries.get().setLibraries(Collections.singletonList(stuff));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
+        r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff@initial') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
+        r.assertLogContains("using initial", r.buildAndAssertSuccess(p));
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
+        r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
+        p.setDefinition(new CpsFlowDefinition("echo(/using ${pkg.Lib.CONST}/)", true));
+        r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
+    }
 
 }
