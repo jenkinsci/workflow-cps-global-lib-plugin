@@ -48,6 +48,7 @@ import java.util.Map;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
+import org.apache.commons.io.FileUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
 import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
@@ -145,9 +146,7 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
                 // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
                 // Pack up src.jar and/or vars.jar and/or resources.jar with relevant files from the checkout:
                 File libDir = new File(execution.getOwner().getRootDir(), "libs/" + name);
-                if (!libDir.mkdirs()) {
-                    throw new AbortException("Failed to create " + libDir);
-                }
+                FileUtils.forceMkdir(libDir);
                 boolean addingSomething = false;
                 FilePath srcDir = dir.child("src");
                 if (srcDir.isDirectory()) {
