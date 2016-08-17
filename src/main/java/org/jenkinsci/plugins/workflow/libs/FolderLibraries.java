@@ -24,62 +24,58 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import com.cloudbees.hudson.plugins.folder.AbstractFolder;
+import com.cloudbees.hudson.plugins.folder.AbstractFolderProperty;
+import com.cloudbees.hudson.plugins.folder.AbstractFolderPropertyDescriptor;
 import hudson.Extension;
+import hudson.model.ItemGroup;
 import hudson.model.Job;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import javax.annotation.Nonnull;
-import jenkins.model.GlobalConfiguration;
-import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 /**
- * Manages libraries available to any job in the system.
+ * Like {@link GlobalLibraries} but scoped to a folder.
  */
-@Extension public class GlobalLibraries extends GlobalConfiguration {
+public class FolderLibraries extends AbstractFolderProperty<AbstractFolder<?>> {
 
-    public static @Nonnull GlobalLibraries get() {
-        GlobalLibraries instance = GlobalConfiguration.all().get(GlobalLibraries.class);
-        if (instance == null) { // TODO would be useful to have an ExtensionList.getOrFail
-            throw new IllegalStateException();
-        }
-        return instance;
-    }
+    private final List<LibraryConfiguration> libraries;
 
-    private List<LibraryConfiguration> libraries = new ArrayList<>();
-
-    public GlobalLibraries() {
-        load();
+    @DataBoundConstructor public FolderLibraries(List<LibraryConfiguration> libraries) {
+        this.libraries = libraries;
     }
 
     public List<LibraryConfiguration> getLibraries() {
         return libraries;
     }
 
-    public void setLibraries(List<LibraryConfiguration> libraries) {
-        if (!libraries.equals(this.libraries)) {
-            Jenkins.getActiveInstance().checkPermission(Jenkins.RUN_SCRIPTS);
-            this.libraries = libraries;
-            save();
+    @Extension public static class DescriptorImpl extends AbstractFolderPropertyDescriptor {
+
+        @Override public AbstractFolderProperty<?> newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+            FolderLibraries prop = (FolderLibraries) super.newInstance(req, formData);
+            return prop.libraries.isEmpty() ? null : prop;
         }
+
     }
 
-    // TODO https://github.com/jenkinsci/jenkins/pull/2509 delete
-    @Override public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
-        req.bindJSON(this, json);
-        return true;
-    }
-
-    @Extension(ordinal=0) public static class ForJob implements LibraryConfiguration.LibrariesForJob {
+    @Extension(ordinal=100) public static class ForJob implements LibraryConfiguration.LibrariesForJob {
 
         @Override public boolean isTrusted() {
-            return true;
+            return false;
         }
 
         @Override public Collection<LibraryConfiguration> forJob(Job<?, ?> job) {
-            return GlobalLibraries.get().getLibraries();
+            List<LibraryConfiguration> libraries = new ArrayList<>();
+            for (ItemGroup<?> group = job.getParent(); group instanceof AbstractFolder; group = ((AbstractFolder) group).getParent()) {
+                FolderLibraries prop = ((AbstractFolder<?>) group).getProperties().get(FolderLibraries.class);
+                if (prop != null) {
+                    libraries.addAll(prop.getLibraries());
+                }
+            }
+            return libraries;
         }
 
     }

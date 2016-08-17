@@ -62,4 +62,6 @@ public class LibraryAdderTest {
         r.assertLogContains("using constant", r.buildAndAssertSuccess(p));
     }
 
+    // TODO test using the variable interpolation trick to specify a tag
+
 }
