@@ -24,12 +24,16 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import hudson.Extension;
+import hudson.ExtensionList;
 import hudson.ExtensionPoint;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.model.Job;
+import hudson.model.TaskListener;
 import java.util.Collection;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
@@ -108,6 +112,18 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
 
         public SCMSourceDescriptor getDefaultSCMDescriptor() {
             return Jenkins.getActiveInstance().getDescriptorByType(SingleSCMSource.DescriptorImpl.class);
+        }
+
+        /**
+         * Returns only implementations overriding {@link SCMSource#retrieve(String, TaskListener)}.
+         * (The default implementation only supports branch names, so you would be better off using {@link SingleSCMSource}.)
+         */
+        public Collection<SCMSourceDescriptor> getSCMDescriptors() {
+            return Collections2.filter(ExtensionList.lookup(SCMSourceDescriptor.class), new Predicate<SCMSourceDescriptor>() {
+                @Override public boolean apply(SCMSourceDescriptor input) {
+                    return Util.isOverridden(SCMSource.class, input.clazz, "retrieve", String.class, TaskListener.class);
+                }
+            });
         }
 
         // TODO form validation: name not blank; defaultVersion valid in scm (if feasible); defaultVersion nonblank if implicit || !allowVersionOverride
