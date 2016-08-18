@@ -68,7 +68,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>workflow-cps</artifactId>
-            <version>2.11</version>
+            <version>2.13-SNAPSHOT</version> <!-- TODO https://github.com/jenkinsci/workflow-cps-plugin/pull/45 -->
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>

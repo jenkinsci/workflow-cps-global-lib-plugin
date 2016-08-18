@@ -65,8 +65,4 @@ public class LibrariesAction extends InvisibleAction {
 
     }
 
-    // TODO also need to scan global variable names so we can make a GlobalVariableSet
-    // (generalize UserDefinedGlobalVariable to take any URL root)
-    // but first GlobalVariableSet needs to be contextualizable
-
 }

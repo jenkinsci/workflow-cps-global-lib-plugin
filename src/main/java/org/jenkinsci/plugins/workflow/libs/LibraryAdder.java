@@ -39,17 +39,27 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import org.apache.commons.io.FileUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
+import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
+import org.jenkinsci.plugins.workflow.cps.GlobalVariableSet;
+import org.jenkinsci.plugins.workflow.cps.global.UserDefinedGlobalVariable;
 import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
 import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
 
@@ -57,6 +67,8 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
  * Given {@link LibraryConfiguration.LibrariesForJob}, actually adds to the Groovy classpath.
  */
 @Extension public class LibraryAdder implements LibraryDecorator.Adder {
+
+    private static final Logger LOGGER = Logger.getLogger(LibraryAdder.class.getName());
     
     @Override public List<Addition> add(CpsFlowExecution execution, List<String> libraries) throws Exception {
         Queue.Executable executable = execution.getOwner().getExecutable();
@@ -185,6 +197,38 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
     // TODO 1.652 has tempDir API but there is no API to make other variants
     private String getFilePathSuffix() {
         return System.getProperty(WorkspaceList.class.getName(), "@");
+    }
+
+    @Extension public static class GlobalVars extends GlobalVariableSet {
+
+        @Override public Collection<GlobalVariable> forRun(Run<?,?> run) {
+            if (run == null) {
+                return Collections.emptySet();
+            }
+            LibrariesAction action = run.getAction(LibrariesAction.class);
+            if (action == null) {
+                return Collections.emptySet();
+            }
+            List<GlobalVariable> vars = new ArrayList<>();
+            for (String libraryName : action.getLibraries().keySet()) {
+                File jar = new File(run.getRootDir(), "libs/" + libraryName + "/vars.jar");
+                if (jar.isFile()) {
+                    try (JarFile jf = new JarFile(jar, false)) {
+                        Enumeration<JarEntry> entries = jf.entries();
+                        while (entries.hasMoreElements()) {
+                            String name = entries.nextElement().getName();
+                            if (name.endsWith(".groovy")) {
+                                vars.add(new UserDefinedGlobalVariable(name.substring(0, name.length() - ".groovy".length()), new URL("jar:" + jar.toURI() + "!/" + libraryName + ".txt")));
+                            }
+                        }
+                    } catch (IOException x) {
+                        LOGGER.log(Level.WARNING, "failed to scan " + jar + " for global variables", x);
+                    }
+                }
+            }
+            return vars;
+        }
+
     }
 
 }

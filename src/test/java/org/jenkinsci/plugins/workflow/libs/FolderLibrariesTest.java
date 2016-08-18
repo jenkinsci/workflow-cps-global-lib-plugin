@@ -39,6 +39,7 @@ import static org.junit.Assert.*;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 public class FolderLibrariesTest {
@@ -85,6 +86,21 @@ public class FolderLibrariesTest {
         WorkflowJob p = d2.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("@Library('generic') import generic.Lib as Generic; @Library('specific') import specific.Lib as Specific; echo(/from the ${Generic.CONST} to the ${Specific.CONST}/)", true));
         r.assertLogContains("from the generic to the specific", r.buildAndAssertSuccess(p));
+    }
+
+    @Issue("JENKINS-32400") // one approach
+    @Test public void loadVarForFolder() throws Exception {
+        sampleRepo1.init();
+        sampleRepo1.write("src/stuff/Lib.groovy", "package stuff; class Lib {static String CONST = 'stuff'}");
+        sampleRepo1.write("vars/p.groovy", "def call() {echo(/found some ${stuff.Lib.CONST}/)}");
+        sampleRepo1.git("add", "src", "vars");
+        sampleRepo1.git("commit", "--message=init");
+        sampleRepo2.init();
+        Folder d = r.jenkins.createProject(Folder.class, "d");
+        d.getProperties().add(new FolderLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new GitSCMSource(null, sampleRepo1.toString(), "", "*", "", true)))));
+        WorkflowJob p = d.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') _ = p()", true));
+        r.assertLogContains("found some stuff", r.buildAndAssertSuccess(p));
     }
 
     // TODO test override of global or top folder scope

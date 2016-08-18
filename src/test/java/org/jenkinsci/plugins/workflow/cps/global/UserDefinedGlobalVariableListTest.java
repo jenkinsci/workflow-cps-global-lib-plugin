@@ -1,9 +1,7 @@
 package org.jenkinsci.plugins.workflow.cps.global;
 
 import com.google.inject.Inject;
-import hudson.ExtensionList;
 import hudson.FilePath;
-import hudson.Util;
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -14,11 +12,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.mozilla.javascript.tools.shell.Global;
 
 import java.io.File;
 import java.net.URL;
-import java.util.List;
 
 import static org.jenkinsci.plugins.workflow.cps.global.UserDefinedGlobalVariable.PREFIX;
 
@@ -61,7 +57,7 @@ public class UserDefinedGlobalVariableListTest extends Assert {
         // this variable to become accessible once the new definition is pushed
         git.add().addFilepattern(".").call();
         commitAndPush(git);
-        assertTrue(current().contains(acme));
+        assertEquals(acme, GlobalVariable.byName("acme", null));
 
         // help
         assertEquals("Plain<br>text&lt;", acme.getHelpHtml());
@@ -70,7 +66,7 @@ public class UserDefinedGlobalVariableListTest extends Assert {
         src.child("acme.groovy").delete();
         git.rm().addFilepattern(PREFIX+"/acme.groovy").call();
         commitAndPush(git);
-        assertFalse(current().contains(acme));
+        assertEquals(null, GlobalVariable.byName("acme", null));
     }
 
     private void commitAndPush(Git git) throws GitAPIException {
@@ -78,7 +74,4 @@ public class UserDefinedGlobalVariableListTest extends Assert {
         git.push().call();
     }
 
-    private List<UserDefinedGlobalVariable> current() {
-        return Util.filter(GlobalVariable.ALL, UserDefinedGlobalVariable.class);
-    }
 }

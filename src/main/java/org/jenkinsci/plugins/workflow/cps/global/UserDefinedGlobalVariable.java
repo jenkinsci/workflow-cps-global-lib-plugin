@@ -2,15 +2,19 @@ package org.jenkinsci.plugins.workflow.cps.global;
 
 import groovy.lang.Binding;
 import org.apache.commons.io.Charsets;
-import org.apache.commons.io.FileUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsScript;
 import org.jenkinsci.plugins.workflow.cps.CpsThread;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
 
 import javax.annotation.Nonnull;
-import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import javax.annotation.CheckForNull;
 import jenkins.model.Jenkins;
+import org.apache.commons.io.IOUtils;
 
 /**
  * Global variable backed by user-supplied script.
@@ -20,12 +24,24 @@ import jenkins.model.Jenkins;
  */
 // not @Extension because these are instantiated programmatically
 public class UserDefinedGlobalVariable extends GlobalVariable {
-    private final WorkflowLibRepository repo;
+    private final URL helpURL;
     private final String name;
 
     /*package*/ UserDefinedGlobalVariable(WorkflowLibRepository repo, String name) {
-        this.repo = repo;
+        this(name, urlOf(repo, name));
+    }
+
+    private static URL urlOf(WorkflowLibRepository repo, String name) {
+        try {
+            return new URL(repo.workspace.toURI().toURL(), PREFIX + "/" + name + ".txt");
+        } catch (MalformedURLException x) {
+            throw new IllegalStateException(x);
+        }
+    }
+
+    public UserDefinedGlobalVariable(String name, URL helpURL) {
         this.name = name;
+        this.helpURL = helpURL;
     }
 
     @Nonnull
@@ -61,15 +77,14 @@ public class UserDefinedGlobalVariable extends GlobalVariable {
     /**
      * Loads help from user-defined file, if available.
      */
-    public String getHelpHtml() throws IOException {
-        File help = source(".txt");
-        if (!help.exists())     return null;
-
-        return Jenkins.getActiveInstance().getMarkupFormatter().translate(FileUtils.readFileToString(help, Charsets.UTF_8));
-    }
-
-    private File source(String extension) {
-        return new File(repo.workspace, PREFIX+"/"+ name + extension);
+    public @CheckForNull String getHelpHtml() throws IOException {
+        try {
+            try (InputStream is = helpURL.openStream()) {
+                return Jenkins.getActiveInstance().getMarkupFormatter().translate(IOUtils.toString(is, Charsets.UTF_8));
+            }
+        } catch (FileNotFoundException x) {
+            return null;
+        }
     }
 
     @Override

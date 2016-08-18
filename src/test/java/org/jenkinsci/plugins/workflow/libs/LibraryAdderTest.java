@@ -34,7 +34,11 @@ import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.scm.impl.SingleSCMSource;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
+import org.jenkinsci.plugins.workflow.cps.global.UserDefinedGlobalVariable;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import static org.junit.Assert.*;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.Rule;
@@ -91,6 +95,24 @@ public class LibraryAdderTest {
         r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
         p.setDefinition(new CpsFlowDefinition("echo(/using ${pkg.Lib.CONST}/)", true));
         r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
+    }
+
+    @Test public void globalVariable() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("vars/myecho.groovy", "def call() {echo 'something special'}");
+        sampleRepo.write("vars/myecho.txt", "Says something very special!");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(
+            new LibraryConfiguration("myecho",
+                new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('myecho@master') import myecho; myecho()", true));
+        WorkflowRun b = r.buildAndAssertSuccess(p);
+        r.assertLogContains("something special", b);
+        GlobalVariable var = GlobalVariable.byName("myecho", b);
+        assertNotNull(var);
+        assertEquals("Says something very special!", ((UserDefinedGlobalVariable) var).getHelpHtml());
     }
 
 }
