@@ -218,7 +218,8 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
                         while (entries.hasMoreElements()) {
                             String name = entries.nextElement().getName();
                             if (name.endsWith(".groovy")) {
-                                vars.add(new UserDefinedGlobalVariable(name.substring(0, name.length() - ".groovy".length()), new URL("jar:" + jar.toURI() + "!/" + libraryName + ".txt")));
+                                String varname = name.substring(0, name.length() - ".groovy".length());
+                                vars.add(new UserDefinedGlobalVariable(varname, new URL("jar:" + jar.toURI() + "!/" + varname + ".txt")));
                             }
                         }
                     } catch (IOException x) {

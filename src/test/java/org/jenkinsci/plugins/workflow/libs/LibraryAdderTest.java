@@ -104,10 +104,10 @@ public class LibraryAdderTest {
         sampleRepo.git("add", "vars");
         sampleRepo.git("commit", "--message=init");
         GlobalLibraries.get().setLibraries(Collections.singletonList(
-            new LibraryConfiguration("myecho",
+            new LibraryConfiguration("echo-utils",
                 new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
-        p.setDefinition(new CpsFlowDefinition("@Library('myecho@master') import myecho; myecho()", true));
+        p.setDefinition(new CpsFlowDefinition("@Library('echo-utils@master') import myecho; myecho()", true));
         WorkflowRun b = r.buildAndAssertSuccess(p);
         r.assertLogContains("something special", b);
         GlobalVariable var = GlobalVariable.byName("myecho", b);
