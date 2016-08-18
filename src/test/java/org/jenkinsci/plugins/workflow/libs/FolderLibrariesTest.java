@@ -32,8 +32,12 @@ import java.util.List;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.scm.impl.SingleSCMSource;
+import static org.hamcrest.CoreMatchers.*;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
+import org.jenkinsci.plugins.workflow.cps.Snippetizer;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.ClassRule;
@@ -93,6 +97,7 @@ public class FolderLibrariesTest {
         sampleRepo1.init();
         sampleRepo1.write("src/stuff/Lib.groovy", "package stuff; class Lib {static String CONST = 'stuff'}");
         sampleRepo1.write("vars/p.groovy", "def call() {echo(/found some ${stuff.Lib.CONST}/)}");
+        sampleRepo1.write("vars/p.txt", "Handling of <p>.");
         sampleRepo1.git("add", "src", "vars");
         sampleRepo1.git("commit", "--message=init");
         sampleRepo2.init();
@@ -100,7 +105,14 @@ public class FolderLibrariesTest {
         d.getProperties().add(new FolderLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new GitSCMSource(null, sampleRepo1.toString(), "", "*", "", true)))));
         WorkflowJob p = d.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') _ = p()", true));
-        r.assertLogContains("found some stuff", r.buildAndAssertSuccess(p));
+        WorkflowRun b = r.buildAndAssertSuccess(p);
+        r.assertLogContains("found some stuff", b);
+        assertNotNull(GlobalVariable.byName("p", b));
+        JenkinsRule.WebClient wc = r.createWebClient();
+        String html = wc.getPage(p, Snippetizer.ACTION_URL + "/globals").getWebResponse().getContentAsString();
+        assertThat(html, containsString("Handling of &lt;p&gt;."));
+        html = wc.goTo(Snippetizer.ACTION_URL + "/globals").getWebResponse().getContentAsString();
+        assertThat(html, not(containsString("Handling of &lt;p&gt;.")));
     }
 
     // TODO test override of global or top folder scope
