@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.cps.global;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import groovy.grape.Grape;
 import groovy.grape.GrapeEngine;
 import hudson.init.InitMilestone;
@@ -39,12 +40,14 @@ public class GrapeHack {
 
     private static final Logger LOGGER = Logger.getLogger(GrapeHack.class.getName());
 
+    @SuppressFBWarnings(value="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED", justification="the least of our concerns")
     @Initializer(after=InitMilestone.PLUGINS_PREPARED, fatal=false)
     public static void hack() throws Exception {
         String grapeIvyName = "groovy.grape.GrapeIvy";
+        String ivyGrabRecordName = "groovy.grape.IvyGrabRecord"; // another top-level class
         URL groovyJar = Grape.class.getProtectionDomain().getCodeSource().getLocation();
         LOGGER.log(Level.FINE, "using {0}", groovyJar);
-        ClassLoader l = new URLClassLoader(new URL[] {groovyJar}, new MaskingClassLoader(GrapeHack.class.getClassLoader(), grapeIvyName));
+        ClassLoader l = new URLClassLoader(new URL[] {groovyJar}, new MaskingClassLoader(GrapeHack.class.getClassLoader(), grapeIvyName, ivyGrabRecordName));
         Class<?> c = Class.forName(grapeIvyName, false, l);
         Field instance = Grape.class.getDeclaredField("instance");
         instance.setAccessible(true);
@@ -52,7 +55,9 @@ public class GrapeHack {
             instance.set(null, c.newInstance());
             GrapeEngine engine = Grape.getInstance();
             LOGGER.log(Level.FINE, "successfully loaded {0}", engine);
-            LOGGER.log(Level.FINE, "linked to {0}", engine.getClass().getClassLoader().loadClass("org.apache.ivy.core.settings.IvySettings").getProtectionDomain().getCodeSource().getLocation());
+            l = engine.getClass().getClassLoader();
+            LOGGER.log(Level.FINE, "was also able to load {0}", l.loadClass(ivyGrabRecordName));
+            LOGGER.log(Level.FINE, "linked to {0}", l.loadClass("org.apache.ivy.core.module.id.ModuleRevisionId").getProtectionDomain().getCodeSource().getLocation());
         } else {
             LOGGER.fine("instance was already set");
         }
