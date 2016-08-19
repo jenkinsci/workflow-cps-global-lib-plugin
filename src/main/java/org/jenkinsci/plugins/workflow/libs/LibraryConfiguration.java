@@ -175,7 +175,28 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
             }
         }
 
-        // TODO autocompletion on defaultVersion requires a new SCMSource method; AbstractGitSCMSource could call client.getRemoteBranches() + client.getTagNames("*") + (perhaps) client.getRefNames("")
+        /* TODO does not work; autoCompleteField does not support passing neighboring fields:
+        public AutoCompletionCandidates doAutoCompleteDefaultVersion(@QueryParameter String value, @QueryParameter @RelativePath("scm") String id) {
+            AutoCompletionCandidates candidates = new AutoCompletionCandidates();
+            for (LibraryResolver resolver : ExtensionList.lookup(LibraryResolver.class)) {
+                SCMSource scm = resolver.getSCMSource(id, Stapler.getCurrentRequest());
+                if (scm instanceof SingleSCMSource) {
+                    // cannot complete anything
+                } else if (scm != null) {
+                    try {
+                        for (String revision : scm.fetchRevisions(null)) {
+                            if (revision.startsWith(value)) {
+                                candidates.add(revision);
+                            }
+                        }
+                    } catch (IOException | InterruptedException x) {
+                        LOGGER.log(Level.FINE, null, x);
+                    }
+                }
+            }
+            return candidates;
+        }
+        */
 
     }
 
