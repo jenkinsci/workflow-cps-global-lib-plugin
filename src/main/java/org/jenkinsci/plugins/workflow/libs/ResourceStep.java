@@ -68,6 +68,8 @@ public class ResourceStep extends AbstractStepImpl {
 
     public static class Execution extends AbstractSynchronousStepExecution<String> {
 
+        private static final long serialVersionUID = 1L;
+
         @Inject private transient ResourceStep step;
 
         @Override protected String run() throws Exception {
