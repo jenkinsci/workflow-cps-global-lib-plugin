@@ -33,6 +33,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
+import jenkins.scm.api.SCMSource;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -83,6 +84,16 @@ import org.kohsuke.stapler.StaplerRequest;
 
         @Override public Collection<LibraryConfiguration> forJob(Job<?,?> job, Map<String,String> libraryVersions) {
             return GlobalLibraries.get().getLibraries();
+        }
+
+        @Override public SCMSource getSCMSource(String sourceId, StaplerRequest request) {
+            for (LibraryConfiguration cfg : GlobalLibraries.get().getLibraries()) {
+                SCMSource scm = cfg.getScm();
+                if (scm.getId().equals(sourceId)) {
+                    return scm;
+                }
+            }
+            return null;
         }
 
     }

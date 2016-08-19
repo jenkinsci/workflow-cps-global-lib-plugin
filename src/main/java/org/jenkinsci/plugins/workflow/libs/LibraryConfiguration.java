@@ -28,17 +28,25 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import hudson.Extension;
 import hudson.ExtensionList;
+import hudson.RelativePath;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.model.TaskListener;
+import hudson.util.FormValidation;
+import hudson.util.StreamTaskListener;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.util.Collection;
 import jenkins.model.Jenkins;
+import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
 import jenkins.scm.impl.SingleSCMSource;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.Stapler;
 
 /**
  * User configuration for one library.
@@ -123,7 +131,50 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
             });
         }
 
-        // TODO form validation: name not blank; defaultVersion valid in scm (if feasible); defaultVersion nonblank if implicit || !allowVersionOverride
+        public FormValidation doCheckName(@QueryParameter String name) {
+            if (name.isEmpty()) {
+                return FormValidation.warning("You must enter a name.");
+            } else {
+                // Currently no character restrictions.
+                return FormValidation.ok();
+            }
+        }
+
+        public FormValidation doCheckDefaultVersion(@QueryParameter String defaultVersion, @QueryParameter boolean implicit, @QueryParameter boolean allowVersionOverride, @QueryParameter @RelativePath("scm") String id) {
+            if (defaultVersion.isEmpty()) {
+                if (implicit) {
+                    return FormValidation.error("If you load a library implicitly, you must specify a default version.");
+                }
+                if (!allowVersionOverride) {
+                    return FormValidation.error("If you deny overriding a default version, you must define that version.");
+                }
+                return FormValidation.ok();
+            } else {
+                for (LibraryResolver resolver : ExtensionList.lookup(LibraryResolver.class)) {
+                    SCMSource scm = resolver.getSCMSource(id, Stapler.getCurrentRequest());
+                    if (scm instanceof SingleSCMSource) {
+                        return FormValidation.ok("Cannot validate default version with legacy SCM plugins. Use a different SCM if available.");
+                    } else if (scm != null) {
+                        StringWriter w = new StringWriter();
+                        try {
+                            StreamTaskListener listener = new StreamTaskListener(w);
+                            SCMRevision revision = scm.fetch(defaultVersion, listener);
+                            if (revision != null) {
+                                // TODO validate repository structure using SCMFileSystem when implemented (JENKINS-33273)
+                                return FormValidation.ok("Currently maps to revision: " + revision);
+                            } else {
+                                listener.getLogger().flush();
+                                return FormValidation.warning("Revision seems invalid:\n" + w);
+                            }
+                        } catch (IOException | InterruptedException x) {
+                            return FormValidation.warning(x, "Cannot validate default version.");
+                        }
+                    }
+                }
+                return FormValidation.ok("Cannot validate default version until after saving and reconfiguring.");
+            }
+        }
+
         // TODO autocompletion on defaultVersion requires a new SCMSource method; AbstractGitSCMSource could call client.getRemoteBranches() + client.getTagNames("*") + (perhaps) client.getRefNames("")
 
     }
