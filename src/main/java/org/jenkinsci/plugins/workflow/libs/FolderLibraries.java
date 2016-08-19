@@ -61,7 +61,7 @@ public class FolderLibraries extends AbstractFolderProperty<AbstractFolder<?>> {
 
     }
 
-    @Extension(ordinal=100) public static class ForJob implements LibraryConfiguration.LibrariesForJob {
+    @Extension(ordinal=100) public static class ForJob extends LibraryResolver {
 
         @Override public boolean isTrusted() {
             return false;

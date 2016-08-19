@@ -74,7 +74,7 @@ import org.kohsuke.stapler.StaplerRequest;
         }
     }
 
-    @Extension(ordinal=0) public static class ForJob implements LibraryConfiguration.LibrariesForJob {
+    @Extension(ordinal=0) public static class ForJob extends LibraryResolver {
 
         @Override public boolean isTrusted() {
             return true;

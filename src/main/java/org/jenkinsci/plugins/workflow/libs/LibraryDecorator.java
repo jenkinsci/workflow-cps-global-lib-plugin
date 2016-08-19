@@ -28,15 +28,12 @@ import groovy.lang.GroovyShell;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
-import hudson.ExtensionPoint;
 import hudson.model.TaskListener;
 import java.io.IOException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.Nonnull;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport;
@@ -98,9 +95,9 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
                         }
                     }
                 }.visitClass(classNode);
-                for (Adder adder : ExtensionList.lookup(Adder.class)) {
+                for (ClasspathAdder adder : ExtensionList.lookup(ClasspathAdder.class)) {
                     try {
-                        for (Adder.Addition addition : adder.add(execution, libraries)) {
+                        for (ClasspathAdder.Addition addition : adder.add(execution, libraries)) {
                             GroovyShell shell = addition.trusted ? execution.getTrustedShell() : execution.getShell();
                             shell.getClassLoader().addURL(addition.url);
                         }
@@ -125,28 +122,5 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
         });
     }
 
-    /**
-     * Allows libraries to be mapped to actual classpath additions.
-     */
-    public interface Adder extends ExtensionPoint {
-        class Addition {
-            /** URL to add to the classpath. */
-            public final @Nonnull URL url;
-            /** Whether this should be loaded in the trusted class loader, or untrusted alongside the main script. */
-            public final boolean trusted;
-            public Addition(@Nonnull URL url, boolean trusted) {
-                this.url = url;
-                this.trusted = trusted;
-            }
-        }
-        /**
-         * May add to the classpath.
-         * @param execution a running build
-         * @param libraries aggregated entries from all encountered {@link Library#value} (will be empty if {@link Library} is never used at all)
-         * @return a possibly empty list of additions
-         * @throws Exception for whatever reason (will fail compilation)
-         */
-        @Nonnull List<Addition> add(@Nonnull CpsFlowExecution execution, @Nonnull List<String> libraries) throws Exception;
-    }
 
 }

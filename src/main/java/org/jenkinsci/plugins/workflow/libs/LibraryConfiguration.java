@@ -28,14 +28,11 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import hudson.Extension;
 import hudson.ExtensionList;
-import hudson.ExtensionPoint;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
-import hudson.model.Job;
 import hudson.model.TaskListener;
 import java.util.Collection;
-import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
@@ -128,25 +125,6 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
 
         // TODO form validation: name not blank; defaultVersion valid in scm (if feasible); defaultVersion nonblank if implicit || !allowVersionOverride
         // TODO autocompletion on defaultVersion requires a new SCMSource method; AbstractGitSCMSource could call client.getRemoteBranches() + client.getTagNames("*") + (perhaps) client.getRefNames("")
-
-    }
-
-    /**
-     * Allows a provider of libraries to indicate which libraries should be visible to a given job.
-     */
-    public interface LibrariesForJob extends ExtensionPoint {
-
-        /**
-         * Whether these libraries should be run outside the sandbox.
-         */
-        boolean isTrusted();
-
-        /**
-         * Check for libraries visible to a given job.
-         * @param job a job
-         * @return a possibly empty collection of associated libraries
-         */
-        @Nonnull Collection<LibraryConfiguration> forJob(@Nonnull Job<?,?> job);
 
     }
 

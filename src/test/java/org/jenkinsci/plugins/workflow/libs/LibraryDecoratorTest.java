@@ -62,11 +62,11 @@ public class LibraryDecoratorTest {
         r.assertLogContains("loaded 1 and 2", r.buildAndAssertSuccess(p));
     }
 
-    @TestExtension public static class TestAdder implements LibraryDecorator.Adder {
-        @Override public List<LibraryDecorator.Adder.Addition> add(CpsFlowExecution execution, List<String> libraries) throws Exception {
-            List<LibraryDecorator.Adder.Addition> additions = new ArrayList<>();
+    @TestExtension public static class TestAdder extends ClasspathAdder {
+        @Override public List<Addition> add(CpsFlowExecution execution, List<String> libraries) throws Exception {
+            List<Addition> additions = new ArrayList<>();
             for (String library : libraries) {
-                additions.add(new LibraryDecorator.Adder.Addition(new File(((WorkflowRun) execution.getOwner().getExecutable()).getParent().getRootDir(), "libs/" + library).toURI().toURL(), false));
+                additions.add(new Addition(new File(((WorkflowRun) execution.getOwner().getExecutable()).getParent().getRootDir(), "libs/" + library).toURI().toURL(), false));
             }
             return additions;
         }
@@ -83,8 +83,8 @@ public class LibraryDecoratorTest {
         p.setDefinition(new CpsFlowDefinition("@Library('stuff') import /* irrelevant */ java.lang.Void", true));
         r.assertLogContains("failed to load [stuff]", r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
     }
-    @TestExtension("adderError") public static class ErroneousAdder implements LibraryDecorator.Adder {
-        @Override public List<LibraryDecorator.Adder.Addition> add(CpsFlowExecution execution, List<String> libraries) throws Exception {
+    @TestExtension("adderError") public static class ErroneousAdder extends ClasspathAdder {
+        @Override public List<Addition> add(CpsFlowExecution execution, List<String> libraries) throws Exception {
             throw new AbortException("failed to load " + libraries);
         }
     }

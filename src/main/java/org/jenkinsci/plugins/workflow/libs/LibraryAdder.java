@@ -62,7 +62,7 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
 /**
  * Given {@link LibraryConfiguration.LibrariesForJob}, actually adds to the Groovy classpath.
  */
-@Extension public class LibraryAdder implements LibraryDecorator.Adder {
+@Extension public class LibraryAdder extends ClasspathAdder {
 
     private static final Logger LOGGER = Logger.getLogger(LibraryAdder.class.getName());
     
@@ -89,7 +89,7 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
         Map<String,LibraryRecord> librariesAdded = new LinkedHashMap<>();
         Map<String,SCMSource> sources = new HashMap<>();
         TaskListener listener = execution.getOwner().getListener();
-        for (LibraryConfiguration.LibrariesForJob kind : ExtensionList.lookup(LibraryConfiguration.LibrariesForJob.class)) {
+        for (LibraryResolver kind : ExtensionList.lookup(LibraryResolver.class)) {
             boolean kindTrusted = kind.isTrusted();
             for (LibraryConfiguration cfg : kind.forJob(build.getParent())) {
                 String name = cfg.getName();
