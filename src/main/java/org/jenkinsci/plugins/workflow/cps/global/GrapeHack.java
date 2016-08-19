@@ -43,6 +43,12 @@ public class GrapeHack {
     @SuppressFBWarnings(value="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED", justification="the least of our concerns")
     @Initializer(after=InitMilestone.PLUGINS_PREPARED, fatal=false)
     public static void hack() throws Exception {
+        try {
+            GrapeEngine engine = Grape.getInstance();
+            LOGGER.log(Level.FINE, "{0} was already set, not touching it", engine);
+        } catch (RuntimeException | LinkageError x) {
+            LOGGER.log(Level.FINE, "by default we could not load Grape", x);
+        }
         String grapeIvyName = "groovy.grape.GrapeIvy";
         String ivyGrabRecordName = "groovy.grape.IvyGrabRecord"; // another top-level class
         URL groovyJar = Grape.class.getProtectionDomain().getCodeSource().getLocation();
@@ -51,16 +57,12 @@ public class GrapeHack {
         Class<?> c = Class.forName(grapeIvyName, false, l);
         Field instance = Grape.class.getDeclaredField("instance");
         instance.setAccessible(true);
-        if (instance.get(null) == null) {
-            instance.set(null, c.newInstance());
-            GrapeEngine engine = Grape.getInstance();
-            LOGGER.log(Level.FINE, "successfully loaded {0}", engine);
-            l = engine.getClass().getClassLoader();
-            LOGGER.log(Level.FINE, "was also able to load {0}", l.loadClass(ivyGrabRecordName));
-            LOGGER.log(Level.FINE, "linked to {0}", l.loadClass("org.apache.ivy.core.module.id.ModuleRevisionId").getProtectionDomain().getCodeSource().getLocation());
-        } else {
-            LOGGER.fine("instance was already set");
-        }
+        instance.set(null, c.newInstance());
+        GrapeEngine engine = Grape.getInstance();
+        LOGGER.log(Level.FINE, "successfully loaded {0}", engine);
+        l = engine.getClass().getClassLoader();
+        LOGGER.log(Level.FINE, "was also able to load {0}", l.loadClass(ivyGrabRecordName));
+        LOGGER.log(Level.FINE, "linked to {0}", l.loadClass("org.apache.ivy.core.module.id.ModuleRevisionId").getProtectionDomain().getCodeSource().getLocation());
     }
 
     private GrapeHack() {}
