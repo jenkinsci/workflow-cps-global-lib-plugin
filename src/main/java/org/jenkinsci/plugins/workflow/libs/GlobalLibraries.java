@@ -59,16 +59,19 @@ import org.kohsuke.stapler.StaplerRequest;
     }
 
     public void setLibraries(List<LibraryConfiguration> libraries) {
-        if (Jenkins.getActiveInstance().hasPermission(Jenkins.RUN_SCRIPTS)) {
-            this.libraries = libraries;
-            save();
-        }
+        this.libraries = libraries;
+        save();
     }
 
-    // TODO https://github.com/jenkinsci/jenkins/pull/2509 delete
     @Override public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
-        req.bindJSON(this, json);
-        return true;
+        if (Jenkins.getActiveInstance().hasPermission(Jenkins.RUN_SCRIPTS)) {
+            // TODO https://github.com/jenkinsci/jenkins/pull/2509 super.configure(req, json)
+            req.bindJSON(this, json);
+            return true;
+        } else {
+            // For anyone with ADMINISTER but not RUN_SCRIPTS, we do not display the configuration section and we do not allow it to be modified.
+            return true;
+        }
     }
 
     @Extension(ordinal=0) public static class ForJob implements LibraryConfiguration.LibrariesForJob {

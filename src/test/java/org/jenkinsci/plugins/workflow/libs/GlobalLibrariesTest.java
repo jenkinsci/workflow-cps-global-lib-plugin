@@ -24,16 +24,22 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import hudson.model.Item;
+import hudson.model.View;
 import hudson.plugins.git.GitSCM;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import jenkins.model.Jenkins;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.scm.impl.SingleSCMSource;
+import static org.hamcrest.Matchers.*;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.MockAuthorizationStrategy;
 
 public class GlobalLibrariesTest {
 
@@ -49,8 +55,20 @@ public class GlobalLibrariesTest {
         bar.setImplicit(true);
         bar.setAllowVersionOverride(false);
         gl.setLibraries(Arrays.asList(foo, bar));
-        r.configRoundtrip();
+        r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
+        r.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy().
+            grant(Jenkins.ADMINISTER).everywhere().to("alice"). // includes RUN_SCRIPTS and all else
+            grantWithoutImplication(Jenkins.ADMINISTER).everywhere().to("bob"). // but not RUN_SCRIPTS
+            grant(Jenkins.READ, Item.READ, View.READ).everywhere().to("bob"));
+        HtmlPage configurePage = r.createWebClient().login("alice").goTo("configure");
+        assertThat(configurePage.getWebResponse().getContentAsString(), containsString("https://nowhere.net/foo.git"));
+        r.submit(configurePage.getFormByName("config")); // JenkinsRule.configRoundtrip expanded to include login
         List<LibraryConfiguration> libs = gl.getLibraries();
+        r.assertEqualDataBoundBeans(Arrays.asList(foo, bar), libs);
+        configurePage = r.createWebClient().login("bob").goTo("configure");
+        assertThat(configurePage.getWebResponse().getContentAsString(), not(containsString("https://nowhere.net/foo.git")));
+        r.submit(configurePage.getFormByName("config"));
+        libs = gl.getLibraries();
         r.assertEqualDataBoundBeans(Arrays.asList(foo, bar), libs);
     }
 
