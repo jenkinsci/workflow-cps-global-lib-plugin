@@ -28,6 +28,7 @@ import hudson.model.Result;
 import java.io.File;
 import javax.inject.Inject;
 import org.apache.commons.io.FileUtils;
+import org.jenkinsci.plugins.scriptsecurity.scripts.ScriptApproval;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -167,6 +168,35 @@ public class GrapeTest {
                 SemaphoreStep.success("wait/1", null);
                 story.j.assertBuildStatusSuccess(story.j.waitForCompletion(b));
                 story.j.assertLogContains("ran CPS-transformed", b);
+            }
+        });
+    }
+
+    @Test public void outsideLibrary() throws Exception {
+        story.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                WorkflowJob p = story.j.jenkins.createProject(WorkflowJob.class, "p");
+                p.setDefinition(new CpsFlowDefinition(
+                    "@Grab('commons-primitives:commons-primitives:1.0')\n" +
+                    "import org.apache.commons.collections.primitives.ArrayIntList\n" +
+                    "echo(/got ${new ArrayIntList()}/)", false));
+                story.j.assertLogContains("got []", story.j.buildAndAssertSuccess(p));
+            }
+        });
+    }
+
+    @Test public void outsideLibrarySandbox() throws Exception {
+        story.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                WorkflowJob p = story.j.jenkins.createProject(WorkflowJob.class, "p");
+                p.setDefinition(new CpsFlowDefinition(
+                    "@Grab('commons-primitives:commons-primitives:1.0')\n" +
+                    "import org.apache.commons.collections.primitives.ArrayIntList\n" +
+                    "new ArrayIntList()", true));
+                // Even assuming signature approvals, we do not want to allow Grape to be used from sandboxed scripts.
+                ScriptApproval.get().approveSignature("new org.apache.commons.collections.primitives.ArrayIntList");
+                // Specifically: java.lang.RuntimeException: No suitable ClassLoader found for grab
+                story.j.assertLogContains("GrapeIvy.chooseClassLoader", story.j.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
             }
         });
     }
