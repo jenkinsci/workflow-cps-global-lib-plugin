@@ -36,29 +36,20 @@ import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
 import hudson.slaves.WorkspaceList;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariableSet;
@@ -159,8 +150,6 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
             try (WorkspaceList.Lease lease = computer.getWorkspaceList().acquire(dir)) {
                 delegate.checkout(build, dir, listener, node.createLauncher(listener));
                 // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
-                File libDir = new File(execution.getOwner().getRootDir(), "libs/" + name);
-                FileUtils.forceMkdir(libDir);
                 // Replace any classes requested for replay:
                 if (!record.trusted) {
                     for (String clazz : ReplayAction.replacementsIn(execution)) {
@@ -177,39 +166,23 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
                         }
                     }
                 }
-                // Pack up src.jar and/or vars.jar and/or resources.jar with relevant files from the checkout:
-                boolean addingSomething = false;
-                FilePath srcDir = dir.child("src");
+                // Copy sources with relevant files from the checkout:
+                FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
+                int files = dir.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt", null, libDir);
+
+                FilePath srcDir = libDir.child("src");
                 if (srcDir.isDirectory()) {
-                    addingSomething = true;
-                    File srcJar = new File(libDir, "src.jar");
-                    try (OutputStream os = new FileOutputStream(srcJar)) {
-                        srcDir.zip(os, "**/*.groovy");
-                    }
-                    additions.add(new Addition(srcJar.toURI().toURL(), record.trusted));
+                    additions.add(new Addition(srcDir.toURI().toURL(), record.trusted));
                 }
-                FilePath varsDir = dir.child("vars");
+                FilePath varsDir = libDir.child("vars");
                 if (varsDir.isDirectory()) {
-                    addingSomething = true;
-                    File varsJar = new File(libDir, "vars.jar");
-                    try (OutputStream os = new FileOutputStream(varsJar)) {
-                        varsDir.zip(os, "*.groovy,*.txt");
-                    }
-                    additions.add(new Addition(varsJar.toURI().toURL(), record.trusted));
+                    additions.add(new Addition(varsDir.toURI().toURL(), record.trusted));
                     for (FilePath var : varsDir.list("*.groovy")) {
                         record.variables.add(var.getBaseName());
                     }
                 }
-                FilePath resourcesDir = dir.child("resources");
-                if (resourcesDir.isDirectory()) {
-                    addingSomething = true;
-                    File resourcesJar = new File(libDir, "resources.jar");
-                    try (OutputStream os = new FileOutputStream(resourcesJar)) {
-                        resourcesDir.zip(os);
-                    }
-                }
-                if (!addingSomething) {
-                    throw new AbortException("Library " + name + " expected to contain at least one of src, vars, or resources directories");
+                if (files == 0) {
+                    throw new AbortException("Library " + name + " expected to contain at least one of src or vars directories");
                 }
             }
         }
@@ -234,11 +207,7 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
             List<GlobalVariable> vars = new ArrayList<>();
             for (LibraryRecord library : action.getLibraries()) {
                 for (String variable : library.variables) {
-                    try {
-                        vars.add(new UserDefinedGlobalVariable(variable, new URL("jar:" + new File(run.getRootDir(), "libs/" + library.name + "/vars.jar").toURI() + "!/" + variable + ".txt")));
-                    } catch (MalformedURLException x) {
-                        LOGGER.log(Level.WARNING, null, x);
-                    }
+                    vars.add(new UserDefinedGlobalVariable(variable, new File(run.getRootDir(), "libs/" + library.name + "/vars/" + variable + ".txt")));
                 }
             }
             return vars;
@@ -256,31 +225,22 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
                     Run<?,?> run = (Run) executable;
                     LibrariesAction action = run.getAction(LibrariesAction.class);
                     if (action != null) {
-                        File libs = new File(run.getRootDir(), "libs");
+                        FilePath libs = new FilePath(run.getRootDir()).child("libs");
                         for (LibraryRecord library : action.getLibraries()) {
                             if (library.trusted) {
                                 continue; // TODO for simplicity we do not allow replay of trusted libraries, even if you have RUN_SCRIPTS
                             }
-                            for (String jarName : new String[] {"src.jar", "vars.jar"}) {
-                                File jar = new File(new File(libs, library.name), jarName);
-                                if (jar.isFile()) {
-                                    try (JarFile jf = new JarFile(jar, false)) {
-                                        Enumeration<JarEntry> entries = jf.entries();
-                                        while (entries.hasMoreElements()) {
-                                            JarEntry entry = entries.nextElement();
-                                            String name = entry.getName();
-                                            if (name.endsWith(".groovy")) {
-                                                scripts.put(name.substring(0, name.length() - ".groovy".length()).replace('/', '.'),
-                                                            IOUtils.toString(jf.getInputStream(entry))); // TODO no idea what encoding the Groovy compiler uses
-                                            }
-                                        }
-                                    }
+                            for (String rootName : new String[] {"src", "vars"}) {
+                                FilePath root = libs.child(library.name + "/" + rootName);
+                                for (FilePath groovy : root.list("**/*.groovy")) {
+                                    String clazz = groovy.getRemote().replaceFirst("^\\Q" + root.getRemote() + "\\E[/\\\\](.+)[.]groovy", "$1").replace('/', '.');
+                                    scripts.put(clazz, groovy.readToString()); // TODO no idea what encoding the Groovy compiler uses
                                 }
                             }
                         }
                     }
                 }
-            } catch (IOException x) {
+            } catch (IOException | InterruptedException x) {
                 LOGGER.log(Level.WARNING, null, x);
             }
             return scripts;
