@@ -213,6 +213,8 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
             return vars;
         }
 
+        // TODO implement forJob by checking each LibraryConfiguration and scanning SCMFileSystem when implemented (JENKINS-33273)
+
     }
 
     @Extension public static class LoadedLibraries extends OriginalLoadedScripts {
