@@ -39,6 +39,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -48,6 +49,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
@@ -56,10 +58,13 @@ import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariableSet;
 import org.jenkinsci.plugins.workflow.cps.global.UserDefinedGlobalVariable;
+import org.jenkinsci.plugins.workflow.cps.replay.OriginalLoadedScripts;
+import org.jenkinsci.plugins.workflow.cps.replay.ReplayAction;
 import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
 import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
 
@@ -90,9 +95,8 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
             }
         }
         // Now we will see which libraries we want to load for this job.
-        Map<String,String> librariesAdded = new LinkedHashMap<>();
+        Map<String,LibraryRecord> librariesAdded = new LinkedHashMap<>();
         Map<String,SCMSource> sources = new HashMap<>();
-        Map<String,Boolean> trusted = new HashMap<>();
         TaskListener listener = execution.getOwner().getListener();
         for (LibraryConfiguration.LibrariesForJob kind : ExtensionList.lookup(LibraryConfiguration.LibrariesForJob.class)) {
             boolean kindTrusted = kind.isTrusted();
@@ -114,13 +118,12 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
                 } else if (!cfg.isAllowVersionOverride()) {
                     throw new AbortException("Version override not permitted for library " + name);
                 }
-                librariesAdded.put(name, version);
+                librariesAdded.put(name, new LibraryRecord(name, version, new TreeSet<String>(), kindTrusted));
                 sources.put(name, cfg.getScm());
-                trusted.put(name, kindTrusted);
             }
         }
         // Record libraries we plan to load. We need LibrariesAction there first so variables can be interpolated.
-        build.addAction(new LibrariesAction(librariesAdded));
+        build.addAction(new LibrariesAction(new ArrayList<>(librariesAdded.values())));
         // Now actually try to check out the libraries.
         List<Addition> additions = new ArrayList<>();
         // Adapted from CpsScmFlowDefinition:
@@ -139,9 +142,9 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
         if (computer == null) {
             throw new IOException(node.getDisplayName() + " may be offline");
         }
-        for (Map.Entry<String,String> entry : librariesAdded.entrySet()) {
-            String name = entry.getKey();
-            String version = entry.getValue();
+        for (LibraryRecord record : librariesAdded.values()) {
+            String name = record.name;
+            String version = record.version;
             listener.getLogger().println("Loading library " + name + "@" + version);
             // Perform an SCM checkout and JAR up the relevant files.
             SCMSource source = sources.get(name);
@@ -156,9 +159,25 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
             try (WorkspaceList.Lease lease = computer.getWorkspaceList().acquire(dir)) {
                 delegate.checkout(build, dir, listener, node.createLauncher(listener));
                 // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
-                // Pack up src.jar and/or vars.jar and/or resources.jar with relevant files from the checkout:
                 File libDir = new File(execution.getOwner().getRootDir(), "libs/" + name);
                 FileUtils.forceMkdir(libDir);
+                // Replace any classes requested for replay:
+                if (!record.trusted) {
+                    for (String clazz : ReplayAction.replacementsIn(execution)) {
+                        for (String root : new String[] {"src", "vars"}) {
+                            String rel = root + "/" + clazz.replace('.', '/') + ".groovy";
+                            FilePath f = dir.child(rel);
+                            if (f.exists()) {
+                                String replacement = ReplayAction.replace(execution, clazz);
+                                if (replacement != null) {
+                                    listener.getLogger().println("Replacing contents of " + rel);
+                                    f.write(replacement, null); // TODO as below, unsure of encoding used by Groovy compiler
+                                }
+                            }
+                        }
+                    }
+                }
+                // Pack up src.jar and/or vars.jar and/or resources.jar with relevant files from the checkout:
                 boolean addingSomething = false;
                 FilePath srcDir = dir.child("src");
                 if (srcDir.isDirectory()) {
@@ -167,7 +186,7 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
                     try (OutputStream os = new FileOutputStream(srcJar)) {
                         srcDir.zip(os, "**/*.groovy");
                     }
-                    additions.add(new Addition(srcJar.toURI().toURL(), trusted.get(name)));
+                    additions.add(new Addition(srcJar.toURI().toURL(), record.trusted));
                 }
                 FilePath varsDir = dir.child("vars");
                 if (varsDir.isDirectory()) {
@@ -176,7 +195,10 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
                     try (OutputStream os = new FileOutputStream(varsJar)) {
                         varsDir.zip(os, "*.groovy,*.txt");
                     }
-                    additions.add(new Addition(varsJar.toURI().toURL(), trusted.get(name)));
+                    additions.add(new Addition(varsJar.toURI().toURL(), record.trusted));
+                    for (FilePath var : varsDir.list("*.groovy")) {
+                        record.variables.add(var.getBaseName());
+                    }
                 }
                 FilePath resourcesDir = dir.child("resources");
                 if (resourcesDir.isDirectory()) {
@@ -210,24 +232,58 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
                 return Collections.emptySet();
             }
             List<GlobalVariable> vars = new ArrayList<>();
-            for (String libraryName : action.getLibraries().keySet()) {
-                File jar = new File(run.getRootDir(), "libs/" + libraryName + "/vars.jar");
-                if (jar.isFile()) {
-                    try (JarFile jf = new JarFile(jar, false)) {
-                        Enumeration<JarEntry> entries = jf.entries();
-                        while (entries.hasMoreElements()) {
-                            String name = entries.nextElement().getName();
-                            if (name.endsWith(".groovy")) {
-                                String varname = name.substring(0, name.length() - ".groovy".length());
-                                vars.add(new UserDefinedGlobalVariable(varname, new URL("jar:" + jar.toURI() + "!/" + varname + ".txt")));
-                            }
-                        }
-                    } catch (IOException x) {
-                        LOGGER.log(Level.WARNING, "failed to scan " + jar + " for global variables", x);
+            for (LibraryRecord library : action.getLibraries()) {
+                for (String variable : library.variables) {
+                    try {
+                        vars.add(new UserDefinedGlobalVariable(variable, new URL("jar:" + new File(run.getRootDir(), "libs/" + library.name + "/vars.jar").toURI() + "!/" + variable + ".txt")));
+                    } catch (MalformedURLException x) {
+                        LOGGER.log(Level.WARNING, null, x);
                     }
                 }
             }
             return vars;
+        }
+
+    }
+
+    @Extension public static class LoadedLibraries extends OriginalLoadedScripts {
+
+        @Override public Map<String,String> loadScripts(CpsFlowExecution execution) {
+            Map<String,String> scripts = new HashMap<>();
+            try {
+                Queue.Executable executable = execution.getOwner().getExecutable();
+                if (executable instanceof Run) {
+                    Run<?,?> run = (Run) executable;
+                    LibrariesAction action = run.getAction(LibrariesAction.class);
+                    if (action != null) {
+                        File libs = new File(run.getRootDir(), "libs");
+                        for (LibraryRecord library : action.getLibraries()) {
+                            if (library.trusted) {
+                                continue; // TODO for simplicity we do not allow replay of trusted libraries, even if you have RUN_SCRIPTS
+                            }
+                            for (String jarName : new String[] {"src.jar", "vars.jar"}) {
+                                File jar = new File(new File(libs, library.name), jarName);
+                                if (jar.isFile()) {
+                                    try (JarFile jf = new JarFile(jar, false)) {
+                                        Enumeration<JarEntry> entries = jf.entries();
+                                        while (entries.hasMoreElements()) {
+                                            JarEntry entry = entries.nextElement();
+                                            String name = entry.getName();
+                                            if (name.endsWith(".groovy")) {
+                                                scripts.put(name.substring(0, name.length() - ".groovy".length()).replace('/', '.'),
+                                                            IOUtils.toString(jf.getInputStream(entry))); // TODO no idea what encoding the Groovy compiler uses
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (IOException x) {
+                LOGGER.log(Level.WARNING, null, x);
+            }
+            return scripts;
         }
 
     }

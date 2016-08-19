@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
+import com.google.common.collect.ImmutableMap;
 import hudson.plugins.git.GitSCM;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,6 +37,7 @@ import static org.hamcrest.CoreMatchers.*;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
 import org.jenkinsci.plugins.workflow.cps.Snippetizer;
+import org.jenkinsci.plugins.workflow.cps.replay.ReplayAction;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.junit.Test;
@@ -114,6 +116,34 @@ public class FolderLibrariesTest {
         html = wc.goTo(Snippetizer.ACTION_URL + "/globals").getWebResponse().getContentAsString();
         assertThat(html, not(containsString("Handling of &lt;p&gt;.")));
     }
+
+    @Test public void replay() throws Exception {
+        sampleRepo1.init();
+        String somethingCode = "package pkg; class Something {@NonCPS String toString() {'the first version'}}";
+        sampleRepo1.write("src/pkg/Something.groovy", somethingCode);
+        String varCode = "def call() {echo(/initially running ${new pkg.Something()}/)}";
+        sampleRepo1.write("vars/var.groovy", varCode);
+        sampleRepo1.git("add", "src", "vars");
+        sampleRepo1.git("commit", "--message=init");
+        Folder d = r.jenkins.createProject(Folder.class, "d");
+        d.getProperties().add(new FolderLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new GitSCMSource(null, sampleRepo1.toString(), "", "*", "", true)))));
+        WorkflowJob p = d.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') _ = var()", true));
+        WorkflowRun b1 = r.buildAndAssertSuccess(p);
+        r.assertLogContains("initially running the first version", b1);
+        ReplayAction ra = b1.getAction(ReplayAction.class);
+        assertEquals(ImmutableMap.of("pkg.Something", somethingCode, "var", varCode), ra.getOriginalLoadedScripts());
+        String varCode2 = varCode.replace("initially", "subsequently");
+        WorkflowRun b2 = r.assertBuildStatusSuccess((WorkflowRun) ra.run(ra.getOriginalScript(), ImmutableMap.of("pkg.Something", somethingCode, "var", varCode2)).get());
+        r.assertLogContains("subsequently running the first version", b2);
+        ra = b2.getAction(ReplayAction.class);
+        assertEquals(ImmutableMap.of("pkg.Something", somethingCode, "var", varCode2), ra.getOriginalLoadedScripts());
+        String somethingCode2 = somethingCode.replace("first", "second");
+        WorkflowRun b3 = r.assertBuildStatusSuccess((WorkflowRun) ra.run(ra.getOriginalScript(), ImmutableMap.of("pkg.Something", somethingCode2, "var", varCode2)).get());
+        r.assertLogContains("subsequently running the second version", b3);
+    }
+
+    // TODO test replay of `load`ed scripts as well as libraries
 
     // TODO test override of global or top folder scope
 

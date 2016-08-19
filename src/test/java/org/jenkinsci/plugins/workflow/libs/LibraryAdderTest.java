@@ -115,4 +115,6 @@ public class LibraryAdderTest {
         assertEquals("Says something very special!", ((UserDefinedGlobalVariable) var).getHelpHtml());
     }
 
+    // TODO test that trusted libraries are rejected for replay
+
 }

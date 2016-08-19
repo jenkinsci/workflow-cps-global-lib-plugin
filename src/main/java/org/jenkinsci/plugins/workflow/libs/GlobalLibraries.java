@@ -59,8 +59,7 @@ import org.kohsuke.stapler.StaplerRequest;
     }
 
     public void setLibraries(List<LibraryConfiguration> libraries) {
-        if (!libraries.equals(this.libraries)) {
-            Jenkins.getActiveInstance().checkPermission(Jenkins.RUN_SCRIPTS);
+        if (Jenkins.getActiveInstance().hasPermission(Jenkins.RUN_SCRIPTS)) {
             this.libraries = libraries;
             save();
         }

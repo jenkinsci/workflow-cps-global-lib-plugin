@@ -24,45 +24,23 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
-import hudson.EnvVars;
-import hudson.Extension;
-import hudson.model.EnvironmentContributor;
-import hudson.model.InvisibleAction;
-import hudson.model.Run;
-import hudson.model.TaskListener;
-import java.io.IOException;
-import java.util.List;
+import java.util.Set;
 
 /**
- * A run action recording libraries used in a given build.
+ * Record of a library being used in a particular build.
  */
-class LibrariesAction extends InvisibleAction {
+final class LibraryRecord {
 
-    private final List<LibraryRecord> libraries;
+    final String name;
+    final String version;
+    final Set<String> variables;
+    final boolean trusted;
 
-    LibrariesAction(List<LibraryRecord> libraries) {
-        this.libraries = libraries;
-    }
-
-    /**
-     * A list of libraries in use.
-     */
-    public List<LibraryRecord> getLibraries() {
-        return libraries;
-    }
-
-    @Extension public static class LibraryEnvironment extends EnvironmentContributor {
-
-        @SuppressWarnings("rawtypes")
-        @Override public void buildEnvironmentFor(Run r, EnvVars envs, TaskListener listener) throws IOException, InterruptedException {
-            LibrariesAction action = r.getAction(LibrariesAction.class);
-            if (action != null) {
-                for (LibraryRecord library : action.libraries) {
-                    envs.put("library." + library.name + ".version", library.version);
-                }
-            }
-        }
-
+    LibraryRecord(String name, String version, Set<String> variables, boolean trusted) {
+        this.name = name;
+        this.version = version;
+        this.variables = variables;
+        this.trusted = trusted;
     }
 
 }
