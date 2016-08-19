@@ -60,7 +60,7 @@ import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
 import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
 
 /**
- * Given {@link LibraryConfiguration.LibrariesForJob}, actually adds to the Groovy classpath.
+ * Given {@link LibraryResolver}, actually adds to the Groovy classpath.
  */
 @Extension public class LibraryAdder extends ClasspathAdder {
 
