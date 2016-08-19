@@ -44,9 +44,11 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
@@ -168,7 +170,7 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
                 }
                 // Copy sources with relevant files from the checkout:
                 FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
-                int files = dir.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt", null, libDir);
+                int files = dir.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, libDir);
 
                 FilePath srcDir = libDir.child("src");
                 if (srcDir.isDirectory()) {
@@ -192,6 +194,31 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
     // TODO 1.652 has tempDir API but there is no API to make other variants
     private String getFilePathSuffix() {
         return System.getProperty(WorkspaceList.class.getName(), "@");
+    }
+
+    /**
+     * Loads resources for {@link ResourceStep}.
+     * @param execution a build
+     * @param name a resource name, à la {@link Class#getResource(String)} but with no leading {@code /} allowed
+     * @return a map from {@link LibraryRecord#name} to file contents
+     */
+    static @Nonnull Map<String,String> findResources(@Nonnull CpsFlowExecution execution, @Nonnull String name) throws IOException, InterruptedException {
+        Map<String,String> resources = new TreeMap<>();
+        Queue.Executable executable = execution.getOwner().getExecutable();
+        if (executable instanceof Run) {
+            Run<?,?> run = (Run) executable;
+            LibrariesAction action = run.getAction(LibrariesAction.class);
+            if (action != null) {
+                FilePath libs = new FilePath(run.getRootDir()).child("libs");
+                for (LibraryRecord library : action.getLibraries()) {
+                    FilePath f = libs.child(library.name + "/resources/" + name);
+                    if (f.exists()) {
+                        resources.put(library.name, f.readToString());
+                    }
+                }
+            }
+        }
+        return resources;
     }
 
     @Extension public static class GlobalVars extends GlobalVariableSet {
