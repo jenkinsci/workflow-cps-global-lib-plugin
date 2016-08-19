@@ -24,12 +24,17 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import hudson.model.Job;
 import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.SubmoduleConfig;
 import hudson.plugins.git.UserRemoteConfig;
 import hudson.plugins.git.extensions.GitSCMExtension;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.scm.impl.SingleSCMSource;
@@ -44,6 +49,7 @@ import org.junit.Test;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.TestExtension;
 
 public class LibraryAdderTest {
 
@@ -113,6 +119,30 @@ public class LibraryAdderTest {
         GlobalVariable var = GlobalVariable.byName("myecho", b);
         assertNotNull(var);
         assertEquals("Says something very special!", ((UserDefinedGlobalVariable) var).getHelpHtml());
+    }
+
+    @Test public void dynamicLibraries() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String CONST = 'constant'}");
+        sampleRepo.git("add", "src");
+        sampleRepo.git("commit", "--message=init");
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('" + sampleRepo + "') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
+        r.assertLogContains("using constant", r.buildAndAssertSuccess(p));
+    }
+    @TestExtension("dynamicLibraries") public static class DynamicResolver extends LibraryResolver {
+        @Override public boolean isTrusted() {
+            return false;
+        }
+        @Override public Collection<LibraryConfiguration> forJob(Job<?,?> job, Map<String,String> libraryVersions) {
+            List<LibraryConfiguration> cfgs = new ArrayList<>();
+            for (String url : libraryVersions.keySet()) {
+                LibraryConfiguration cfg = new LibraryConfiguration(url, new GitSCMSource(null, url, "", "*", "", true));
+                cfg.setDefaultVersion("master");
+                cfgs.add(cfg);
+            }
+            return cfgs;
+        }
     }
 
     // TODO test that trusted libraries are rejected for replay

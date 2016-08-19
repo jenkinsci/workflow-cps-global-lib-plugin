@@ -27,6 +27,7 @@ package org.jenkinsci.plugins.workflow.libs;
 import hudson.ExtensionPoint;
 import hudson.model.Job;
 import java.util.Collection;
+import java.util.Map;
 import javax.annotation.Nonnull;
 
 /**
@@ -41,9 +42,16 @@ public abstract class LibraryResolver implements ExtensionPoint {
 
     /**
      * Check for libraries visible to a given job.
+     * <p>An implementation may ignore the {@code libraryVersions} parameter
+     * and simply list configured libraries visible to the job;
+     * the caller will select which libraries to actually load,
+     * taking into account {@link LibraryConfiguration#isImplicit}.
+     * Or it may dynamically generate library configurations
+     * by matching library names against some predefined pattern.
      * @param job a job
+     * @param libraryVersions libraries explicitly requested in the job, as a map from {@link LibraryConfiguration#getName} to version or null; may be empty
      * @return a possibly empty collection of associated libraries
      */
-    public abstract @Nonnull Collection<LibraryConfiguration> forJob(@Nonnull Job<?, ?> job);
+    public abstract @Nonnull Collection<LibraryConfiguration> forJob(@Nonnull Job<?,?> job, @Nonnull Map<String,String> libraryVersions);
 
 }

@@ -91,7 +91,7 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
         TaskListener listener = execution.getOwner().getListener();
         for (LibraryResolver kind : ExtensionList.lookup(LibraryResolver.class)) {
             boolean kindTrusted = kind.isTrusted();
-            for (LibraryConfiguration cfg : kind.forJob(build.getParent())) {
+            for (LibraryConfiguration cfg : kind.forJob(build.getParent(), libraryVersions)) {
                 String name = cfg.getName();
                 if (!cfg.isImplicit() && !libraryVersions.containsKey(name)) {
                     continue; // not using this one at all

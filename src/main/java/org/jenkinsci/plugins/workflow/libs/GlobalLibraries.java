@@ -29,6 +29,7 @@ import hudson.model.Job;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import javax.annotation.Nonnull;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
@@ -80,7 +81,7 @@ import org.kohsuke.stapler.StaplerRequest;
             return true;
         }
 
-        @Override public Collection<LibraryConfiguration> forJob(Job<?, ?> job) {
+        @Override public Collection<LibraryConfiguration> forJob(Job<?,?> job, Map<String,String> libraryVersions) {
             return GlobalLibraries.get().getLibraries();
         }
 

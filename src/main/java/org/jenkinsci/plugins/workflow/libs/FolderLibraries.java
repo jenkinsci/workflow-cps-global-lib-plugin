@@ -33,6 +33,7 @@ import hudson.model.Job;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
@@ -67,7 +68,7 @@ public class FolderLibraries extends AbstractFolderProperty<AbstractFolder<?>> {
             return false;
         }
 
-        @Override public Collection<LibraryConfiguration> forJob(Job<?, ?> job) {
+        @Override public Collection<LibraryConfiguration> forJob(Job<?,?> job, Map<String,String> libraryVersions) {
             List<LibraryConfiguration> libraries = new ArrayList<>();
             for (ItemGroup<?> group = job.getParent(); group instanceof AbstractFolder; group = ((AbstractFolder) group).getParent()) {
                 FolderLibraries prop = ((AbstractFolder<?>) group).getProperties().get(FolderLibraries.class);
