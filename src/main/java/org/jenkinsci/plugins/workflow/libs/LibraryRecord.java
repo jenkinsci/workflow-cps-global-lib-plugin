@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Record of a library being used in a particular build.
@@ -33,14 +34,17 @@ final class LibraryRecord {
 
     final String name;
     final String version;
-    final Set<String> variables;
+    final Set<String> variables = new TreeSet<>();
     final boolean trusted;
 
-    LibraryRecord(String name, String version, Set<String> variables, boolean trusted) {
+    LibraryRecord(String name, String version, boolean trusted) {
         this.name = name;
         this.version = version;
-        this.variables = variables;
         this.trusted = trusted;
+    }
+
+    @Override public String toString() {
+        return "LibraryRecord{name=" + name + ", version=" + version + ", variables=" + variables + ", trusted=" + trusted + '}';
     }
 
 }

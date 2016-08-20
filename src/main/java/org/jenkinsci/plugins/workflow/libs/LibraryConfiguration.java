@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.libs;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
+import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.RelativePath;
@@ -38,6 +39,8 @@ import hudson.util.StreamTaskListener;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.Collection;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
@@ -111,6 +114,20 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
 
     @DataBoundSetter public void setAllowVersionOverride(boolean allowVersionOverride) {
         this.allowVersionOverride = allowVersionOverride;
+    }
+
+    @Nonnull String defaultedVersion(@CheckForNull String version) throws AbortException {
+        if (version == null) {
+            if (defaultVersion == null) {
+                throw new AbortException("No version specified for library " + name);
+            } else {
+                return defaultVersion;
+            }
+        } else if (allowVersionOverride) {
+            return version;
+        } else {
+            throw new AbortException("Version override not permitted for library " + name);
+        }
     }
 
     @Extension public static class DescriptorImpl extends Descriptor<LibraryConfiguration> {

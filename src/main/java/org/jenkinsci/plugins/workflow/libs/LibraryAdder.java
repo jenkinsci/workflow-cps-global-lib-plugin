@@ -37,6 +37,7 @@ import hudson.model.TopLevelItem;
 import hudson.slaves.WorkspaceList;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,8 +45,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
@@ -67,7 +68,7 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
 @Extension public class LibraryAdder extends ClasspathAdder {
 
     private static final Logger LOGGER = Logger.getLogger(LibraryAdder.class.getName());
-    
+
     @Override public List<Addition> add(CpsFlowExecution execution, List<String> libraries) throws Exception {
         Queue.Executable executable = execution.getOwner().getExecutable();
         Run<?,?> build;
@@ -80,12 +81,8 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
         // First parse the library declarations (if any) looking for requested versions.
         Map<String,String> libraryVersions = new HashMap<>();
         for (String library : libraries) {
-            int at = library.indexOf('@');
-            if (at == -1) {
-                libraryVersions.put(library, null); // pick up defaultVersion
-            } else {
-                libraryVersions.put(library.substring(0, at), library.substring(at + 1));
-            }
+            String[] parsed = parse(library);
+            libraryVersions.put(parsed[0], parsed[1]);
         }
         // Now we will see which libraries we want to load for this job.
         Map<String,LibraryRecord> librariesAdded = new LinkedHashMap<>();
@@ -102,98 +99,117 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
                     listener.getLogger().println("Only using first definition of library " + name);
                     continue;
                 }
-                String version = libraryVersions.get(name);
-                if (version == null) {
-                    version = cfg.getDefaultVersion();
-                    if (version == null) {
-                        throw new AbortException("No version specified for library " + name);
-                    }
-                } else if (!cfg.isAllowVersionOverride()) {
-                    throw new AbortException("Version override not permitted for library " + name);
-                }
-                librariesAdded.put(name, new LibraryRecord(name, version, new TreeSet<String>(), kindTrusted));
+                String version = cfg.defaultedVersion(libraryVersions.get(name));
+                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted));
                 sources.put(name, cfg.getScm());
             }
         }
         // Record libraries we plan to load. We need LibrariesAction there first so variables can be interpolated.
         build.addAction(new LibrariesAction(new ArrayList<>(librariesAdded.values())));
         // Now actually try to check out the libraries.
+        CheckoutContext checkoutContext = CheckoutContext.forBuild(build, execution);
         List<Addition> additions = new ArrayList<>();
-        // Adapted from CpsScmFlowDefinition:
-        FilePath checkoutRoot;
-        Node node = Jenkins.getActiveInstance();
-        if (build.getParent() instanceof TopLevelItem) {
-            FilePath baseWorkspace = node.getWorkspaceFor((TopLevelItem) build.getParent());
-            if (baseWorkspace == null) {
-                throw new IOException(node.getDisplayName() + " may be offline");
-            }
-            checkoutRoot = baseWorkspace.withSuffix(getFilePathSuffix() + "libs");
-        } else { // should not happen, but just in case:
-            checkoutRoot = new FilePath(execution.getOwner().getRootDir()).child("libs");
-        }
-        Computer computer = node.toComputer();
-        if (computer == null) {
-            throw new IOException(node.getDisplayName() + " may be offline");
-        }
         for (LibraryRecord record : librariesAdded.values()) {
-            String name = record.name;
-            String version = record.version;
-            listener.getLogger().println("Loading library " + name + "@" + version);
-            // Perform an SCM checkout and JAR up the relevant files.
-            SCMSource source = sources.get(name);
-            SCMRevision revision = source.fetch(version, listener);
-            if (revision == null) {
-                throw new AbortException("No version " + version + " found for library " + name);
-            }
-            SCMStep delegate = new GenericSCMStep(source.build(revision.getHead(), revision));
-            delegate.setPoll(!revision.isDeterministic()); // TODO is this desirable?
-            delegate.setChangelog(true); // TODO is this desirable?
-            FilePath dir = checkoutRoot.child(name);
-            try (WorkspaceList.Lease lease = computer.getWorkspaceList().acquire(dir)) {
-                delegate.checkout(build, dir, listener, node.createLauncher(listener));
-                // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
-                // Replace any classes requested for replay:
-                if (!record.trusted) {
-                    for (String clazz : ReplayAction.replacementsIn(execution)) {
-                        for (String root : new String[] {"src", "vars"}) {
-                            String rel = root + "/" + clazz.replace('.', '/') + ".groovy";
-                            FilePath f = dir.child(rel);
-                            if (f.exists()) {
-                                String replacement = ReplayAction.replace(execution, clazz);
-                                if (replacement != null) {
-                                    listener.getLogger().println("Replacing contents of " + rel);
-                                    f.write(replacement, null); // TODO as below, unsure of encoding used by Groovy compiler
-                                }
-                            }
-                        }
-                    }
-                }
-                // Copy sources with relevant files from the checkout:
-                FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
-                int files = dir.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, libDir);
-
-                FilePath srcDir = libDir.child("src");
-                if (srcDir.isDirectory()) {
-                    additions.add(new Addition(srcDir.toURI().toURL(), record.trusted));
-                }
-                FilePath varsDir = libDir.child("vars");
-                if (varsDir.isDirectory()) {
-                    additions.add(new Addition(varsDir.toURI().toURL(), record.trusted));
-                    for (FilePath var : varsDir.list("*.groovy")) {
-                        record.variables.add(var.getBaseName());
-                    }
-                }
-                if (files == 0) {
-                    throw new AbortException("Library " + name + " expected to contain at least one of src or vars directories");
-                }
+            listener.getLogger().println("Loading library " + record.name + "@" + record.version);
+            for (URL u : doAdd(record.name, record.version, sources.get(record.name), record.trusted, listener, checkoutContext, build, execution, record.variables)) {
+                additions.add(new Addition(u, record.trusted));
             }
         }
         return additions;
     }
 
+    private static class CheckoutContext {
+        final @Nonnull Node node;
+        final @Nonnull Computer computer;
+        final @Nonnull FilePath root;
+        CheckoutContext(Node node, Computer computer, FilePath root) {
+            this.node = node;
+            this.computer = computer;
+            this.root = root;
+        }
+        // Adapted from CpsScmFlowDefinition:
+        static CheckoutContext forBuild(@Nonnull Run<?,?> build, @Nonnull CpsFlowExecution execution) throws IOException {
+            FilePath root;
+            Node node = Jenkins.getActiveInstance();
+            if (build.getParent() instanceof TopLevelItem) {
+                FilePath baseWorkspace = node.getWorkspaceFor((TopLevelItem) build.getParent());
+                if (baseWorkspace == null) {
+                    throw new IOException(node.getDisplayName() + " may be offline");
+                }
+                root = baseWorkspace.withSuffix(getFilePathSuffix() + "libs");
+            } else { // should not happen, but just in case:
+                root = new FilePath(execution.getOwner().getRootDir()).child("libs");
+            }
+            Computer computer = node.toComputer();
+            if (computer == null) {
+                throw new IOException(node.getDisplayName() + " may be offline");
+            }
+            return new CheckoutContext(node, computer, root);
+        }
+    }
+
+    private static @Nonnull String[] parse(@Nonnull String identifier) {
+        int at = identifier.indexOf('@');
+        if (at == -1) {
+            return new String[] {identifier, null}; // pick up defaultVersion
+        } else {
+            return new String[] {identifier.substring(0, at), identifier.substring(at + 1)};
+        }
+    }
+
     // TODO 1.652 has tempDir API but there is no API to make other variants
-    private String getFilePathSuffix() {
+    private static String getFilePathSuffix() {
         return System.getProperty(WorkspaceList.class.getName(), "@");
+    }
+
+    /** Perform an SCM checkout and copy the relevant files. */
+    private static List<URL> doAdd(@Nonnull String name, @Nonnull String version, @Nonnull SCMSource scm, boolean trusted, @Nonnull TaskListener listener, @Nonnull CheckoutContext checkoutContext, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
+        SCMRevision revision = scm.fetch(version, listener);
+        if (revision == null) {
+            throw new AbortException("No version " + version + " found for library " + name);
+        }
+        SCMStep delegate = new GenericSCMStep(scm.build(revision.getHead(), revision));
+        delegate.setPoll(!revision.isDeterministic()); // TODO is this desirable?
+        delegate.setChangelog(true); // TODO is this desirable?
+        FilePath dir = checkoutContext.root.child(name);
+        try (WorkspaceList.Lease lease = checkoutContext.computer.getWorkspaceList().acquire(dir)) {
+            delegate.checkout(run, dir, listener, checkoutContext.node.createLauncher(listener));
+            // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
+            // Replace any classes requested for replay:
+            if (!trusted) {
+                for (String clazz : ReplayAction.replacementsIn(execution)) {
+                    for (String root : new String[] {"src", "vars"}) {
+                        String rel = root + "/" + clazz.replace('.', '/') + ".groovy";
+                        FilePath f = dir.child(rel);
+                        if (f.exists()) {
+                            String replacement = ReplayAction.replace(execution, clazz);
+                            if (replacement != null) {
+                                listener.getLogger().println("Replacing contents of " + rel);
+                                f.write(replacement, null); // TODO as below, unsure of encoding used by Groovy compiler
+                            }
+                        }
+                    }
+                }
+            }
+            // Copy sources with relevant files from the checkout:
+            FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
+            if (dir.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, libDir) == 0) {
+                throw new AbortException("Library " + name + " expected to contain at least one of src or vars directories");
+            }
+            List<URL> urls = new ArrayList<>();
+            FilePath srcDir = libDir.child("src");
+            if (srcDir.isDirectory()) {
+                urls.add(srcDir.toURI().toURL());
+            }
+            FilePath varsDir = libDir.child("vars");
+            if (varsDir.isDirectory()) {
+                urls.add(varsDir.toURI().toURL());
+                for (FilePath var : varsDir.list("*.groovy")) {
+                    variables.add(var.getBaseName());
+                }
+            }
+            return urls;
+        }
     }
 
     /**
