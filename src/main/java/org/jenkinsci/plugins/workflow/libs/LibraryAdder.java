@@ -118,6 +118,41 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
         return additions;
     }
 
+    @Override public List<Addition> readd(CpsFlowExecution execution) {
+        Queue.Executable executable;
+        try {
+            executable = execution.getOwner().getExecutable();
+        } catch (IOException x) {
+            LOGGER.log(Level.WARNING, null, x);
+            return null;
+        }
+        Run<?, ?> build;
+        if (executable instanceof Run) {
+            build = (Run) executable;
+        } else {
+            return null;
+        }
+        LibrariesAction action = build.getAction(LibrariesAction.class);
+        if (action == null) {
+            return null;
+        }
+        List<Addition> additions = new ArrayList<>();
+        for (LibraryRecord record : action.getLibraries()) {
+            try {
+                FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + record.name);
+                for (String root : new String[] {"src", "vars"}) {
+                    FilePath dir = libDir.child(root);
+                    if (dir.isDirectory()) {
+                        additions.add(new Addition(dir.toURI().toURL(), record.trusted));
+                    }
+                }
+            } catch (IOException | InterruptedException x) {
+                LOGGER.log(Level.WARNING, "could not readd " + record, x);
+            }
+        }
+        return additions;
+    }
+
     private static class CheckoutContext {
         final @Nonnull Node node;
         final @Nonnull Computer computer;

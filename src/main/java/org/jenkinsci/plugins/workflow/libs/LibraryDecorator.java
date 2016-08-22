@@ -24,13 +24,13 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
-import groovy.lang.GroovyShell;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.model.TaskListener;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -69,6 +69,20 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
             // but the current GroovyShellDecorator API does not allow us to even detect the Job!
             return;
         }
+        final List<ClasspathAdder> adders = new ArrayList<>(ExtensionList.lookup(ClasspathAdder.class));
+        Iterator<ClasspathAdder> it = adders.iterator();
+        while (it.hasNext()) {
+            List<ClasspathAdder.Addition> additions = it.next().readd(execution);
+            if (additions != null) {
+                for (ClasspathAdder.Addition addition : additions) {
+                    addition.addTo(execution);
+                }
+                it.remove();
+            }
+        }
+        if (adders.isEmpty()) {
+            return;
+        }
         cc.addCompilationCustomizers(new CompilationCustomizer(CompilePhase.CONVERSION) {
             @Override public void call(final SourceUnit source, GeneratorContext context, ClassNode classNode) throws CompilationFailedException {
                 final List<String> libraries = new ArrayList<>();
@@ -95,11 +109,10 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
                         }
                     }
                 }.visitClass(classNode);
-                for (ClasspathAdder adder : ExtensionList.lookup(ClasspathAdder.class)) {
+                for (ClasspathAdder adder : adders) {
                     try {
                         for (ClasspathAdder.Addition addition : adder.add(execution, libraries)) {
-                            GroovyShell shell = addition.trusted ? execution.getTrustedShell() : execution.getShell();
-                            shell.getClassLoader().addURL(addition.url);
+                            addition.addTo(execution);
                         }
                     } catch (Exception x) {
                         // Merely throwing CompilationFailedException does not cause compilation to…fail. Gotta love Groovy!
@@ -121,6 +134,5 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
             }
         });
     }
-
 
 }
