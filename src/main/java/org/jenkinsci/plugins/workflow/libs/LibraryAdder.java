@@ -78,6 +78,21 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
             // SCM.checkout does not make it possible to do checkouts outside the context of a Run.
             return Collections.emptyList();
         }
+        List<Addition> additions = new ArrayList<>();
+        LibrariesAction action = build.getAction(LibrariesAction.class);
+        if (action != null) {
+            // Resuming a build, so just look up what we loaded before.
+            for (LibraryRecord record : action.getLibraries()) {
+                FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + record.name);
+                for (String root : new String[] {"src", "vars"}) {
+                    FilePath dir = libDir.child(root);
+                    if (dir.isDirectory()) {
+                        additions.add(new Addition(dir.toURI().toURL(), record.trusted));
+                    }
+                }
+            }
+            return additions;
+        }
         // First parse the library declarations (if any) looking for requested versions.
         Map<String,String> libraryVersions = new HashMap<>();
         for (String library : libraries) {
@@ -108,46 +123,10 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
         build.addAction(new LibrariesAction(new ArrayList<>(librariesAdded.values())));
         // Now actually try to check out the libraries.
         CheckoutContext checkoutContext = CheckoutContext.forBuild(build, execution);
-        List<Addition> additions = new ArrayList<>();
         for (LibraryRecord record : librariesAdded.values()) {
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
             for (URL u : doAdd(record.name, record.version, sources.get(record.name), record.trusted, listener, checkoutContext, build, execution, record.variables)) {
                 additions.add(new Addition(u, record.trusted));
-            }
-        }
-        return additions;
-    }
-
-    @Override public List<Addition> readd(CpsFlowExecution execution) {
-        Queue.Executable executable;
-        try {
-            executable = execution.getOwner().getExecutable();
-        } catch (IOException x) {
-            LOGGER.log(Level.WARNING, null, x);
-            return null;
-        }
-        Run<?, ?> build;
-        if (executable instanceof Run) {
-            build = (Run) executable;
-        } else {
-            return null;
-        }
-        LibrariesAction action = build.getAction(LibrariesAction.class);
-        if (action == null) {
-            return null;
-        }
-        List<Addition> additions = new ArrayList<>();
-        for (LibraryRecord record : action.getLibraries()) {
-            try {
-                FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + record.name);
-                for (String root : new String[] {"src", "vars"}) {
-                    FilePath dir = libDir.child(root);
-                    if (dir.isDirectory()) {
-                        additions.add(new Addition(dir.toURI().toURL(), record.trusted));
-                    }
-                }
-            } catch (IOException | InterruptedException x) {
-                LOGGER.log(Level.WARNING, "could not readd " + record, x);
             }
         }
         return additions;

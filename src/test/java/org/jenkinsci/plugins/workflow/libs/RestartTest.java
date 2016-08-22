@@ -24,10 +24,12 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import com.cloudbees.hudson.plugins.folder.Folder;
 import java.util.Collections;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.replay.ReplayAction;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
@@ -79,6 +81,42 @@ public class RestartTest {
         });
     }
 
-    // TODO replay after restart
+    @Test public void replay() {
+        final String initialScript = "def call() {semaphore 'wait'; echo 'initial content'}";
+        rr.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                sampleRepo.init();
+                sampleRepo.write("vars/slow.groovy", initialScript);
+                sampleRepo.git("add", "vars");
+                sampleRepo.git("commit", "--message=init");
+                Folder d = rr.j.jenkins.createProject(Folder.class, "d");
+                d.getProperties().add(new FolderLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+                WorkflowJob p = d.createProject(WorkflowJob.class, "p");
+                p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') _ = slow()", true));
+                p.save(); // TODO should probably be implicit in setDefinition
+                WorkflowRun b1 = p.scheduleBuild2(0).waitForStart();
+                SemaphoreStep.waitForStart("wait/1", b1);
+            }
+        });
+        rr.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                WorkflowJob p = rr.j.jenkins.getItemByFullName("d/p", WorkflowJob.class);
+                WorkflowRun b1 = p.getLastBuild();
+                SemaphoreStep.success("wait/1", null);
+                rr.j.assertLogContains("initial content", rr.j.waitForCompletion(b1));
+                ReplayAction ra = b1.getAction(ReplayAction.class);
+                WorkflowRun b2 = (WorkflowRun) ra.run(ra.getOriginalScript(), Collections.singletonMap("slow", initialScript.replace("initial", "subsequent"))).waitForStart();
+                SemaphoreStep.waitForStart("wait/2", b2);
+            }
+        });
+        rr.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                WorkflowJob p = rr.j.jenkins.getItemByFullName("d/p", WorkflowJob.class);
+                WorkflowRun b2 = p.getLastBuild();
+                SemaphoreStep.success("wait/2", null);
+                rr.j.assertLogContains("subsequent content", rr.j.waitForCompletion(b2));
+            }
+        });
+    }
 
 }

@@ -28,7 +28,6 @@ import groovy.lang.GroovyShell;
 import hudson.ExtensionPoint;
 import java.net.URL;
 import java.util.List;
-import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 
@@ -59,22 +58,11 @@ public abstract class ClasspathAdder implements ExtensionPoint {
 
     /**
      * May add to the classpath.
-     * @param execution a running build
+     * @param execution a running build (possibly newly started, possibly resumed)
      * @param libraries aggregated entries from all encountered {@link Library#value} (will be empty if {@link Library} is never used at all)
      * @return a possibly empty list of additions
      * @throws Exception for whatever reason (will fail compilation)
      */
     public abstract @Nonnull List<Addition> add(@Nonnull CpsFlowExecution execution, @Nonnull List<String> libraries) throws Exception;
-
-    /**
-     * Readd libraries to the classpath after resuming a build.
-     * @param execution a running build, which may or may not have just been started
-     * @return a list of additions to use for this resumption of the build,
-     *         in which case {@link Library}s will not be inspected and {@link #add} will not be called;
-     *         or null if not known to be resumed by this extension (by default, null)
-     */
-    public @CheckForNull List<Addition> readd(@Nonnull CpsFlowExecution execution) {
-        return null;
-    }
 
 }
