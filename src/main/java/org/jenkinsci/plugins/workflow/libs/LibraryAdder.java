@@ -59,6 +59,7 @@ import org.jenkinsci.plugins.workflow.cps.GlobalVariableSet;
 import org.jenkinsci.plugins.workflow.cps.global.UserDefinedGlobalVariable;
 import org.jenkinsci.plugins.workflow.cps.replay.OriginalLoadedScripts;
 import org.jenkinsci.plugins.workflow.cps.replay.ReplayAction;
+import org.jenkinsci.plugins.workflow.flow.FlowCopier;
 import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
 import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
 
@@ -303,6 +304,21 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
                 LOGGER.log(Level.WARNING, null, x);
             }
             return scripts;
+        }
+
+    }
+
+    @Extension public static class Copier extends FlowCopier.ByRun {
+
+        @Override public void copy(Run<?,?> original, Run<?,?> copy, TaskListener listener) throws IOException, InterruptedException {
+            LibrariesAction action = original.getAction(LibrariesAction.class);
+            if (action != null) {
+                copy.addAction(new LibrariesAction(action.getLibraries()));
+                FilePath libs = new FilePath(original.getRootDir()).child("libs");
+                if (libs.isDirectory()) {
+                    libs.copyRecursiveTo(new FilePath(copy.getRootDir()).child("libs"));
+                }
+            }
         }
 
     }
