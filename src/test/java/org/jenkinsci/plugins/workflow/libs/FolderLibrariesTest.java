@@ -106,7 +106,7 @@ public class FolderLibrariesTest {
         Folder d = r.jenkins.createProject(Folder.class, "d");
         d.getProperties().add(new FolderLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new GitSCMSource(null, sampleRepo1.toString(), "", "*", "", true)))));
         WorkflowJob p = d.createProject(WorkflowJob.class, "p");
-        p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') _ = p()", true));
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') _; p()", true));
         WorkflowRun b = r.buildAndAssertSuccess(p);
         r.assertLogContains("found some stuff", b);
         assertNotNull(GlobalVariable.byName("p", b));
