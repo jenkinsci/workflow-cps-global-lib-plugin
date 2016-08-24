@@ -198,3 +198,24 @@ jenkinsPlugin {
     name = 'git'
 }
 ```
+
+### Using third-party libraries
+
+You may use third-party Java libraries (typically found in Maven Central) within your library code via `@Grab`.
+Refer to the [Grape documentation](http://docs.groovy-lang.org/latest/html/documentation/grape.html#_quick_start) for details.
+For example:
+
+```groovy
+@Grab('org.apache.commons:commons-math3:3.4.1')
+import org.apache.commons.math3.primes.Primes
+void parallelize(int count) {
+  if (!Primes.isPrime(count)) {
+    error "${count} was not prime"
+  }
+  // …
+}
+```
+
+Since the _Overall/RunScripts_ permission is required to push any changes to the global library repository,
+library code is allowed to call any Java methods without sandbox checks.
+Therefore it can safely encapsulate calls to third-party libraries (as well as to Jenkins model APIs, etc.).
