@@ -25,6 +25,9 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
+import com.gargoylesoftware.htmlunit.html.HtmlForm;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import com.gargoylesoftware.htmlunit.html.HtmlTextArea;
 import com.google.common.collect.ImmutableMap;
 import hudson.plugins.git.GitSCM;
 import java.util.Arrays;
@@ -139,8 +142,20 @@ public class FolderLibrariesTest {
         ra = b2.getAction(ReplayAction.class);
         assertEquals(ImmutableMap.of("pkg.Something", somethingCode, "var", varCode2), ra.getOriginalLoadedScripts());
         String somethingCode2 = somethingCode.replace("first", "second");
-        WorkflowRun b3 = r.assertBuildStatusSuccess((WorkflowRun) ra.run(ra.getOriginalScript(), ImmutableMap.of("pkg.Something", somethingCode2, "var", varCode2)).get());
-        r.assertLogContains("subsequently running the second version", b3);
+        WorkflowRun b3;
+        { // to bypass the UI: b3 = (WorkflowRun) ra.run(ra.getOriginalScript(), ImmutableMap.of("pkg.Something", somethingCode2, "var", varCode2)).get();
+            HtmlPage page = r.createWebClient().getPage(b2, ra.getUrlName());
+            HtmlForm form = page.getFormByName("config");
+            HtmlTextArea text = form.getTextAreaByName("_.pkg_Something");
+            assertEquals(somethingCode, text.getText());
+            text.setText(somethingCode2);
+            HtmlPage redirect = r.submit(form);
+            assertEquals(p.getAbsoluteUrl(), redirect.getUrl().toString());
+            r.waitUntilNoActivity();
+            b3 = p.getBuildByNumber(3);
+            assertNotNull(b3);
+        }
+        r.assertLogContains("subsequently running the second version", r.assertBuildStatusSuccess(b3));
     }
 
     // TODO test replay of `load`ed scripts as well as libraries
