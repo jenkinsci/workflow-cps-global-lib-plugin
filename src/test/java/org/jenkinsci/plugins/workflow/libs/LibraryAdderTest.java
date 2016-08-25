@@ -40,6 +40,7 @@ import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.scm.impl.SingleSCMSource;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
+import org.jenkinsci.plugins.workflow.cps.global.GrapeTest;
 import org.jenkinsci.plugins.workflow.cps.global.UserDefinedGlobalVariable;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -143,6 +144,33 @@ public class LibraryAdderTest {
             }
             return cfgs;
         }
+    }
+
+    /** @see GrapeTest */
+    @Test public void grape() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/semver/Version.groovy",
+            "package semver\n" +
+            "@Grab('com.vdurmont:semver4j:2.0.1') import com.vdurmont.semver4j.Semver\n" + // https://github.com/vdurmont/semver4j#using-gradle
+            "public class Version implements Serializable {\n" +
+            "  private final String v\n" +
+            "  public Version(String v) {this.v = v}\n" +
+            // @NonCPS since third-party class is not Serializable
+            "  @NonCPS public boolean isGreaterThan(String version) {\n" +
+            "    new Semver(v).isGreaterThan(version)\n" +
+            "  }\n" +
+            "}");
+        sampleRepo.git("add", "src");
+        sampleRepo.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("semver", new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition(
+            "@Library('semver@master') import semver.Version\n" +
+            "echo(/1.2.0 > 1.0.0? ${new Version('1.2.0').isGreaterThan('1.0.0')}/)\n" +
+            "echo(/1.0.0 > 1.2.0? ${new Version('1.0.0').isGreaterThan('1.2.0')}/)", true));
+        WorkflowRun b = r.buildAndAssertSuccess(p);
+        r.assertLogContains("1.2.0 > 1.0.0? true", b);
+        r.assertLogContains("1.0.0 > 1.2.0? false", b);
     }
 
     // TODO test that trusted libraries are rejected for replay

@@ -29,6 +29,7 @@ import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.html.HtmlTextArea;
 import com.google.common.collect.ImmutableMap;
+import hudson.model.Result;
 import hudson.plugins.git.GitSCM;
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,9 +38,11 @@ import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.scm.impl.SingleSCMSource;
 import static org.hamcrest.CoreMatchers.*;
+import org.jenkinsci.plugins.scriptsecurity.scripts.ScriptApproval;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
 import org.jenkinsci.plugins.workflow.cps.Snippetizer;
+import org.jenkinsci.plugins.workflow.cps.global.GrapeTest;
 import org.jenkinsci.plugins.workflow.cps.replay.ReplayAction;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -156,6 +159,24 @@ public class FolderLibrariesTest {
             assertNotNull(b3);
         }
         r.assertLogContains("subsequently running the second version", r.assertBuildStatusSuccess(b3));
+    }
+
+    /** @see GrapeTest#outsideLibrarySandbox */
+    @Test public void noGrape() throws Exception {
+        sampleRepo1.init();
+        sampleRepo1.write("src/pkg/Wrapper.groovy",
+            "package pkg\n" +
+            "@Grab('commons-primitives:commons-primitives:1.0')\n" +
+            "import org.apache.commons.collections.primitives.ArrayIntList\n" +
+            "class Wrapper {static def list() {new ArrayIntList()}}");
+        sampleRepo1.git("add", "src");
+        sampleRepo1.git("commit", "--message=init");
+        Folder d = r.jenkins.createProject(Folder.class, "d");
+        d.getProperties().add(new FolderLibraries(Collections.singletonList(new LibraryConfiguration("grape", new GitSCMSource(null, sampleRepo1.toString(), "", "*", "", true)))));
+        WorkflowJob p = d.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('grape@master') import pkg.Wrapper; echo(/should not have been able to run ${pkg.Wrapper.list()}/)", true));
+        ScriptApproval.get().approveSignature("new org.apache.commons.collections.primitives.ArrayIntList");
+        r.assertLogContains("GrapeIvy.chooseClassLoader", r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
     }
 
     // TODO test replay of `load`ed scripts as well as libraries
