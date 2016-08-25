@@ -26,6 +26,9 @@ THE SOFTWARE.
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
     <f:section title="${%Pipeline Libraries}">
+        <f:block>
+            <j:out value="${%blurb}"/>
+        </f:block>
         <f:entry>
             <f:repeatableProperty field="libraries" header="${%Library}">
                 <f:entry title="">

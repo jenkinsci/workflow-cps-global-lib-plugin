@@ -28,7 +28,7 @@ THE SOFTWARE.
     <f:entry field="name" title="${%Name}">
         <f:textbox/>
     </f:entry>
-    <f:dropdownDescriptorSelector field="scm" title="${SCM}" default="${descriptor.defaultSCMDescriptor}" descriptors="${descriptor.SCMDescriptors}"/>
+    <f:dropdownDescriptorSelector field="scm" title="${SCM}" descriptors="${descriptor.SCMDescriptors}"/>
     <f:entry field="defaultVersion" title="${%Default version}">
         <f:textbox/>
     </f:entry>

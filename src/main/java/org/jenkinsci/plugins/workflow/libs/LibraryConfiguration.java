@@ -24,8 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
@@ -33,15 +31,18 @@ import hudson.RelativePath;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
+import hudson.model.Items;
 import hudson.model.TaskListener;
+import hudson.scm.SCM;
 import hudson.util.FormValidation;
 import hudson.util.StreamTaskListener;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
@@ -132,29 +133,45 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
 
     @Extension public static class DescriptorImpl extends Descriptor<LibraryConfiguration> {
 
-        public SCMSourceDescriptor getDefaultSCMDescriptor() {
-            return Jenkins.getActiveInstance().getDescriptorByType(SingleSCMSource.DescriptorImpl.class);
-        }
-
         /**
          * Returns only implementations overriding {@link SCMSource#retrieve(String, TaskListener)}.
          * (The default implementation only supports branch names, so you would be better off using {@link SingleSCMSource}.)
          */
         public Collection<SCMSourceDescriptor> getSCMDescriptors() {
-            return Collections2.filter(ExtensionList.lookup(SCMSourceDescriptor.class), new Predicate<SCMSourceDescriptor>() {
-                @Override public boolean apply(SCMSourceDescriptor input) {
-                    return Util.isOverridden(SCMSource.class, input.clazz, "retrieve", String.class, TaskListener.class);
+            List<SCMSourceDescriptor> descriptors = new ArrayList<>();
+            List<SCMSourceDescriptor> lessFavoredDescriptors = new ArrayList<>();
+            for (SCMSourceDescriptor d : ExtensionList.lookup(SCMSourceDescriptor.class)) {
+                if (Util.isOverridden(SCMSource.class, d.clazz, "retrieve", String.class, TaskListener.class)) {
+                    (d.clazz == SingleSCMSource.class ? lessFavoredDescriptors : descriptors).add(d);
                 }
-            });
+            }
+            descriptors.addAll(lessFavoredDescriptors);
+            return descriptors;
         }
 
-        public FormValidation doCheckName(@QueryParameter String name) {
+        public FormValidation doCheckName(@QueryParameter String name, @QueryParameter @RelativePath("scm") String id) {
             if (name.isEmpty()) {
-                return FormValidation.warning("You must enter a name.");
-            } else {
-                // Currently no character restrictions.
-                return FormValidation.ok();
+                return FormValidation.error("You must enter a name.");
             }
+            for (LibraryResolver resolver : ExtensionList.lookup(LibraryResolver.class)) {
+                SCMSource scm = resolver.getSCMSource(id, Stapler.getCurrentRequest());
+                if (scm instanceof SingleSCMSource) {
+                    SCM impl = ((SingleSCMSource) scm).getScm();
+                    String singleSCMSourceDisplayName = scm.getDescriptor().getDisplayName();
+                    if (scm == null) { // SingleSCMSource.DescriptorImpl.getSCMDescriptors filters out NullSCM, but perhaps pulldown was empty
+                        return FormValidation.errorWithMarkup("You must specify an SCM when using <b>" + singleSCMSourceDisplayName + "</b>");
+                    }
+                    if (!((SingleSCMSource) scm).getName().isEmpty()) {
+                        // Really this should be doCheckScm but form validation makes that impossible, so you need to save & reload to see this change.
+                        return FormValidation.warningWithMarkup("Branch name is ignored when using <b>" + singleSCMSourceDisplayName + "</b>");
+                    }
+                    if (!Items.XSTREAM2.toXML(scm).contains("${library." + name + ".version}")) {
+                        return FormValidation.warningWithMarkup("When using <b>" + singleSCMSourceDisplayName + "</b>, you will need to include <code>${library." + Util.escape(name) + ".version}</code> in the SCM configuration somewhere.");
+                    }
+                }
+            }
+            // Currently no character restrictions.
+            return FormValidation.ok();
         }
 
         public FormValidation doCheckDefaultVersion(@QueryParameter String defaultVersion, @QueryParameter boolean implicit, @QueryParameter boolean allowVersionOverride, @QueryParameter @RelativePath("scm") String id) {
@@ -170,7 +187,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
                 for (LibraryResolver resolver : ExtensionList.lookup(LibraryResolver.class)) {
                     SCMSource scm = resolver.getSCMSource(id, Stapler.getCurrentRequest());
                     if (scm instanceof SingleSCMSource) {
-                        return FormValidation.ok("Cannot validate default version with legacy SCM plugins. Use a different SCM if available.");
+                        return FormValidation.okWithMarkup("Cannot validate default version with legacy SCM plugins via <b>" + scm.getDescriptor().getDisplayName() + "</b>. Use a different SCM if available.");
                     } else if (scm != null) {
                         StringWriter w = new StringWriter();
                         try {
@@ -183,7 +200,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
                                 listener.getLogger().flush();
                                 return FormValidation.warning("Revision seems invalid:\n" + w);
                             }
-                        } catch (IOException | InterruptedException x) {
+                        } catch (Exception x) {
                             return FormValidation.warning(x, "Cannot validate default version.");
                         }
                     }

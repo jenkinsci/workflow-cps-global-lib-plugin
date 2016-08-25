@@ -27,6 +27,9 @@ THE SOFTWARE.
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
     <j:if test="${h.hasPermission(app.RUN_SCRIPTS)}">
         <f:section title="${%Global Pipeline Libraries}">
+            <f:block>
+                <j:out value="${%blurb}"/>
+            </f:block>
             <f:entry>
                 <f:repeatableProperty field="libraries" header="${%Library}">
                     <f:entry title="">
