@@ -219,3 +219,5 @@ void parallelize(int count) {
 Since the _Overall/RunScripts_ permission is required to push any changes to the global library repository,
 library code is allowed to call any Java methods without sandbox checks.
 Therefore it can safely encapsulate calls to third-party libraries (as well as to Jenkins model APIs, etc.).
+
+Libraries are cached by default in `~/.groovy/grapes/` on the Jenkins master.
