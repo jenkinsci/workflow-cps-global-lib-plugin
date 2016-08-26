@@ -51,7 +51,7 @@ public class GitLoader implements Loader, Parser {
     @Override
     public URL load(File storageDir) {
         File targetFile = new File(storageDir, "global-library-git");
-        Logger.getLogger(GitLoader.class.getName()).log(Level.INFO, "clone git repo into " + targetFile);
+        Logger.getLogger(GitLoader.class.getName()).log(Level.INFO, "clone git repo " + repositoryUrl + " into " + targetFile);
         try {
             FileUtils.deleteDirectory(targetFile);
             Git result = Git
@@ -60,6 +60,7 @@ public class GitLoader implements Loader, Parser {
                     .setBranch(branch)
                     .setDirectory(targetFile)
                     .call();
+            result.close();
             if (clPath != null) {
                 targetFile = new File(targetFile, clPath);
             }
