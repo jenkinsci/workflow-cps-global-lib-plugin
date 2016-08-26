@@ -158,14 +158,14 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
                 if (scm instanceof SingleSCMSource) {
                     SCM impl = ((SingleSCMSource) scm).getScm();
                     String singleSCMSourceDisplayName = scm.getDescriptor().getDisplayName();
-                    if (scm == null) { // SingleSCMSource.DescriptorImpl.getSCMDescriptors filters out NullSCM, but perhaps pulldown was empty
+                    if (impl == null) { // SingleSCMSource.DescriptorImpl.getSCMDescriptors filters out NullSCM, but perhaps pulldown was empty
                         return FormValidation.errorWithMarkup("You must specify an SCM when using <b>" + singleSCMSourceDisplayName + "</b>");
                     }
                     if (!((SingleSCMSource) scm).getName().isEmpty()) {
                         // Really this should be doCheckScm but form validation makes that impossible, so you need to save & reload to see this change.
                         return FormValidation.warningWithMarkup("Branch name is ignored when using <b>" + singleSCMSourceDisplayName + "</b>");
                     }
-                    if (!Items.XSTREAM2.toXML(scm).contains("${library." + name + ".version}")) {
+                    if (!Items.XSTREAM2.toXML(impl).contains("${library." + name + ".version}")) {
                         return FormValidation.warningWithMarkup("When using <b>" + singleSCMSourceDisplayName + "</b>, you will need to include <code>${library." + Util.escape(name) + ".version}</code> in the SCM configuration somewhere.");
                     }
                 }
