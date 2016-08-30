@@ -39,6 +39,7 @@ import java.util.Map;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.scm.impl.SingleSCMSource;
+import jenkins.scm.impl.subversion.SubversionSCMSource;
 import jenkins.scm.impl.subversion.SubversionSampleRepoRule;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
@@ -130,6 +131,36 @@ public class LibraryAdderTest {
         r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
         p.setDefinition(new CpsFlowDefinition("echo(/using ${pkg.Lib.CONST}/)", true));
         r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
+    }
+
+    @Test public void properSvn() throws Exception {
+        sampleSvnRepo.init();
+        sampleSvnRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String CONST = 'initial'}");
+        sampleSvnRepo.svn("add", "src");
+        sampleSvnRepo.svn("commit", "--message=init");
+        sampleSvnRepo.svn("copy", "--message=tagged", sampleSvnRepo.trunkUrl(), sampleSvnRepo.tagsUrl() + "/initial");
+        sampleSvnRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String CONST = 'modified'}");
+        sampleSvnRepo.svn("commit", "--message=modified");
+        // TODO https://github.com/jenkinsci/subversion-plugin/pull/168 use new constructor; until then, LibraryConfiguration.DescriptorImpl.getSCMDescriptors will not offer it:
+        LibraryConfiguration stuff = new LibraryConfiguration("stuff", new SubversionSCMSource(null, sampleSvnRepo.prjUrl(), "", "trunk,branches/*,tags/*,sandbox/*", ""));
+        stuff.setDefaultVersion("trunk");
+        stuff.setImplicit(true);
+        GlobalLibraries.get().setLibraries(Collections.singletonList(stuff));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff@trunk') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
+        r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff@tags/initial') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
+        r.assertLogContains("using initial", r.buildAndAssertSuccess(p));
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
+        r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
+        p.setDefinition(new CpsFlowDefinition("echo(/using ${pkg.Lib.CONST}/)", true));
+        r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
+        /* TODO #168 use SubversionSampleRepoRule.revision to obtain the revision number right before tagging:
+        // Note that LibraryAdder.parse uses indexOf not lastIndexOf, so we can have an @ inside a revision
+        // (the converse is that we may not have an @ inside a library name):
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff@trunk@3') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
+        r.assertLogContains("using initial", r.buildAndAssertSuccess(p));
+        */
     }
 
     @Test public void globalVariable() throws Exception {
