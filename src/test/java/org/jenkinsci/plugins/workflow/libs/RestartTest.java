@@ -105,6 +105,7 @@ public class RestartTest {
                 SemaphoreStep.success("wait/1", null);
                 rr.j.assertLogContains("initial content", rr.j.waitForCompletion(b1));
                 ReplayAction ra = b1.getAction(ReplayAction.class);
+                assertEquals(Collections.singletonMap("slow", initialScript), ra.getOriginalLoadedScripts());
                 WorkflowRun b2 = (WorkflowRun) ra.run(ra.getOriginalScript(), Collections.singletonMap("slow", initialScript.replace("initial", "subsequent"))).waitForStart();
                 SemaphoreStep.waitForStart("wait/2", b2);
             }

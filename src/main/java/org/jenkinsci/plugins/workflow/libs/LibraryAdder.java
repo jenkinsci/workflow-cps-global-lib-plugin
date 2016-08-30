@@ -292,6 +292,9 @@ import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
                             }
                             for (String rootName : new String[] {"src", "vars"}) {
                                 FilePath root = libs.child(library.name + "/" + rootName);
+                                if (!root.isDirectory()) {
+                                    continue;
+                                }
                                 for (FilePath groovy : root.list("**/*.groovy")) {
                                     String clazz = groovy.getRemote().replaceFirst("^\\Q" + root.getRemote() + "\\E[/\\\\](.+)[.]groovy", "$1").replace('/', '.');
                                     scripts.put(clazz, groovy.readToString()); // TODO no idea what encoding the Groovy compiler uses
