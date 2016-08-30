@@ -45,7 +45,7 @@ public class ResourceStepTest {
 
     @Test public void smokes() throws Exception {
         sampleRepo.init();
-        sampleRepo.write("src/pkg/Stuff.groovy", "package pkg; class Stuff {static def contents(script) {script.libraryResource target: Stuff, resource: 'pkg/file'}}");
+        sampleRepo.write("src/pkg/Stuff.groovy", "package pkg; class Stuff {static def contents(script) {script.libraryResource 'pkg/file'}}");
         sampleRepo.write("resources/pkg/file", "fixed contents");
         sampleRepo.git("add", "src", "resources");
         sampleRepo.git("commit", "--message=init");
@@ -64,7 +64,7 @@ public class ResourceStepTest {
 
     @Test public void duplicatedResources() throws Exception {
         sampleRepo.init();
-        sampleRepo.write("src/pkg/Stuff.groovy", "package pkg; class Stuff {static def contents(script) {script.libraryResource target: Stuff, resource: 'pkg/file'}}");
+        sampleRepo.write("src/pkg/Stuff.groovy", "package pkg; class Stuff {static def contents(script) {script.libraryResource 'pkg/file'}}");
         sampleRepo.write("resources/pkg/file", "initial contents");
         sampleRepo.git("add", "src", "resources");
         sampleRepo.git("commit", "--message=init");
