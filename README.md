@@ -44,7 +44,7 @@ Other directories under the root are reserved for future enhancements.
 
 ## Defining external libraries
 
-An external library is defined with a name, an SCM, and optionally a default version.
+An external library is defined with a name, a source code retrieval method such as by SCM, and optionally a default version.
 The name should be a short identifier as it will be used in scripts.
 
 The version could be anything understood by that SCM; for example, branches, tags, and commit hashes all work for Git.
@@ -52,10 +52,10 @@ You may also declare whether scripts need to explicitly request that library (de
 Furthermore, if you specify a version in Jenkins configuration, you can block scripts from selecting a _different_ version.
 
 The best way to specify the SCM is using an SCM plugin which has been specifically updated
-to support a new API for checking out an arbitrary named version.
-Initially the Git plugin has this modification; others should follow.
+to support a new API for checking out an arbitrary named version (_Modern SCM_ option).
+Initially the Git and Subversion plugins have this modification; others should follow.
 
-If your SCM plugin has not been integrated, you may select _Single repository & branch_ and pick anything offered.
+If your SCM plugin has not been integrated, you may select _Legacy SCM_ and pick anything offered.
 In this case, you need to include `${library.yourLibName.version}` somewhere in the configuration of the SCM,
 so that during checkout the plugin will expand this variable to select the desired version.
 For example, for Subversion, you can set the _Repository URL_ to `https://svnserver/project/${library.yourLibName.version}`
