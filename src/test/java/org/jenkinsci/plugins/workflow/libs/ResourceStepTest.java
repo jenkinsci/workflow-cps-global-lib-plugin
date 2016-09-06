@@ -50,7 +50,7 @@ public class ResourceStepTest {
         sampleRepo.git("add", "src", "resources");
         sampleRepo.git("commit", "--message=init");
         GlobalLibraries.get().setLibraries(Collections.singletonList(
-            new LibraryConfiguration("stuff", new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true))));
+            new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') import pkg.Stuff; echo(/got ${Stuff.contents(this)}/)", true));
         r.assertLogContains("got fixed contents", r.buildAndAssertSuccess(p));
@@ -72,9 +72,9 @@ public class ResourceStepTest {
         sampleRepo.write("resources/pkg/file", "subsequent contents");
         sampleRepo.git("commit", "--all", "--message=edited");
         String v2 = sampleRepo.head();
-        LibraryConfiguration stuff1 = new LibraryConfiguration("stuff1", new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true));
+        LibraryConfiguration stuff1 = new LibraryConfiguration("stuff1", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
         stuff1.setDefaultVersion(v1);
-        LibraryConfiguration stuff2 = new LibraryConfiguration("stuff2", new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true));
+        LibraryConfiguration stuff2 = new LibraryConfiguration("stuff2", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
         stuff2.setDefaultVersion(v2);
         GlobalLibraries.get().setLibraries(Arrays.asList(stuff1, stuff2));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");

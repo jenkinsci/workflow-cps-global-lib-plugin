@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import jenkins.scm.api.SCMSource;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
@@ -80,19 +79,15 @@ public class FolderLibraries extends AbstractFolderProperty<AbstractFolder<?>> {
             return libraries;
         }
 
-        @Override public SCMSource getSCMSource(String sourceId, StaplerRequest request) {
+        @Override public Collection<LibraryConfiguration> fromConfiguration(StaplerRequest request) {
+            List<LibraryConfiguration> libraries = new ArrayList<>();
             for (ItemGroup<?> group = request.findAncestorObject(AbstractFolder.class); group instanceof AbstractFolder; group = ((AbstractFolder) group).getParent()) {
                 FolderLibraries prop = ((AbstractFolder<?>) group).getProperties().get(FolderLibraries.class);
                 if (prop != null) {
-                    for (LibraryConfiguration cfg : prop.getLibraries()) {
-                        SCMSource scm = cfg.getScm();
-                        if (scm.getId().equals(sourceId)) {
-                            return scm;
-                        }
-                    }
+                    libraries.addAll(prop.getLibraries());
                 }
             }
-            return null;
+            return libraries;
         }
 
     }

@@ -25,14 +25,11 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import hudson.ExtensionPoint;
-import hudson.model.Item;
 import hudson.model.Job;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
-import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import jenkins.scm.api.SCMSource;
-import jenkins.scm.api.SCMSourceOwner;
 import org.kohsuke.stapler.StaplerRequest;
 
 /**
@@ -60,14 +57,12 @@ public abstract class LibraryResolver implements ExtensionPoint {
     public abstract @Nonnull Collection<LibraryConfiguration> forJob(@Nonnull Job<?,?> job, @Nonnull Map<String,String> libraryVersions);
 
     /**
-     * Looks up a known SCM used as part of some {@link LibraryConfiguration} previously configured by this resolver.
-     * Similar to {@link SCMSourceOwner#getSCMSource} but does not require implementation of {@link Item} and may be contextualized to a {@link StaplerRequest}.
-     * @param sourceId from {@link SCMSource#getId}
+     * A list of libraries that may have already been configured in this context.
      * @param request a web request
-     * @return a matching source, or null if unknown (null by default)
+     * @return known libraries, if any (empty by default)
      */
-    public @CheckForNull SCMSource getSCMSource(@Nonnull String sourceId, @Nonnull StaplerRequest request) {
-        return null;
+    public @Nonnull Collection<LibraryConfiguration> fromConfiguration(@Nonnull StaplerRequest request) {
+        return Collections.emptySet();
     }
 
 }

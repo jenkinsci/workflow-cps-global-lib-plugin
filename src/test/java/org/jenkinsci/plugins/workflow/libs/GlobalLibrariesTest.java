@@ -33,7 +33,6 @@ import java.util.Collections;
 import java.util.List;
 import jenkins.model.Jenkins;
 import jenkins.plugins.git.GitSCMSource;
-import jenkins.scm.impl.SingleSCMSource;
 import static org.hamcrest.Matchers.*;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -49,8 +48,8 @@ public class GlobalLibrariesTest {
         r.configRoundtrip();
         GlobalLibraries gl = GlobalLibraries.get();
         assertEquals(Collections.emptyList(), gl.getLibraries());
-        LibraryConfiguration foo = new LibraryConfiguration("foo", new GitSCMSource("foo", "https://nowhere.net/foo.git", "", "*", "", true));
-        LibraryConfiguration bar = new LibraryConfiguration("bar", new SingleSCMSource("bar", "bar", new GitSCM("https://nowhere.net/bar.git")));
+        LibraryConfiguration foo = new LibraryConfiguration("foo", new SCMSourceRetriever(new GitSCMSource("foo", "https://nowhere.net/foo.git", "", "*", "", true)));
+        LibraryConfiguration bar = new LibraryConfiguration("bar", new SCMRetriever(new GitSCM("https://nowhere.net/bar.git")));
         bar.setDefaultVersion("master");
         bar.setImplicit(true);
         bar.setAllowVersionOverride(false);

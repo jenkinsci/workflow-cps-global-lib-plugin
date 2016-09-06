@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
-import jenkins.scm.impl.SingleSCMSource;
 import jenkins.scm.impl.subversion.SubversionSCMSource;
 import jenkins.scm.impl.subversion.SubversionSampleRepoRule;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
@@ -68,9 +67,7 @@ public class LibraryAdderTest {
         sampleRepo.write("src/pkg/Lib.groovy", lib);
         sampleRepo.git("add", "src");
         sampleRepo.git("commit", "--message=init");
-        GlobalLibraries.get().setLibraries(Collections.singletonList(
-            new LibraryConfiguration("stuff",
-                new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true))));
+        GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
         String script = "@Library('stuff@master') import static pkg.Lib.*; echo(/using ${CONST}/)";
         p.setDefinition(new CpsFlowDefinition(script, true));
@@ -92,7 +89,7 @@ public class LibraryAdderTest {
         sampleRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String CONST = 'modified'}");
         sampleRepo.git("commit", "--all", "--message=modified");
         LibraryConfiguration stuff = new LibraryConfiguration("stuff",
-            new SingleSCMSource("", "",
+            new SCMRetriever(
                     new GitSCM(Collections.singletonList(new UserRemoteConfig(sampleRepo.fileUrl(), null, null, null)),
                             Collections.singletonList(new BranchSpec("${library.stuff.version}")),
                             false, Collections.<SubmoduleConfig>emptyList(), null, null, Collections.<GitSCMExtension>emptyList())));
@@ -113,12 +110,12 @@ public class LibraryAdderTest {
     @Test public void interpolationSvn() throws Exception {
         sampleSvnRepo.init();
         sampleSvnRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String CONST = 'initial'}");
-        sampleSvnRepo.svn("add", "src");
-        sampleSvnRepo.svn("commit", "--message=init");
-        sampleSvnRepo.svn("copy", "--message=tagged", sampleSvnRepo.trunkUrl(), sampleSvnRepo.tagsUrl() + "/initial");
+        sampleSvnRepo.svnkit("add", sampleSvnRepo.wc() + "/src");
+        sampleSvnRepo.svnkit("commit", "--message=init", sampleSvnRepo.wc());
+        sampleSvnRepo.svnkit("copy", "--message=tagged", sampleSvnRepo.trunkUrl(), sampleSvnRepo.tagsUrl() + "/initial");
         sampleSvnRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String CONST = 'modified'}");
-        sampleSvnRepo.svn("commit", "--message=modified");
-        LibraryConfiguration stuff = new LibraryConfiguration("stuff", new SingleSCMSource("", "", new SubversionSCM(sampleSvnRepo.prjUrl() + "/${library.stuff.version}")));
+        sampleSvnRepo.svnkit("commit", "--message=modified", sampleSvnRepo.wc());
+        LibraryConfiguration stuff = new LibraryConfiguration("stuff", new SCMRetriever(new SubversionSCM(sampleSvnRepo.prjUrl() + "/${library.stuff.version}")));
         stuff.setDefaultVersion("trunk");
         stuff.setImplicit(true);
         GlobalLibraries.get().setLibraries(Collections.singletonList(stuff));
@@ -136,13 +133,13 @@ public class LibraryAdderTest {
     @Test public void properSvn() throws Exception {
         sampleSvnRepo.init();
         sampleSvnRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String CONST = 'initial'}");
-        sampleSvnRepo.svn("add", "src");
-        sampleSvnRepo.svn("commit", "--message=init");
-        sampleSvnRepo.svn("copy", "--message=tagged", sampleSvnRepo.trunkUrl(), sampleSvnRepo.tagsUrl() + "/initial");
+        sampleSvnRepo.svnkit("add", sampleSvnRepo.wc() + "/src");
+        sampleSvnRepo.svnkit("commit", "--message=init", sampleSvnRepo.wc());
+        long tag = sampleSvnRepo.revision();
+        sampleSvnRepo.svnkit("copy", "--message=tagged", sampleSvnRepo.trunkUrl(), sampleSvnRepo.tagsUrl() + "/initial");
         sampleSvnRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String CONST = 'modified'}");
-        sampleSvnRepo.svn("commit", "--message=modified");
-        // TODO https://github.com/jenkinsci/subversion-plugin/pull/168 use new constructor; until then, LibraryConfiguration.DescriptorImpl.getSCMDescriptors will not offer it:
-        LibraryConfiguration stuff = new LibraryConfiguration("stuff", new SubversionSCMSource(null, sampleSvnRepo.prjUrl(), "", "trunk,branches/*,tags/*,sandbox/*", ""));
+        sampleSvnRepo.svnkit("commit", "--message=modified", sampleSvnRepo.wc());
+        LibraryConfiguration stuff = new LibraryConfiguration("stuff", new SCMSourceRetriever(new SubversionSCMSource(null, sampleSvnRepo.prjUrl())));
         stuff.setDefaultVersion("trunk");
         stuff.setImplicit(true);
         GlobalLibraries.get().setLibraries(Collections.singletonList(stuff));
@@ -155,12 +152,10 @@ public class LibraryAdderTest {
         r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
         p.setDefinition(new CpsFlowDefinition("echo(/using ${pkg.Lib.CONST}/)", true));
         r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
-        /* TODO #168 use SubversionSampleRepoRule.revision to obtain the revision number right before tagging:
         // Note that LibraryAdder.parse uses indexOf not lastIndexOf, so we can have an @ inside a revision
         // (the converse is that we may not have an @ inside a library name):
-        p.setDefinition(new CpsFlowDefinition("@Library('stuff@trunk@3') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff@trunk@" + tag + "') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
         r.assertLogContains("using initial", r.buildAndAssertSuccess(p));
-        */
     }
 
     @Test public void globalVariable() throws Exception {
@@ -171,7 +166,7 @@ public class LibraryAdderTest {
         sampleRepo.git("commit", "--message=init");
         GlobalLibraries.get().setLibraries(Collections.singletonList(
             new LibraryConfiguration("echo-utils",
-                new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true))));
+                new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("@Library('echo-utils@master') import myecho; myecho()", true));
         WorkflowRun b = r.buildAndAssertSuccess(p);
@@ -197,7 +192,7 @@ public class LibraryAdderTest {
         @Override public Collection<LibraryConfiguration> forJob(Job<?,?> job, Map<String,String> libraryVersions) {
             List<LibraryConfiguration> cfgs = new ArrayList<>();
             for (String url : libraryVersions.keySet()) {
-                LibraryConfiguration cfg = new LibraryConfiguration(url, new GitSCMSource(null, url, "", "*", "", true));
+                LibraryConfiguration cfg = new LibraryConfiguration(url, new SCMSourceRetriever(new GitSCMSource(null, url, "", "*", "", true)));
                 cfg.setDefaultVersion("master");
                 cfgs.add(cfg);
             }
@@ -221,7 +216,7 @@ public class LibraryAdderTest {
             "}");
         sampleRepo.git("add", "src");
         sampleRepo.git("commit", "--message=init");
-        GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("semver", new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true))));
+        GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("semver", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition(
             "@Library('semver@master') import semver.Version\n" +

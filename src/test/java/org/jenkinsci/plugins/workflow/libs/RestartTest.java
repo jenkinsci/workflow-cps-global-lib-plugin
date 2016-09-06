@@ -55,7 +55,7 @@ public class RestartTest {
                 sampleRepo.write("vars/slow.groovy", "def call() {semaphore 'wait-var'}");
                 sampleRepo.git("add", "src", "vars");
                 sampleRepo.git("commit", "--message=init");
-                GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true))));
+                GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
                 WorkflowJob p = rr.j.jenkins.createProject(WorkflowJob.class, "p");
                 p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') import pkg.Slow; echo 'at the beginning'; Slow.wait(this); echo 'in the middle'; slow(); echo 'at the end'", true));
                 WorkflowRun b = p.scheduleBuild2(0).waitForStart();
@@ -90,7 +90,7 @@ public class RestartTest {
                 sampleRepo.git("add", "vars");
                 sampleRepo.git("commit", "--message=init");
                 Folder d = rr.j.jenkins.createProject(Folder.class, "d");
-                d.getProperties().add(new FolderLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+                d.getProperties().add(new FolderLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true))))));
                 WorkflowJob p = d.createProject(WorkflowJob.class, "p");
                 p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') _ = slow()", true));
                 p.save(); // TODO should probably be implicit in setDefinition
