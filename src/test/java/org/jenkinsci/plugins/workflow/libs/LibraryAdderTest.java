@@ -45,6 +45,7 @@ import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
 import org.jenkinsci.plugins.workflow.cps.global.GrapeTest;
 import org.jenkinsci.plugins.workflow.cps.global.UserDefinedGlobalVariable;
+import org.jenkinsci.plugins.workflow.cps.replay.ReplayAction;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import static org.junit.Assert.*;
@@ -234,6 +235,23 @@ public class LibraryAdderTest {
         r.assertLogContains("1.0.0 > 1.2.0? false", b);
     }
 
-    // TODO test that trusted libraries are rejected for replay
+    @Test public void noReplayTrustedLibraries() throws Exception {
+        sampleRepo.init();
+        String originalMessage = "must not be edited";
+        String originalScript = "def call() {echo '" + originalMessage + "'}";
+        sampleRepo.write("vars/trusted.groovy", originalScript);
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("trusted", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('trusted@master') import trusted; trusted()", true));
+        WorkflowRun b1 = r.buildAndAssertSuccess(p);
+        r.assertLogContains(originalMessage, b1);
+        ReplayAction ra = b1.getAction(ReplayAction.class);
+        assertEquals(Collections.emptyMap(), ra.getOriginalLoadedScripts());
+        WorkflowRun b2 = (WorkflowRun) ra.run(ra.getOriginalScript(), Collections.singletonMap("trusted", originalScript.replace(originalMessage, "should not allowed"))).get();
+        r.assertBuildStatusSuccess(b2); // currently do not throw an error, since the GUI does not offer it anyway
+        r.assertLogContains(originalMessage, b2);
+    }
 
 }
