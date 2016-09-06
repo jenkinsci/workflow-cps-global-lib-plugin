@@ -87,9 +87,11 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         }
         // First parse the library declarations (if any) looking for requested versions.
         Map<String,String> libraryVersions = new HashMap<>();
+        Map<String,String> librariesUnparsed = new HashMap<>();
         for (String library : libraries) {
             String[] parsed = parse(library);
             libraryVersions.put(parsed[0], parsed[1]);
+            librariesUnparsed.put(parsed[0], library);
         }
         // Now we will see which libraries we want to load for this job.
         Map<String,LibraryRecord> librariesAdded = new LinkedHashMap<>();
@@ -111,8 +113,11 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                 retrievers.put(name, cfg.getRetriever());
             }
         }
-        if (!libraryVersions.isEmpty()) {
-            throw new AbortException(Messages.LibraryAdder_could_not_find_any_definition_of_librari(libraryVersions.keySet()));
+        for (String name : librariesAdded.keySet()) {
+            String unparsed = librariesUnparsed.get(name);
+            if (unparsed != null) {
+                libraries.remove(unparsed);
+            }
         }
         // Record libraries we plan to load. We need LibrariesAction there first so variables can be interpolated.
         build.addAction(new LibrariesAction(new ArrayList<>(librariesAdded.values())));

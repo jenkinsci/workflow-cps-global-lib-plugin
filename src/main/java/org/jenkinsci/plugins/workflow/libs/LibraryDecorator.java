@@ -94,26 +94,29 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
                         }
                     }
                 }.visitClass(classNode);
-                for (ClasspathAdder adder : ExtensionList.lookup(ClasspathAdder.class)) {
-                    try {
+                try {
+                    for (ClasspathAdder adder : ExtensionList.lookup(ClasspathAdder.class)) {
                         for (ClasspathAdder.Addition addition : adder.add(execution, libraries)) {
                             addition.addTo(execution);
                         }
-                    } catch (Exception x) {
-                        // Merely throwing CompilationFailedException does not cause compilation to…fail. Gotta love Groovy!
-                        source.getErrorCollector().addErrorAndContinue(Message.create("Loading libraries failed", source));
-                        try {
-                            TaskListener listener = execution.getOwner().getListener();
-                            if (x instanceof AbortException) {
-                                listener.error(x.getMessage());
-                            } else {
-                                x.printStackTrace(listener.getLogger());
-                            }
-                            throw new CompilationFailedException(Phases.CONVERSION, source);
-                        } catch (IOException x2) {
-                            Logger.getLogger(LibraryDecorator.class.getName()).log(Level.WARNING, null, x2);
-                            throw new CompilationFailedException(Phases.CONVERSION, source, x); // reported at least in Jenkins 2
+                    }
+                    if (!libraries.isEmpty()) {
+                        throw new AbortException(Messages.LibraryDecorator_could_not_find_any_definition_of_librari(libraries));
+                    }
+                } catch (Exception x) {
+                    // Merely throwing CompilationFailedException does not cause compilation to…fail. Gotta love Groovy!
+                    source.getErrorCollector().addErrorAndContinue(Message.create("Loading libraries failed", source));
+                    try {
+                        TaskListener listener = execution.getOwner().getListener();
+                        if (x instanceof AbortException) {
+                            listener.error(x.getMessage());
+                        } else {
+                            x.printStackTrace(listener.getLogger());
                         }
+                        throw new CompilationFailedException(Phases.CONVERSION, source);
+                    } catch (IOException x2) {
+                        Logger.getLogger(LibraryDecorator.class.getName()).log(Level.WARNING, null, x2);
+                        throw new CompilationFailedException(Phases.CONVERSION, source, x); // reported at least in Jenkins 2
                     }
                 }
             }

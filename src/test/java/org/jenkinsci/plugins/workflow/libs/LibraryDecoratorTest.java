@@ -68,6 +68,7 @@ public class LibraryDecoratorTest {
             for (String library : libraries) {
                 additions.add(new Addition(new File(((WorkflowRun) execution.getOwner().getExecutable()).getParent().getRootDir(), "libs/" + library).toURI().toURL(), false));
             }
+            libraries.clear();
             return additions;
         }
     }
