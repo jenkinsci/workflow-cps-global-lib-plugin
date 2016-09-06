@@ -28,6 +28,7 @@ import hudson.Extension;
 import hudson.model.Job;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
@@ -66,6 +67,7 @@ import org.kohsuke.stapler.StaplerRequest;
 
     @Override public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
         if (Jenkins.getActiveInstance().hasPermission(Jenkins.RUN_SCRIPTS)) {
+            setLibraries(Collections.<LibraryConfiguration>emptyList()); // allow last library to be deleted
             // TODO https://github.com/jenkinsci/jenkins/pull/2509 super.configure(req, json)
             req.bindJSON(this, json);
             return true;
