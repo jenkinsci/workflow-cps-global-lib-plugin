@@ -106,10 +106,13 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                     listener.getLogger().println("Only using first definition of library " + name);
                     continue;
                 }
-                String version = cfg.defaultedVersion(libraryVersions.get(name));
+                String version = cfg.defaultedVersion(libraryVersions.remove(name));
                 librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted));
                 retrievers.put(name, cfg.getRetriever());
             }
+        }
+        if (!libraryVersions.isEmpty()) {
+            throw new AbortException(Messages.LibraryAdder_could_not_find_any_definition_of_librari(libraryVersions.keySet()));
         }
         // Record libraries we plan to load. We need LibrariesAction there first so variables can be interpolated.
         build.addAction(new LibrariesAction(new ArrayList<>(librariesAdded.values())));

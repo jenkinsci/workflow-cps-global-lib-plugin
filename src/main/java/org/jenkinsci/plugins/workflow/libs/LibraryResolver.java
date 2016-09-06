@@ -50,6 +50,12 @@ public abstract class LibraryResolver implements ExtensionPoint {
      * taking into account {@link LibraryConfiguration#isImplicit}.
      * Or it may dynamically generate library configurations
      * by matching library names against some predefined pattern.
+     * <p>By returning a library with a matching {@code name},
+     * this resolver “claims” that entry of {@code libraryVersions};
+     * subsequent resolvers will not be offered that entry.
+     * It is an error if no resolver claims a given entry.
+     * Multiple resolvers might return a library of a given name if the libraries are implicit,
+     * in which case only the first will be loaded.
      * @param job a job
      * @param libraryVersions libraries explicitly requested in the job, as a map from {@link LibraryConfiguration#getName} to version or null; may be empty
      * @return a possibly empty collection of associated libraries

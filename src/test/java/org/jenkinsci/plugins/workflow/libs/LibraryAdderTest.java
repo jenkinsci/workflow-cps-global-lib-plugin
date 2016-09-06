@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import hudson.model.Job;
+import hudson.model.Result;
 import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.SubmoduleConfig;
@@ -198,6 +199,12 @@ public class LibraryAdderTest {
             }
             return cfgs;
         }
+    }
+
+    @Test public void undefinedLibraries() throws Exception {
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('nonexistent') _", true));
+        r.assertLogContains(Messages.LibraryAdder_could_not_find_any_definition_of_librari(Collections.singleton("nonexistent")), r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
     }
 
     /** @see GrapeTest */
