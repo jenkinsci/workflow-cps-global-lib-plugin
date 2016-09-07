@@ -70,6 +70,14 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
             // SCM.checkout does not make it possible to do checkouts outside the context of a Run.
             return Collections.emptyList();
         }
+        // First parse the library declarations (if any) looking for requested versions.
+        Map<String,String> libraryVersions = new HashMap<>();
+        Map<String,String> librariesUnparsed = new HashMap<>();
+        for (String library : libraries) {
+            String[] parsed = parse(library);
+            libraryVersions.put(parsed[0], parsed[1]);
+            librariesUnparsed.put(parsed[0], library);
+        }
         List<Addition> additions = new ArrayList<>();
         LibrariesAction action = build.getAction(LibrariesAction.class);
         if (action != null) {
@@ -82,16 +90,12 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                         additions.add(new Addition(dir.toURI().toURL(), record.trusted));
                     }
                 }
+                String unparsed = librariesUnparsed.get(record.name);
+                if (unparsed != null) {
+                    libraries.remove(unparsed);
+                }
             }
             return additions;
-        }
-        // First parse the library declarations (if any) looking for requested versions.
-        Map<String,String> libraryVersions = new HashMap<>();
-        Map<String,String> librariesUnparsed = new HashMap<>();
-        for (String library : libraries) {
-            String[] parsed = parse(library);
-            libraryVersions.put(parsed[0], parsed[1]);
-            librariesUnparsed.put(parsed[0], library);
         }
         // Now we will see which libraries we want to load for this job.
         Map<String,LibraryRecord> librariesAdded = new LinkedHashMap<>();
