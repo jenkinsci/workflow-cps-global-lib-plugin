@@ -64,17 +64,19 @@ public class FolderLibrariesTest {
         Folder d = r.jenkins.createProject(Folder.class, "d");
         r.configRoundtrip(d);
         assertNull(d.getProperties().get(FolderLibraries.class));
+        /* TODO https://github.com/jenkinsci/git-plugin/pull/433
         LibraryConfiguration foo = new LibraryConfiguration("foo", new SCMSourceRetriever(new GitSCMSource("foo", "https://nowhere.net/foo.git", "", "*", "", true)));
+        */
         LibraryConfiguration bar = new LibraryConfiguration("bar", new SCMRetriever(new GitSCM("https://nowhere.net/bar.git")));
         bar.setDefaultVersion("master");
         bar.setImplicit(true);
         bar.setAllowVersionOverride(false);
-        d.getProperties().add(new FolderLibraries(Arrays.asList(foo, bar)));
+        d.getProperties().add(new FolderLibraries(Arrays.asList(/* TODO foo, */bar)));
         r.configRoundtrip(d);
         FolderLibraries prop = d.getProperties().get(FolderLibraries.class);
         assertNotNull(prop);
         List<LibraryConfiguration> libs = prop.getLibraries();
-        r.assertEqualDataBoundBeans(Arrays.asList(foo, bar), libs);
+        r.assertEqualDataBoundBeans(Arrays.asList(/* TODO foo, */bar), libs);
     }
 
     @Test public void registration() throws Exception {

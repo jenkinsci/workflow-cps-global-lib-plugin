@@ -25,7 +25,6 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import hudson.model.Result;
-import java.util.Arrays;
 import java.util.Collections;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
@@ -62,6 +61,7 @@ public class ResourceStepTest {
         r.assertLogContains(Messages.ResourceStep_no_such_library_resource_could_be_found_("whatever"), r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
     }
 
+    /* TODO https://github.com/jenkinsci/git-plugin/pull/433
     @Test public void duplicatedResources() throws Exception {
         sampleRepo.init();
         sampleRepo.write("src/pkg/Stuff.groovy", "package pkg; class Stuff {static def contents(script) {script.libraryResource 'pkg/file'}}");
@@ -81,5 +81,6 @@ public class ResourceStepTest {
         p.setDefinition(new CpsFlowDefinition("@Library(['stuff1', 'stuff2']) import pkg.Stuff; echo(/got ${Stuff.contents(this)}/)", true));
         r.assertLogContains(Messages.ResourceStep_library_resource_ambiguous_among_librari("pkg/file", "[stuff1, stuff2]"), r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
     }
+    */
 
 }
