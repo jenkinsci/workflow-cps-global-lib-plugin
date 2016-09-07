@@ -2,6 +2,7 @@ package org.jenkinsci.plugins.workflow.cps.global;
 
 import hudson.Extension;
 import hudson.ExtensionList;
+import hudson.model.Run;
 import hudson.util.CopyOnWriteList;
 import org.apache.commons.io.FilenameUtils;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
@@ -10,7 +11,7 @@ import org.jenkinsci.plugins.workflow.cps.GlobalVariableSet;
 import javax.inject.Inject;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -48,11 +49,10 @@ public class UserDefinedGlobalVariableList extends GlobalVariableSet {
         ours.replaceBy(list);
     }
 
-    @Override
-    public Iterator<GlobalVariable> iterator() {
+    @Override public Collection<GlobalVariable> forRun(Run<?, ?> run) {
         if (ours==null) {
             rebuild();
         }
-        return ours.iterator();
+        return ours.getView();
     }
 }

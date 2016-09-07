@@ -7,6 +7,7 @@ import org.jenkinsci.plugins.workflow.cps.CpsScript;
 import org.jenkinsci.plugins.workflow.cps.CpsThread;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
@@ -20,12 +21,16 @@ import jenkins.model.Jenkins;
  */
 // not @Extension because these are instantiated programmatically
 public class UserDefinedGlobalVariable extends GlobalVariable {
-    private final WorkflowLibRepository repo;
+    private final File help;
     private final String name;
 
     /*package*/ UserDefinedGlobalVariable(WorkflowLibRepository repo, String name) {
-        this.repo = repo;
+        this(name, new File(repo.workspace, PREFIX + "/" + name + ".txt"));
+    }
+
+    public UserDefinedGlobalVariable(String name, File help) {
         this.name = name;
+        this.help = help;
     }
 
     @Nonnull
@@ -61,15 +66,10 @@ public class UserDefinedGlobalVariable extends GlobalVariable {
     /**
      * Loads help from user-defined file, if available.
      */
-    public String getHelpHtml() throws IOException {
-        File help = source(".txt");
+    public @CheckForNull String getHelpHtml() throws IOException {
         if (!help.exists())     return null;
 
         return Jenkins.getActiveInstance().getMarkupFormatter().translate(FileUtils.readFileToString(help, Charsets.UTF_8));
-    }
-
-    private File source(String extension) {
-        return new File(repo.workspace, PREFIX+"/"+ name + extension);
     }
 
     @Override
