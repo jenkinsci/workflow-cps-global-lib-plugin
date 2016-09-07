@@ -75,13 +75,13 @@ public class SCMSourceRetriever extends LibraryRetriever {
         if (revision == null) {
             throw new AbortException("No version " + version + " found for library " + name);
         }
-        doRetrieve(scm.build(revision.getHead(), revision), revision.isDeterministic(), target, run, listener);
+        doRetrieve(scm.build(revision.getHead(), revision), target, run, listener);
     }
 
-    static void doRetrieve(@Nonnull SCM scm, boolean deterministic, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    static void doRetrieve(@Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         // Adapted from CpsScmFlowDefinition:
         SCMStep delegate = new GenericSCMStep(scm);
-        delegate.setPoll(!deterministic); // TODO is this desirable?
+        delegate.setPoll(false); // TODO we have no API for determining if a given SCMHead is branch-like or tag-like; would we want to turn on polling if the former?
         delegate.setChangelog(true); // TODO is this desirable?
         FilePath dir;
         Node node = Jenkins.getActiveInstance();
