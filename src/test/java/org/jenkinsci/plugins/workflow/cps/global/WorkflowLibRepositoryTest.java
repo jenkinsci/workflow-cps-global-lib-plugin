@@ -187,7 +187,7 @@ public class WorkflowLibRepositoryTest {
 
                 FileUtils.write(new File(new File(repo.workspace, "src/pkg"), "Privileged.groovy"),
                     "package pkg\n" +
-                    "class Privileged {\n" +
+                    "class Privileged implements Serializable {\n" +
                     "  void write(String content) {\n" +
                     "    new File(jenkins.model.Jenkins.instance.rootDir, 'f').text = content\n" +
                     "  }\n" +
