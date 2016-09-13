@@ -27,7 +27,6 @@ package org.jenkinsci.plugins.workflow.libs;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
-import hudson.RelativePath;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
@@ -117,7 +116,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
 
     @Extension public static class DescriptorImpl extends Descriptor<LibraryConfiguration> {
 
-        public FormValidation doCheckName(@QueryParameter String name, @QueryParameter @RelativePath("scm") String id) {
+        public FormValidation doCheckName(@QueryParameter String name) {
             if (name.isEmpty()) {
                 return FormValidation.error("You must enter a name.");
             }
