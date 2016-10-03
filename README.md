@@ -53,13 +53,15 @@ Furthermore, if you specify a version in Jenkins configuration, you can block sc
 
 The best way to specify the SCM is using an SCM plugin which has been specifically updated
 to support a new API for checking out an arbitrary named version (_Modern SCM_ option).
-Initially the Git and Subversion plugins have this modification; others should follow.
+As of this writing, there are *unreleased pull requests* for the Git and Subversion plugins to work in this mode; others should follow.
 
 If your SCM plugin has not been integrated, you may select _Legacy SCM_ and pick anything offered.
 In this case, you need to include `${library.yourLibName.version}` somewhere in the configuration of the SCM,
 so that during checkout the plugin will expand this variable to select the desired version.
 For example, for Subversion, you can set the _Repository URL_ to `https://svnserver/project/${library.yourLibName.version}`
 and then use versions such as `trunk` or `branches/dev` or `tags/1.0`.
+
+As of this writing, there are *unreleased pull requests* for the Git and Subversion plugins to allow you to specify credentials in “legacy” mode when using global external libraries; currently you can specify credentials in the UI for folder-scoped libraries, but for global libraries the only workaround is to edit configuration files in `$JENKINS_HOME` manually.
 
 ### Global external libraries
 
