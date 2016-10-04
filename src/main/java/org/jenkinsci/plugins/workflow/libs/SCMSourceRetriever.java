@@ -52,6 +52,9 @@ import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
 import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
 import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -139,6 +142,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
         /**
          * Returns only implementations overriding {@link SCMSource#retrieve(String, TaskListener)}.
          */
+        @Restricted(NoExternalUse.class) // Jelly, Hider
         public Collection<SCMSourceDescriptor> getSCMDescriptors() {
             List<SCMSourceDescriptor> descriptors = new ArrayList<>();
             for (SCMSourceDescriptor d : ExtensionList.lookup(SCMSourceDescriptor.class)) {
@@ -151,6 +155,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
 
     }
 
+    @Restricted(DoNotUse.class)
     @Extension public static class Hider extends DescriptorVisibilityFilter {
 
         @SuppressWarnings("rawtypes")

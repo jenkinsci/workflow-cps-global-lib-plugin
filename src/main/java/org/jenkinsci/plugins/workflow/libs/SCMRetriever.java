@@ -39,6 +39,9 @@ import hudson.util.FormValidation;
 import java.util.ArrayList;
 import java.util.List;
 import jenkins.model.Jenkins;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -74,6 +77,7 @@ public class SCMRetriever extends LibraryRetriever {
             return "Legacy SCM";
         }
 
+        @Restricted(NoExternalUse.class) // Jelly, Hider
         public List<SCMDescriptor<?>> getSCMDescriptors() {
             List<SCMDescriptor<?>> descriptors = new ArrayList<>();
             for (SCMDescriptor<?> d : SCM.all()) {
@@ -85,6 +89,7 @@ public class SCMRetriever extends LibraryRetriever {
         }
     }
 
+    @Restricted(DoNotUse.class)
     @Extension public static class Hider extends DescriptorVisibilityFilter {
 
         @SuppressWarnings("rawtypes")
