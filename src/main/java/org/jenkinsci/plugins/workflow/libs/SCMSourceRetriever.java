@@ -30,6 +30,8 @@ import hudson.ExtensionList;
 import hudson.FilePath;
 import hudson.Util;
 import hudson.model.Computer;
+import hudson.model.Descriptor;
+import hudson.model.DescriptorVisibilityFilter;
 import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -145,6 +147,19 @@ public class SCMSourceRetriever extends LibraryRetriever {
                 }
             }
             return descriptors;
+        }
+
+    }
+
+    @Extension public static class Hider extends DescriptorVisibilityFilter {
+
+        @SuppressWarnings("rawtypes")
+        @Override public boolean filter(Object context, Descriptor descriptor) {
+            if (descriptor instanceof DescriptorImpl) {
+                return !((DescriptorImpl) descriptor).getSCMDescriptors().isEmpty();
+            } else {
+                return true;
+            }
         }
 
     }
