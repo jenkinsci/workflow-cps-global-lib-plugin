@@ -77,6 +77,8 @@ public class SCMRetriever extends LibraryRetriever {
         public List<SCMDescriptor<?>> getSCMDescriptors() {
             List<SCMDescriptor<?>> descriptors = new ArrayList<>();
             for (SCMDescriptor<?> d : SCM.all()) {
+                // TODO SCM._for cannot be used here since it requires an actual Job, where we want to check for applicability to Job.class
+                // (the best we could do is to check whether SCM.checkout(Run, …) is overridden)
                 if (d.clazz != NullSCM.class) {
                     descriptors.add(d);
                 }
