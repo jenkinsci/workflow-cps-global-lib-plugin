@@ -28,7 +28,6 @@ THE SOFTWARE.
     <f:entry field="name" title="${%Name}">
         <f:textbox/>
     </f:entry>
-    <f:dropdownDescriptorSelector field="retriever" title="${%Retrieval method}" descriptors="${descriptor.retrieverDescriptors}"/>
     <f:entry field="defaultVersion" title="${%Default version}">
         <f:textbox/>
     </f:entry>
@@ -38,4 +37,5 @@ THE SOFTWARE.
     <f:entry field="allowVersionOverride" title="${%Allow default version to be overridden}">
         <f:checkbox default="true"/>
     </f:entry>
+    <f:descriptorRadioList varName="retriever" instance="${instance.retriever}" descriptors="${descriptor.retrieverDescriptors}" title="${%Retrieval method}"/>
 </j:jelly>
