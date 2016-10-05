@@ -27,6 +27,8 @@ package org.jenkinsci.plugins.workflow.libs;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Util;
+import hudson.model.Descriptor;
+import hudson.model.DescriptorVisibilityFilter;
 import hudson.model.Items;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -37,6 +39,9 @@ import hudson.util.FormValidation;
 import java.util.ArrayList;
 import java.util.List;
 import jenkins.model.Jenkins;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -72,7 +77,8 @@ public class SCMRetriever extends LibraryRetriever {
             return "Legacy SCM";
         }
 
-        public static List<SCMDescriptor<?>> getSCMDescriptors() {
+        @Restricted(NoExternalUse.class) // Jelly, Hider
+        public List<SCMDescriptor<?>> getSCMDescriptors() {
             List<SCMDescriptor<?>> descriptors = new ArrayList<>();
             for (SCMDescriptor<?> d : SCM.all()) {
                 if (d.clazz != NullSCM.class) {
@@ -81,6 +87,20 @@ public class SCMRetriever extends LibraryRetriever {
             }
             return descriptors;
         }
+    }
+
+    @Restricted(DoNotUse.class)
+    @Extension public static class Hider extends DescriptorVisibilityFilter {
+
+        @SuppressWarnings("rawtypes")
+        @Override public boolean filter(Object context, Descriptor descriptor) {
+            if (descriptor instanceof DescriptorImpl) {
+                return !((DescriptorImpl) descriptor).getSCMDescriptors().isEmpty();
+            } else {
+                return true;
+            }
+        }
+
     }
 
 }

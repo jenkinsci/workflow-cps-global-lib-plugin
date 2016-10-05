@@ -30,13 +30,20 @@ import hudson.ExtensionList;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
+import hudson.model.DescriptorVisibilityFilter;
+import hudson.model.Item;
 import hudson.util.FormValidation;
+import java.util.Collection;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import jenkins.model.Jenkins;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
+import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * User configuration for one library.
@@ -115,6 +122,14 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     }
 
     @Extension public static class DescriptorImpl extends Descriptor<LibraryConfiguration> {
+
+        // TODO JENKINS-20020 ought to be unnecessary
+        @Restricted(DoNotUse.class) // Jelly
+        public Collection<LibraryRetrieverDescriptor> getRetrieverDescriptors() {
+            StaplerRequest req = Stapler.getCurrentRequest();
+            Item it = req != null ? req.findAncestorObject(Item.class) : null;
+            return DescriptorVisibilityFilter.apply(it != null ? it : Jenkins.getActiveInstance(), ExtensionList.lookup(LibraryRetrieverDescriptor.class));
+        }
 
         public FormValidation doCheckName(@QueryParameter String name) {
             if (name.isEmpty()) {
