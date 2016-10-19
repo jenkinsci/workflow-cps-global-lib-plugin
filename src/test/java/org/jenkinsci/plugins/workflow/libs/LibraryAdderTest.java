@@ -31,6 +31,7 @@ import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.SubmoduleConfig;
 import hudson.plugins.git.UserRemoteConfig;
 import hudson.plugins.git.extensions.GitSCMExtension;
+import hudson.scm.SubversionSCM;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -38,6 +39,8 @@ import java.util.List;
 import java.util.Map;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import jenkins.scm.impl.subversion.SubversionSCMSource;
+import jenkins.scm.impl.subversion.SubversionSampleRepoRule;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
 import org.jenkinsci.plugins.workflow.cps.global.GrapeTest;
@@ -58,9 +61,7 @@ public class LibraryAdderTest {
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
-    /* TODO subversion 2.7
     @Rule public SubversionSampleRepoRule sampleSvnRepo = new SubversionSampleRepoRule();
-    */
 
     @Test public void smokes() throws Exception {
         sampleRepo.init();
@@ -110,7 +111,6 @@ public class LibraryAdderTest {
         r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
     }
 
-    /* TODO subversion 2.7
     @Test public void interpolationSvn() throws Exception {
         sampleSvnRepo.init();
         sampleSvnRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String CONST = 'initial'}");
@@ -161,7 +161,6 @@ public class LibraryAdderTest {
         p.setDefinition(new CpsFlowDefinition("@Library('stuff@trunk@" + tag + "') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
         r.assertLogContains("using initial", r.buildAndAssertSuccess(p));
     }
-    */
 
     @Test public void globalVariable() throws Exception {
         sampleRepo.init();

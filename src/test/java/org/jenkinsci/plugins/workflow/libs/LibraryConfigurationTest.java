@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import java.util.Collections;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Rule;
@@ -37,8 +38,8 @@ public class LibraryConfigurationTest {
 
     @Issue("JENKINS-38550")
     @Test public void visibleRetrievers() throws Exception {
-        // TODO adjust to reflect https://github.com/jenkinsci/git-plugin/pull/433 & subversion 2.7
-        assertEquals(Collections.singletonList(r.jenkins.getDescriptorByType(SCMRetriever.DescriptorImpl.class)), r.jenkins.getDescriptorByType(LibraryConfiguration.DescriptorImpl.class).getRetrieverDescriptors());
+        assertThat(r.jenkins.getDescriptorByType(LibraryConfiguration.DescriptorImpl.class).getRetrieverDescriptors(),
+            Matchers.<LibraryRetrieverDescriptor>containsInAnyOrder(r.jenkins.getDescriptorByType(SCMSourceRetriever.DescriptorImpl.class), r.jenkins.getDescriptorByType(SCMRetriever.DescriptorImpl.class)));
     }
 
 }

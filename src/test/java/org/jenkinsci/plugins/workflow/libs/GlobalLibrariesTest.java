@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import jenkins.model.Jenkins;
+import jenkins.scm.impl.subversion.SubversionSCMSource;
 import static org.hamcrest.Matchers.*;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -47,29 +48,27 @@ public class GlobalLibrariesTest {
         r.configRoundtrip();
         GlobalLibraries gl = GlobalLibraries.get();
         assertEquals(Collections.emptyList(), gl.getLibraries());
-        /* TODO https://github.com/jenkinsci/git-plugin/pull/433
-        LibraryConfiguration foo = new LibraryConfiguration("foo", new SCMSourceRetriever(new GitSCMSource("foo", "https://nowhere.net/foo.git", "", "*", "", true)));
-        */
-        LibraryConfiguration bar = new LibraryConfiguration("bar", new SCMRetriever(new GitSCM("https://nowhere.net/bar.git")));
+        LibraryConfiguration foo = new LibraryConfiguration("foo", new SCMSourceRetriever(new SubversionSCMSource("foo", "https://phony.jenkins.io/foo/")));
+        LibraryConfiguration bar = new LibraryConfiguration("bar", new SCMRetriever(new GitSCM("https://phony.jenkins.io/bar.git")));
         bar.setDefaultVersion("master");
         bar.setImplicit(true);
         bar.setAllowVersionOverride(false);
-        gl.setLibraries(Arrays.asList(/* TODO foo, */bar));
+        gl.setLibraries(Arrays.asList(foo, bar));
         r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
         r.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy().
             grant(Jenkins.ADMINISTER).everywhere().to("alice"). // includes RUN_SCRIPTS and all else
             grantWithoutImplication(Jenkins.ADMINISTER).everywhere().to("bob"). // but not RUN_SCRIPTS
             grant(Jenkins.READ, Item.READ, View.READ).everywhere().to("bob"));
         HtmlPage configurePage = r.createWebClient().login("alice").goTo("configure");
-        assertThat(configurePage.getWebResponse().getContentAsString(), containsString("https://nowhere.net/bar.git"));
+        assertThat(configurePage.getWebResponse().getContentAsString(), containsString("https://phony.jenkins.io/bar.git"));
         r.submit(configurePage.getFormByName("config")); // JenkinsRule.configRoundtrip expanded to include login
         List<LibraryConfiguration> libs = gl.getLibraries();
-        r.assertEqualDataBoundBeans(Arrays.asList(/* TODO foo, */bar), libs);
+        r.assertEqualDataBoundBeans(Arrays.asList(foo, bar), libs);
         configurePage = r.createWebClient().login("bob").goTo("configure");
-        assertThat(configurePage.getWebResponse().getContentAsString(), not(containsString("https://nowhere.net/bar.git")));
+        assertThat(configurePage.getWebResponse().getContentAsString(), not(containsString("https://phony.jenkins.io/bar.git")));
         r.submit(configurePage.getFormByName("config"));
         libs = gl.getLibraries();
-        r.assertEqualDataBoundBeans(Arrays.asList(/* TODO foo, */bar), libs);
+        r.assertEqualDataBoundBeans(Arrays.asList(foo, bar), libs);
     }
 
 }
