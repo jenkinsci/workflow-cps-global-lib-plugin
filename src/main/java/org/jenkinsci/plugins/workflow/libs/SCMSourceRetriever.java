@@ -80,10 +80,10 @@ public class SCMSourceRetriever extends LibraryRetriever {
         if (revision == null) {
             throw new AbortException("No version " + version + " found for library " + name);
         }
-        doRetrieve(scm.build(revision.getHead(), revision), target, run, listener);
+        doRetrieve(name, scm.build(revision.getHead(), revision), target, run, listener);
     }
 
-    static void doRetrieve(@Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    static void doRetrieve(String name, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         // Adapted from CpsScmFlowDefinition:
         SCMStep delegate = new GenericSCMStep(scm);
         delegate.setPoll(false); // TODO we have no API for determining if a given SCMHead is branch-like or tag-like; would we want to turn on polling if the former?
@@ -95,7 +95,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
             if (baseWorkspace == null) {
                 throw new IOException(node.getDisplayName() + " may be offline");
             }
-            dir = baseWorkspace.withSuffix(getFilePathSuffix() + "libs");
+            dir = baseWorkspace.withSuffix(getFilePathSuffix() + "libs").child(name);
         } else { // should not happen, but just in case:
             throw new AbortException("Cannot check out in non-top-level build");
         }
@@ -103,7 +103,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
         if (computer == null) {
             throw new IOException(node.getDisplayName() + " may be offline");
         }
-        try (WorkspaceList.Lease lease = computer.getWorkspaceList().acquire(dir)) {
+        try (WorkspaceList.Lease lease = computer.getWorkspaceList().allocate(dir)) {
             delegate.checkout(run, dir, listener, node.createLauncher(listener));
             // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
             // Copy sources with relevant files from the checkout:
