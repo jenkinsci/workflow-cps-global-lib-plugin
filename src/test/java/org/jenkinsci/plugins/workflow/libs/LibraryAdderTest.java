@@ -53,7 +53,6 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import static org.junit.Assert.*;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
@@ -267,7 +266,6 @@ public class LibraryAdderTest {
         System.err.println("registering " + o + " from " + loader);
         LOADERS.add(new WeakReference<>(loader));
     }
-    @Ignore("TODO fails pending https://github.com/jenkinsci/workflow-cps-plugin/pull/83")
     @Test public void loaderReleased() throws Exception {
         sampleRepo.init();
         sampleRepo.write("vars/leak.groovy", "def call() {" + LibraryAdderTest.class.getName() + ".register(this)}");
