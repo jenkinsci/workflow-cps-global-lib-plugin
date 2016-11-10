@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import groovy.lang.MetaClass;
 import hudson.model.Job;
 import hudson.model.Result;
 import hudson.plugins.git.BranchSpec;
@@ -34,6 +35,7 @@ import hudson.plugins.git.extensions.GitSCMExtension;
 import hudson.scm.SubversionSCM;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -43,6 +45,7 @@ import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.scm.impl.subversion.SubversionSCMSource;
 import jenkins.scm.impl.subversion.SubversionSampleRepoRule;
+import org.codehaus.groovy.reflection.ClassInfo;
 import org.codehaus.groovy.transform.ASTTransformationVisitor;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
@@ -53,7 +56,6 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import static org.junit.Assert.*;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
@@ -267,7 +269,6 @@ public class LibraryAdderTest {
         System.err.println("registering " + o + " from " + loader);
         LOADERS.add(new WeakReference<>(loader));
     }
-    @Ignore("TODO fails pending https://github.com/jenkinsci/workflow-cps-plugin/pull/83")
     @Test public void loaderReleased() throws Exception {
         sampleRepo.init();
         sampleRepo.write("vars/leak.groovy", "def call() {" + LibraryAdderTest.class.getName() + ".register(this)}");
@@ -283,6 +284,12 @@ public class LibraryAdderTest {
             f.setAccessible(true);
             f.set(null, null);
         } catch (NoSuchFieldException e) {}
+        { // ditto
+            MetaClass metaClass = ClassInfo.getClassInfo(LibraryAdderTest.class).getMetaClass();
+            Method clearInvocationCaches = metaClass.getClass().getDeclaredMethod("clearInvocationCaches");
+            clearInvocationCaches.setAccessible(true);
+            clearInvocationCaches.invoke(metaClass);
+        }
         for (WeakReference<ClassLoader> loaderRef : LOADERS) {
             MemoryAssert.assertGC(loaderRef);
         }
