@@ -85,10 +85,8 @@ public class LibraryAdderTest {
         sampleRepo.write("src/pkg/Lib.groovy", lib.replace("constant", "modified"));
         sampleRepo.git("commit", "--all", "--message=modified");
         r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
-        /* TODO https://github.com/jenkinsci/git-plugin/pull/433
         p.setDefinition(new CpsFlowDefinition(script.replace("master", "1.0"), true));
         r.assertLogContains("using constant", r.buildAndAssertSuccess(p));
-        */
     }
 
     @Test public void usingInterpolation() throws Exception {
