@@ -240,7 +240,9 @@ Alternately, you can explicitly pass the set of `steps` to a library class, in a
 
 ```groovy
 package org.foo
-class Utilities {
+
+// This class must implement Serializable because it has a non-static data member, "steps".
+class Utilities implements Serializable {
   def steps
   Utilities(steps) {this.steps = steps}
   def mvn(args) {
@@ -265,7 +267,10 @@ or simply pass the entire top-level script rather than just `steps`:
 
 ```groovy
 package org.foo
-class Utilities {
+
+// This class only has no non-static data members  so, unlike the previous example
+// it doesn't need to implement Serializable.
+class Utilities { 
   static def mvn(script, args) {
     script.sh "${script.tool 'Maven'}/bin/mvn -s ${script.env.HOME}/jenkins.xml -o ${args}"
   }
