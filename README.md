@@ -148,7 +148,7 @@ or several libraries:
 @Library(['somelib', 'otherlib@abc1234'])
 ```
 
-The annotation can be anywhere in the script where an annotation is permitted by Java/Groovy.
+The annotation can be anywhere in the script where an annotation is [permitted by Java/Groovy](http://groovy-lang.org/objectorientation.html#ann-placement).
 When referring to class libraries (with `src/` directories), conventionally the annotation goes on an `import` statement:
 
 ```groovy
