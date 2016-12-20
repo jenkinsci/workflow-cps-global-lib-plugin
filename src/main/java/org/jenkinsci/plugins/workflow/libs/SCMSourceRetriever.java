@@ -104,10 +104,10 @@ public class SCMSourceRetriever extends LibraryRetriever {
             throw new IOException(node.getDisplayName() + " may be offline");
         }
         try (WorkspaceList.Lease lease = computer.getWorkspaceList().allocate(dir)) {
-            delegate.checkout(run, dir, listener, node.createLauncher(listener));
+            delegate.checkout(run, lease.path, listener, node.createLauncher(listener));
             // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
             // Copy sources with relevant files from the checkout:
-            dir.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);
+            lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);
         }
     }
 
