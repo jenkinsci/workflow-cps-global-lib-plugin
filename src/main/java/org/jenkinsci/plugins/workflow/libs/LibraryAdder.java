@@ -94,8 +94,8 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                 if (unparsed != null) {
                     libraries.remove(unparsed);
                 }
+                libraryVersions.remove(record.name);
             }
-            return additions;
         }
         // Now we will see which libraries we want to load for this job.
         Map<String,LibraryRecord> librariesAdded = new LinkedHashMap<>();
@@ -124,7 +124,13 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
             }
         }
         // Record libraries we plan to load. We need LibrariesAction there first so variables can be interpolated.
-        build.addAction(new LibrariesAction(new ArrayList<>(librariesAdded.values())));
+        if (action == null) {
+            build.addAction(new LibrariesAction(new ArrayList<>(librariesAdded.values())));
+        } else {
+            List<LibraryRecord> allLibraries = new ArrayList<>(action.getLibraries());
+            allLibraries.addAll(librariesAdded.values());
+            build.replaceAction(new LibrariesAction(allLibraries));
+        }
         // Now actually try to retrieve the libraries.
         for (LibraryRecord record : librariesAdded.values()) {
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
