@@ -27,7 +27,6 @@ package org.jenkinsci.plugins.workflow.libs;
 import java.util.Collections;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
-import org.jenkinsci.plugins.scriptsecurity.scripts.ScriptApproval;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -68,20 +67,21 @@ public class LibraryStepTest {
 
     @Test public void classes() throws Exception {
         sampleRepo.init();
-        sampleRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String stuff() {Constants.CONST}}");
-        sampleRepo.write("src/pkg/Constants.groovy", "package pkg; class Constants {static String CONST = 'constant'}");
-        sampleRepo.write("src/pkg/App.groovy", "package pkg; class App implements Serializable {def run() {Lib.stuff()}}");
+        sampleRepo.write("src/some/pkg/Lib.groovy", "package some.pkg; class Lib {static class Inner {static String stuff() {Constants.CONST}}}");
+        sampleRepo.write("src/some/pkg/Constants.groovy", "package some.pkg; class Constants {static String CONST = 'constant'}");
+        sampleRepo.write("src/some/pkg/App.groovy", "package some.pkg; class App implements Serializable {def run() {Lib.Inner.stuff()}}");
         sampleRepo.git("add", "src");
         sampleRepo.git("commit", "--message=init");
         GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
-        ScriptApproval.get().approveSignature("method java.lang.Class newInstance"); // TODO find some alternative
-        p.setDefinition(new CpsFlowDefinition("def lib = library 'stuff@master'; echo(/using ${lib['pkg.Lib'].stuff()} vs. ${lib['pkg.App'].newInstance().run()}/)", true));
+        p.setDefinition(new CpsFlowDefinition("def lib = library 'stuff@master'; echo(/using ${lib.some.pkg.Lib.Inner.stuff()} vs. ${lib.some.pkg.App.new().run()}/)", true));
         WorkflowRun b = r.buildAndAssertSuccess(p);
         r.assertLogContains("using constant vs. constant", b);
-        // TODO also test untrusted libs
     }
 
+    // TODO call methods with one or two arguments or nulls
+    // TODO classes from untrusted libs
+    // TODO return value cannot be used to access unrelated classes, or classes from another library
     // TODO configRoundtrip test
     // TODO duplicated library (@Library + library; library + library) should merely load existing library
     // TODO no matching library

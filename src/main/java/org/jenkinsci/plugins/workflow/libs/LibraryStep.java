@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.libs;
 
 import com.google.common.collect.Lists;
 import groovy.lang.GroovyClassLoader;
+import groovy.lang.GroovyObject;
 import groovy.lang.GroovyObjectSupport;
 import groovy.lang.GroovyRuntimeException;
 import hudson.AbortException;
@@ -34,9 +35,17 @@ import hudson.ExtensionList;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.Collections;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 import javax.inject.Inject;
+import org.apache.commons.lang3.reflect.ConstructorUtils;
+import org.apache.commons.lang3.reflect.MethodUtils;
+import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.AbstractWhitelist;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.cps.CpsThread;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
@@ -134,34 +143,95 @@ public class LibraryStep extends AbstractStepImpl {
                 loader.addURL(u);
             }
             run.save(); // persist changes to LibrariesAction.libraries*.variables
-            return new LoadedClasses(name, trusted);
+            return new LoadedClasses(name, trusted, "", null);
         }
 
     }
 
-    public static class LoadedClasses extends GroovyObjectSupport implements Serializable {
+    public static final class LoadedClasses extends GroovyObjectSupport implements Serializable {
 
-        private final String library;
+        private final @Nonnull String library;
         private final boolean trusted;
+        /** package prefix, like {@code } or {@code some.pkg.} */
+        private final @Nonnull String prefix;
+        /** {@link Class#getName} minus package prefix */
+        private final @CheckForNull String clazz;
 
-        LoadedClasses(String library, boolean trusted) {
+        LoadedClasses(String library, boolean trusted, String prefix, String clazz) {
             this.library = library;
             this.trusted = trusted;
+            this.prefix = prefix;
+            this.clazz = clazz;
         }
 
         @Override public Object getProperty(String property) {
+            if (property.matches("^[A-Z].*")) {
+                // looks like a class name component
+                String fullClazz = clazz != null ? clazz + '$' + property : property;
+                loadClass(prefix + fullClazz);
+                // OK, class really exists, stash it and await methods
+                return new LoadedClasses(library, trusted, prefix, fullClazz);
+            } else if (clazz != null) {
+                // Field access?
+                try {
+                    // not doing a Whitelist check since GroovyClassLoaderWhitelist would be allowing it anyway
+                    return loadClass(prefix + clazz).getField(property).get(null);
+                } catch (NoSuchFieldException | IllegalAccessException x) {
+                    throw new GroovyRuntimeException(x);
+                }
+            } else {
+                // Still selecting package components.
+                return new LoadedClasses(library, trusted, prefix + property + '.', null);
+            }
+        }
+
+        @Override public Object invokeMethod(String name, Object _args) {
+            Class<?> c = loadClass(prefix + clazz);
+            Object[] args = _args instanceof Object[] ? (Object[]) _args : new Object[] {_args}; // TODO why does Groovy not just pass an Object[] to begin with?!
+            try {
+                if (name.equals("new")) {
+                    return ConstructorUtils.invokeConstructor(c, args);
+                } else {
+                    return MethodUtils.invokeStaticMethod(c, name, args);
+                }
+            } catch (InvocationTargetException x) {
+                throw new GroovyRuntimeException(x.getCause());
+            } catch (NoSuchMethodException | InstantiationException | IllegalAccessException x) {
+                throw new GroovyRuntimeException(x);
+            }
+        }
+
+        // TODO putProperty for static field set
+
+        private Class<?> loadClass(String name) {
             CpsFlowExecution exec = CpsThread.current().getExecution();
             GroovyClassLoader loader = (trusted ? exec.getTrustedShell() : exec.getShell()).getClassLoader();
             try {
+                Class<?> c = loader.loadClass(name);
+                ClassLoader definingLoader = c.getClassLoader();
+                if (definingLoader instanceof GroovyClassLoader.InnerLoader) {
+                    definingLoader = definingLoader.getParent();
+                }
+                if (definingLoader != loader) {
+                    throw new IllegalAccessException("cannot access " + c + " via library handle: " + definingLoader + " is not " + loader);
+                }
                 // TODO verify that the specified class is in fact in the named library
-                // TODO allow you to select package components piecemeal, like library('x').com.yoyodyne.jenkins.Utils.method()
-                return loader.loadClass(property);
-            } catch (ClassNotFoundException x) {
+                if (!Modifier.isPublic(c.getModifiers())) { // unlikely since Groovy makes classes implicitly public
+                    throw new IllegalAccessException(c + " is not public");
+                }
+                return c;
+            } catch (ClassNotFoundException | IllegalAccessException x) {
                 throw new GroovyRuntimeException(x);
             }
         }
 
     }
 
+    @Extension public static class LoadedClassesWhitelist extends AbstractWhitelist { // TODO JENKINS-24982 @Whitelisted does not suffice
+        @Override public boolean permitsMethod(Method method, Object receiver, Object[] args) {
+            String name = method.getName();
+            return receiver instanceof LoadedClasses && method.getDeclaringClass() == GroovyObject.class && (name.equals("getProperty") || name.equals("invokeMethod"));
+        }
+    }
 
 }
