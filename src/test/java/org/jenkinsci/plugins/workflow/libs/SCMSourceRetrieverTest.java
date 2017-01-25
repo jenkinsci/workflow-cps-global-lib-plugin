@@ -35,7 +35,6 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.junit.ClassRule;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
@@ -47,7 +46,6 @@ public class SCMSourceRetrieverTest {
     @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
 
-    @Ignore("TODO reproduced")
     @Issue("JENKINS-40408")
     @Test public void lease() throws Exception {
         sampleRepo.init();
