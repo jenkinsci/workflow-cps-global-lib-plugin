@@ -45,15 +45,26 @@ Other directories under the root are reserved for future enhancements.
 ## Defining external libraries
 
 An external library is defined with a name, a source code retrieval method such as by SCM, and optionally a default version.
-The name should be a short identifier as it will be used in scripts.
+This name will later be used in scripts to import the library:
+
+```groovy
+@Library('somename') _
+```
+
+The library name should be a short identifier as it will be used in scripts.
 
 The version could be anything understood by that SCM; for example, branches, tags, and commit hashes all work for Git.
 You may also declare whether scripts need to explicitly request that library (detailed below), or if it is present by default.
 Furthermore, if you specify a version in Jenkins configuration, you can block scripts from selecting a _different_ version.
+If you do not specify a default version, you must always specify it when importing the library into scripts:
+
+```groovy
+@Library('somename@master') _
+```
 
 The best way to specify the SCM is using an SCM plugin which has been specifically updated
 to support a new API for checking out an arbitrary named version (_Modern SCM_ option).
-Initially the Git and Subversion plugins have this modification; others should follow.
+As of this writing, the latest versions of the Git and Subversion plugins support this mode; others should follow.
 
 If your SCM plugin has not been integrated, you may select _Legacy SCM_ and pick anything offered.
 In this case, you need to include `${library.yourLibName.version}` somewhere in the configuration of the SCM,
@@ -148,7 +159,9 @@ or several libraries:
 @Library(['somelib', 'otherlib@abc1234'])
 ```
 
-The annotation can be anywhere in the script where an annotation is permitted by Java/Groovy.
+The version is required when the default version was not specified when the library was defined.
+
+The annotation can be anywhere in the script where an annotation is [permitted by Java/Groovy](http://groovy-lang.org/objectorientation.html#ann-placement).
 When referring to class libraries (with `src/` directories), conventionally the annotation goes on an `import` statement:
 
 ```groovy
@@ -240,7 +253,9 @@ Alternately, you can explicitly pass the set of `steps` to a library class, in a
 
 ```groovy
 package org.foo
-class Utilities {
+
+// This class must implement Serializable because it has a non-static data member, "steps".
+class Utilities implements Serializable {
   def steps
   Utilities(steps) {this.steps = steps}
   def mvn(args) {
@@ -265,7 +280,10 @@ or simply pass the entire top-level script rather than just `steps`:
 
 ```groovy
 package org.foo
-class Utilities {
+
+// This class only has no non-static data members  so, unlike the previous example
+// it doesn't need to implement Serializable.
+class Utilities { 
   static def mvn(script, args) {
     script.sh "${script.tool 'Maven'}/bin/mvn -s ${script.env.HOME}/jenkins.xml -o ${args}"
   }
@@ -282,8 +300,8 @@ node {
 ```
 
 ### Defining global functions
-You can define your own functions that looks and feels like built-in step functions like `sh` or `git`.
-For example, to define `helloWorld` step of your own, create a file named `vars/helloWorld.groovy` and
+You can define your own functions that look and feel like built-in step functions like `sh` or `git`.
+For example, to define your own `helloWorld` step, create a file named `vars/helloWorld.groovy` and
 define the `call` method:
 
 ```groovy

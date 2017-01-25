@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import groovy.lang.MetaClass;
 import hudson.model.Job;
 import hudson.model.Result;
 import hudson.plugins.git.BranchSpec;
@@ -31,6 +32,10 @@ import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.SubmoduleConfig;
 import hudson.plugins.git.UserRemoteConfig;
 import hudson.plugins.git.extensions.GitSCMExtension;
+import hudson.scm.SubversionSCM;
+import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -38,6 +43,10 @@ import java.util.List;
 import java.util.Map;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import jenkins.scm.impl.subversion.SubversionSCMSource;
+import jenkins.scm.impl.subversion.SubversionSampleRepoRule;
+import org.codehaus.groovy.reflection.ClassInfo;
+import org.codehaus.groovy.transform.ASTTransformationVisitor;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
 import org.jenkinsci.plugins.workflow.cps.global.GrapeTest;
@@ -51,6 +60,7 @@ import org.junit.Test;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.MemoryAssert;
 import org.jvnet.hudson.test.TestExtension;
 
 public class LibraryAdderTest {
@@ -58,9 +68,7 @@ public class LibraryAdderTest {
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
-    /* TODO subversion 2.7
     @Rule public SubversionSampleRepoRule sampleSvnRepo = new SubversionSampleRepoRule();
-    */
 
     @Test public void smokes() throws Exception {
         sampleRepo.init();
@@ -77,10 +85,8 @@ public class LibraryAdderTest {
         sampleRepo.write("src/pkg/Lib.groovy", lib.replace("constant", "modified"));
         sampleRepo.git("commit", "--all", "--message=modified");
         r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
-        /* TODO https://github.com/jenkinsci/git-plugin/pull/433
         p.setDefinition(new CpsFlowDefinition(script.replace("master", "1.0"), true));
         r.assertLogContains("using constant", r.buildAndAssertSuccess(p));
-        */
     }
 
     @Test public void usingInterpolation() throws Exception {
@@ -110,7 +116,6 @@ public class LibraryAdderTest {
         r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
     }
 
-    /* TODO subversion 2.7
     @Test public void interpolationSvn() throws Exception {
         sampleSvnRepo.init();
         sampleSvnRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String CONST = 'initial'}");
@@ -161,7 +166,6 @@ public class LibraryAdderTest {
         p.setDefinition(new CpsFlowDefinition("@Library('stuff@trunk@" + tag + "') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
         r.assertLogContains("using initial", r.buildAndAssertSuccess(p));
     }
-    */
 
     @Test public void globalVariable() throws Exception {
         sampleRepo.init();
@@ -255,6 +259,38 @@ public class LibraryAdderTest {
         WorkflowRun b2 = (WorkflowRun) ra.run(ra.getOriginalScript(), Collections.singletonMap("trusted", originalScript.replace(originalMessage, "should not allowed"))).get();
         r.assertBuildStatusSuccess(b2); // currently do not throw an error, since the GUI does not offer it anyway
         r.assertLogContains(originalMessage, b2);
+    }
+
+    private static final List<WeakReference<ClassLoader>> LOADERS = new ArrayList<>();
+    public static void register(Object o) {
+        ClassLoader loader = o.getClass().getClassLoader();
+        System.err.println("registering " + o + " from " + loader);
+        LOADERS.add(new WeakReference<>(loader));
+    }
+    @Test public void loaderReleased() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("vars/leak.groovy", "def call() {" + LibraryAdderTest.class.getName() + ".register(this)}");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("leak", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('leak@master') _; " + LibraryAdderTest.class.getName() + ".register(this); leak()", false));
+        r.assertBuildStatusSuccess(p.scheduleBuild2(0));
+        assertFalse(LOADERS.isEmpty());
+        try { // For Jenkins/Groovy 1. Cf. CpsFlowExecutionTest.loaderReleased.
+            Field f = ASTTransformationVisitor.class.getDeclaredField("compUnit");
+            f.setAccessible(true);
+            f.set(null, null);
+        } catch (NoSuchFieldException e) {}
+        { // ditto
+            MetaClass metaClass = ClassInfo.getClassInfo(LibraryAdderTest.class).getMetaClass();
+            Method clearInvocationCaches = metaClass.getClass().getDeclaredMethod("clearInvocationCaches");
+            clearInvocationCaches.setAccessible(true);
+            clearInvocationCaches.invoke(metaClass);
+        }
+        for (WeakReference<ClassLoader> loaderRef : LOADERS) {
+            MemoryAssert.assertGC(loaderRef);
+        }
     }
 
 }

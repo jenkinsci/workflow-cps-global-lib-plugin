@@ -36,6 +36,7 @@ import java.util.Collections;
 import java.util.List;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import jenkins.scm.impl.subversion.SubversionSCMSource;
 import static org.hamcrest.CoreMatchers.*;
 import org.jenkinsci.plugins.scriptsecurity.scripts.ScriptApproval;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
@@ -64,19 +65,17 @@ public class FolderLibrariesTest {
         Folder d = r.jenkins.createProject(Folder.class, "d");
         r.configRoundtrip(d);
         assertNull(d.getProperties().get(FolderLibraries.class));
-        /* TODO https://github.com/jenkinsci/git-plugin/pull/433
-        LibraryConfiguration foo = new LibraryConfiguration("foo", new SCMSourceRetriever(new GitSCMSource("foo", "https://nowhere.net/foo.git", "", "*", "", true)));
-        */
-        LibraryConfiguration bar = new LibraryConfiguration("bar", new SCMRetriever(new GitSCM("https://nowhere.net/bar.git")));
+        LibraryConfiguration foo = new LibraryConfiguration("foo", new SCMSourceRetriever(new SubversionSCMSource("foo", "https://phony.jenkins.io/foo/")));
+        LibraryConfiguration bar = new LibraryConfiguration("bar", new SCMRetriever(new GitSCM("https://phony.jenkins.io/bar.git")));
         bar.setDefaultVersion("master");
         bar.setImplicit(true);
         bar.setAllowVersionOverride(false);
-        d.getProperties().add(new FolderLibraries(Arrays.asList(/* TODO foo, */bar)));
+        d.getProperties().add(new FolderLibraries(Arrays.asList(foo, bar)));
         r.configRoundtrip(d);
         FolderLibraries prop = d.getProperties().get(FolderLibraries.class);
         assertNotNull(prop);
         List<LibraryConfiguration> libs = prop.getLibraries();
-        r.assertEqualDataBoundBeans(Arrays.asList(/* TODO foo, */bar), libs);
+        r.assertEqualDataBoundBeans(Arrays.asList(foo, bar), libs);
     }
 
     @Test public void registration() throws Exception {

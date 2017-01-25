@@ -30,6 +30,8 @@ import hudson.ExtensionList;
 import hudson.FilePath;
 import hudson.Util;
 import hudson.model.Computer;
+import hudson.model.Descriptor;
+import hudson.model.DescriptorVisibilityFilter;
 import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -50,6 +52,9 @@ import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
 import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
 import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -75,10 +80,10 @@ public class SCMSourceRetriever extends LibraryRetriever {
         if (revision == null) {
             throw new AbortException("No version " + version + " found for library " + name);
         }
-        doRetrieve(scm.build(revision.getHead(), revision), target, run, listener);
+        doRetrieve(name, scm.build(revision.getHead(), revision), target, run, listener);
     }
 
-    static void doRetrieve(@Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    static void doRetrieve(String name, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         // Adapted from CpsScmFlowDefinition:
         SCMStep delegate = new GenericSCMStep(scm);
         delegate.setPoll(false); // TODO we have no API for determining if a given SCMHead is branch-like or tag-like; would we want to turn on polling if the former?
@@ -90,7 +95,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
             if (baseWorkspace == null) {
                 throw new IOException(node.getDisplayName() + " may be offline");
             }
-            dir = baseWorkspace.withSuffix(getFilePathSuffix() + "libs");
+            dir = baseWorkspace.withSuffix(getFilePathSuffix() + "libs").child(name);
         } else { // should not happen, but just in case:
             throw new AbortException("Cannot check out in non-top-level build");
         }
@@ -98,7 +103,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
         if (computer == null) {
             throw new IOException(node.getDisplayName() + " may be offline");
         }
-        try (WorkspaceList.Lease lease = computer.getWorkspaceList().acquire(dir)) {
+        try (WorkspaceList.Lease lease = computer.getWorkspaceList().allocate(dir)) {
             delegate.checkout(run, dir, listener, node.createLauncher(listener));
             // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
             // Copy sources with relevant files from the checkout:
@@ -137,6 +142,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
         /**
          * Returns only implementations overriding {@link SCMSource#retrieve(String, TaskListener)}.
          */
+        @Restricted(NoExternalUse.class) // Jelly, Hider
         public Collection<SCMSourceDescriptor> getSCMDescriptors() {
             List<SCMSourceDescriptor> descriptors = new ArrayList<>();
             for (SCMSourceDescriptor d : ExtensionList.lookup(SCMSourceDescriptor.class)) {
@@ -145,6 +151,20 @@ public class SCMSourceRetriever extends LibraryRetriever {
                 }
             }
             return descriptors;
+        }
+
+    }
+
+    @Restricted(DoNotUse.class)
+    @Extension public static class Hider extends DescriptorVisibilityFilter {
+
+        @SuppressWarnings("rawtypes")
+        @Override public boolean filter(Object context, Descriptor descriptor) {
+            if (descriptor instanceof DescriptorImpl) {
+                return !((DescriptorImpl) descriptor).getSCMDescriptors().isEmpty();
+            } else {
+                return true;
+            }
         }
 
     }

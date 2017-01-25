@@ -27,6 +27,8 @@ package org.jenkinsci.plugins.workflow.libs;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Util;
+import hudson.model.Descriptor;
+import hudson.model.DescriptorVisibilityFilter;
 import hudson.model.Items;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -37,6 +39,9 @@ import hudson.util.FormValidation;
 import java.util.ArrayList;
 import java.util.List;
 import jenkins.model.Jenkins;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -55,7 +60,7 @@ public class SCMRetriever extends LibraryRetriever {
     }
 
     @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
-        SCMSourceRetriever.doRetrieve(scm, target, run, listener);
+        SCMSourceRetriever.doRetrieve(name, scm, target, run, listener);
     }
 
     @Override public FormValidation validateVersion(String name, String version) {
@@ -72,15 +77,32 @@ public class SCMRetriever extends LibraryRetriever {
             return "Legacy SCM";
         }
 
-        public static List<SCMDescriptor<?>> getSCMDescriptors() {
+        @Restricted(NoExternalUse.class) // Jelly, Hider
+        public List<SCMDescriptor<?>> getSCMDescriptors() {
             List<SCMDescriptor<?>> descriptors = new ArrayList<>();
             for (SCMDescriptor<?> d : SCM.all()) {
+                // TODO SCM._for cannot be used here since it requires an actual Job, where we want to check for applicability to Job.class
+                // (the best we could do is to check whether SCM.checkout(Run, …) is overridden)
                 if (d.clazz != NullSCM.class) {
                     descriptors.add(d);
                 }
             }
             return descriptors;
         }
+    }
+
+    @Restricted(DoNotUse.class)
+    @Extension public static class Hider extends DescriptorVisibilityFilter {
+
+        @SuppressWarnings("rawtypes")
+        @Override public boolean filter(Object context, Descriptor descriptor) {
+            if (descriptor instanceof DescriptorImpl) {
+                return !((DescriptorImpl) descriptor).getSCMDescriptors().isEmpty();
+            } else {
+                return true;
+            }
+        }
+
     }
 
 }
