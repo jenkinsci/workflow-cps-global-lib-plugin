@@ -70,7 +70,7 @@ public class LibraryStepTest {
         sampleRepo.init();
         sampleRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String stuff() {Constants.CONST}}");
         sampleRepo.write("src/pkg/Constants.groovy", "package pkg; class Constants {static String CONST = 'constant'}");
-        sampleRepo.write("src/pkg/App.groovy", "package pkg; class App {def run() {Lib.stuff()}}");
+        sampleRepo.write("src/pkg/App.groovy", "package pkg; class App implements Serializable {def run() {Lib.stuff()}}");
         sampleRepo.git("add", "src");
         sampleRepo.git("commit", "--message=init");
         GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
