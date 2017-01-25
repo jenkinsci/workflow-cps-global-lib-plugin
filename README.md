@@ -45,11 +45,22 @@ Other directories under the root are reserved for future enhancements.
 ## Defining external libraries
 
 An external library is defined with a name, a source code retrieval method such as by SCM, and optionally a default version.
-The name should be a short identifier as it will be used in scripts.
+This name will later be used in scripts to import the library:
+
+```groovy
+@Library('somename') _
+```
+
+The library name should be a short identifier as it will be used in scripts.
 
 The version could be anything understood by that SCM; for example, branches, tags, and commit hashes all work for Git.
 You may also declare whether scripts need to explicitly request that library (detailed below), or if it is present by default.
 Furthermore, if you specify a version in Jenkins configuration, you can block scripts from selecting a _different_ version.
+If you do not specify a default version, you must always specify it when importing the library into scripts:
+
+```groovy
+@Library('somename@master') _
+```
 
 The best way to specify the SCM is using an SCM plugin which has been specifically updated
 to support a new API for checking out an arbitrary named version (_Modern SCM_ option).
@@ -147,6 +158,8 @@ or several libraries:
 ```groovy
 @Library(['somelib', 'otherlib@abc1234'])
 ```
+
+The version is required when the default version was not specified when the library was defined.
 
 The annotation can be anywhere in the script where an annotation is [permitted by Java/Groovy](http://groovy-lang.org/objectorientation.html#ann-placement).
 When referring to class libraries (with `src/` directories), conventionally the annotation goes on an `import` statement:
@@ -282,8 +295,8 @@ node {
 ```
 
 ### Defining global functions
-You can define your own functions that looks and feels like built-in step functions like `sh` or `git`.
-For example, to define `helloWorld` step of your own, create a file named `vars/helloWorld.groovy` and
+You can define your own functions that look and feel like built-in step functions like `sh` or `git`.
+For example, to define your own `helloWorld` step, create a file named `vars/helloWorld.groovy` and
 define the `call` method:
 
 ```groovy
