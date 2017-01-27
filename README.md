@@ -169,11 +169,12 @@ When referring to class libraries (with `src/` directories), conventionally the 
 import com.mycorp.pipeline.somelib.UsefulClass
 ```
 
-It is legal, though unnecessary, to `import` a global variable (or function) defined in a `vars/` directory:
+It is not recommended to `import` a global variable (or function) defined in a `vars/` directory if that variable defines instance fields:
 
 ```groovy
 @Library('somelib')
 import usefulFunction
+usefulFunction.something() // invoked as a static method, perhaps not what you meant
 ```
 
 If you have nowhere better to put it, the simplest legal syntax is an unused, untyped field named `_`:
