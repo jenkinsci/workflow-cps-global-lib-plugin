@@ -360,6 +360,24 @@ def say(name) {
 }
 ```
 
+Note that in the above, `this.foo` is not referring to a field, but to an entry in a `Script.binding`, so it is recommended to use a real class definition:
+
+```groovy
+// vars/acme.groovy
+class acme implements Serializable {
+    private String foo
+    def getFoo() {
+        foo
+    }
+    def setFoo(v) {
+        foo = v
+    }
+    def say(name) {
+        echo "Hello world, ${name}"
+    }
+}
+```
+
 Then your Pipeline can call these functions like this:
 
 ```groovy
