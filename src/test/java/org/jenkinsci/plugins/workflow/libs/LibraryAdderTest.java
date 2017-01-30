@@ -267,31 +267,13 @@ public class LibraryAdderTest {
     @Issue("JENKINS-39719")
     @Test public void mayhem() throws Exception {
         sampleRepo.init();
-        sampleRepo.write("src/com/acme/foo/test/MyTest.groovy", "package com.acme.foo.test \n" +
-"class MyTest \n" +
-"{ \n" +
-"def mytest1() {} \n" +
-"} ");
-        sampleRepo.write("src/com/acme/foo/test/MyOtherTest.groovy", "package com.acme.foo.test \n" +
-"class MyOtherTest { \n" +
-"def test1() {} \n" +
-"def test2() {} \n" +
-"}");
+        sampleRepo.write("src/p/MyTest.groovy", "package p; class MyTest {def mytest1() {}}");
+        sampleRepo.write("src/p/MyOtherTest.groovy", "package p; class MyOtherTest {def test1() {}; def test2() {}}");
         sampleRepo.git("add", "src");
         sampleRepo.git("commit", "--message=init");
         GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("test", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
-        p.setDefinition(new CpsFlowDefinition("@Library('test@master') _\n" +
-"import com.acme.foo.test.MyTest \n" +
-"import com.acme.foo.test.MyOtherTest \n" +
-"\n" +
-"class MyTestExtended \n" +
-"extends MyTest \n" +
-"{ \n" +
-"def mytestfunction() {} \n" +
-"} \n" +
-"\n" +
-"new MyTestExtended()", true));
+        p.setDefinition(new CpsFlowDefinition("@Library('test@master') _; import p.MyTest; import p.MyOtherTest; class MyTestExtended extends MyTest {def mytestfunction() {}}", true));
         r.buildAndAssertSuccess(p);
     }
 
