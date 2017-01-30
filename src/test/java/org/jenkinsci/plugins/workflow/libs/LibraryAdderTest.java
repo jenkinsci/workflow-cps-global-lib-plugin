@@ -56,9 +56,11 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import static org.junit.Assert.*;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MemoryAssert;
 import org.jvnet.hudson.test.TestExtension;
@@ -259,6 +261,38 @@ public class LibraryAdderTest {
         WorkflowRun b2 = (WorkflowRun) ra.run(ra.getOriginalScript(), Collections.singletonMap("trusted", originalScript.replace(originalMessage, "should not allowed"))).get();
         r.assertBuildStatusSuccess(b2); // currently do not throw an error, since the GUI does not offer it anyway
         r.assertLogContains(originalMessage, b2);
+    }
+
+    @Ignore("TODO")
+    @Issue("JENKINS-39719")
+    @Test public void mayhem() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/com/acme/foo/test/MyTest.groovy", "package com.acme.foo.test \n" +
+"class MyTest \n" +
+"{ \n" +
+"def mytest1() {} \n" +
+"} ");
+        sampleRepo.write("src/com/acme/foo/test/MyOtherTest.groovy", "package com.acme.foo.test \n" +
+"class MyOtherTest { \n" +
+"def test1() {} \n" +
+"def test2() {} \n" +
+"}");
+        sampleRepo.git("add", "src");
+        sampleRepo.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("test", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('test@master') _\n" +
+"import com.acme.foo.test.MyTest \n" +
+"import com.acme.foo.test.MyOtherTest \n" +
+"\n" +
+"class MyTestExtended \n" +
+"extends MyTest \n" +
+"{ \n" +
+"def mytestfunction() {} \n" +
+"} \n" +
+"\n" +
+"new MyTestExtended()", true));
+        r.buildAndAssertSuccess(p);
     }
 
     private static final List<WeakReference<ClassLoader>> LOADERS = new ArrayList<>();
