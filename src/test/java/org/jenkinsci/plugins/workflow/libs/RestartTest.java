@@ -24,8 +24,11 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import com.cloudbees.groovy.cps.CpsTransformer;
 import com.cloudbees.hudson.plugins.folder.Folder;
+import java.lang.reflect.Field;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicLong;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
@@ -39,6 +42,7 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.runners.model.Statement;
 import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
 
 public class RestartTest {
@@ -116,6 +120,39 @@ public class RestartTest {
                 WorkflowRun b2 = p.getLastBuild();
                 SemaphoreStep.success("wait/2", null);
                 rr.j.assertLogContains("subsequent content", rr.j.waitForCompletion(b2));
+            }
+        });
+    }
+
+    @Issue("JENKINS-39719")
+    @Test public void syntheticMethodOverride() throws Exception {
+        rr.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                sampleRepo.init();
+                sampleRepo.write("src/p/MyTest.groovy", "package p; class MyTest {def mytest1() {}}");
+                sampleRepo.write("src/p/MyOtherTest.groovy", "package p; class MyOtherTest {def test1() {}; def test2() {}}");
+                sampleRepo.git("add", "src");
+                sampleRepo.git("commit", "--message=init");
+                GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("test", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+                WorkflowJob p = rr.j.jenkins.createProject(WorkflowJob.class, "p");
+                p.setDefinition(new CpsFlowDefinition("@Library('test@master') _; import p.MyTest; import p.MyOtherTest; class MyTestExtended extends MyTest {def mytestfunction() {}}", true));
+                rr.j.buildAndAssertSuccess(p);
+                // Variant after restart.
+                Field f = CpsTransformer.class.getDeclaredField("iota");
+                f.setAccessible(true);
+                ((AtomicLong) f.get(null)).set(0); // simulate VM restart
+                p.setDefinition(new CpsFlowDefinition("@Library('test@master') _; import p.MyTest; import p.MyOtherTest; semaphore 'wait'; evaluate 'class MyTestExtended extends p.MyTest {def mytestfunction() {}}; true'", true));
+                SemaphoreStep.waitForStart("wait/1", p.scheduleBuild2(0).waitForStart());
+                ((AtomicLong) f.get(null)).set(0);
+            }
+        });
+        rr.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                WorkflowJob p = rr.j.jenkins.getItemByFullName("p", WorkflowJob.class);
+                WorkflowRun b2 = p.getLastBuild();
+                assertEquals(2, b2.getNumber());
+                SemaphoreStep.success("wait/1", null);
+                rr.j.assertBuildStatusSuccess(rr.j.waitForCompletion(b2));
             }
         });
     }

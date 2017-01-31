@@ -56,11 +56,9 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import static org.junit.Assert.*;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
-import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MemoryAssert;
 import org.jvnet.hudson.test.TestExtension;
@@ -261,20 +259,6 @@ public class LibraryAdderTest {
         WorkflowRun b2 = (WorkflowRun) ra.run(ra.getOriginalScript(), Collections.singletonMap("trusted", originalScript.replace(originalMessage, "should not allowed"))).get();
         r.assertBuildStatusSuccess(b2); // currently do not throw an error, since the GUI does not offer it anyway
         r.assertLogContains(originalMessage, b2);
-    }
-
-    @Ignore("TODO")
-    @Issue("JENKINS-39719")
-    @Test public void mayhem() throws Exception {
-        sampleRepo.init();
-        sampleRepo.write("src/p/MyTest.groovy", "package p; class MyTest {def mytest1() {}}");
-        sampleRepo.write("src/p/MyOtherTest.groovy", "package p; class MyOtherTest {def test1() {}; def test2() {}}");
-        sampleRepo.git("add", "src");
-        sampleRepo.git("commit", "--message=init");
-        GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("test", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
-        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
-        p.setDefinition(new CpsFlowDefinition("@Library('test@master') _; import p.MyTest; import p.MyOtherTest; class MyTestExtended extends MyTest {def mytestfunction() {}}", true));
-        r.buildAndAssertSuccess(p);
     }
 
     private static final List<WeakReference<ClassLoader>> LOADERS = new ArrayList<>();
