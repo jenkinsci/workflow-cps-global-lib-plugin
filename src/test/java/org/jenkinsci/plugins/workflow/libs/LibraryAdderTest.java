@@ -297,15 +297,14 @@ public class LibraryAdderTest {
     @Issue({"JENKINS-38021", "JENKINS-31484"})
     @Test public void gettersAndSetters() throws Exception {
         sampleRepo.init();
-        // TODO when picking up JENKINS-31484 fix, remove @
-        sampleRepo.write("vars/config.groovy", "class config implements Serializable {private String foo; public String getFoo() {return(/loaded ${this.@foo}/)}; public void setFoo(String value) {this.@foo = value.toUpperCase()}}");
+        sampleRepo.write("vars/config.groovy", "class config implements Serializable {private String foo; public String getFoo() {return(/loaded ${this.foo}/)}; public void setFoo(String value) {this.foo = value.toUpperCase()}}");
         sampleRepo.git("add", "vars");
         sampleRepo.git("commit", "--message=init");
         GlobalLibraries.get().setLibraries(Collections.singletonList(
             new LibraryConfiguration("config",
                 new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
-        p.setDefinition(new CpsFlowDefinition("@Library('config@master') _; config.foo = 'bar'; echo(/set to $config.foo/)", false));
+        p.setDefinition(new CpsFlowDefinition("@Library('config@master') _; timeout(1) {config.foo = 'bar'; echo(/set to $config.foo/)}", false));
         r.assertLogContains("set to loaded BAR", r.buildAndAssertSuccess(p));
         p.setDefinition(new CpsFlowDefinition("@Library('config@master') _; config.setFoo('bar'); echo(/set to ${config.getFoo()}/)", true));
         r.assertLogContains("set to loaded BAR", r.buildAndAssertSuccess(p));
