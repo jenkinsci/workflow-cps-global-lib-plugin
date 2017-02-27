@@ -24,6 +24,8 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import hudson.model.Result;
+import java.util.Arrays;
 import java.util.Collections;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
@@ -42,6 +44,7 @@ public class LibraryStepTest {
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
+    @Rule public GitSampleRepoRule sampleRepo2 = new GitSampleRepoRule();
 
     @Test public void vars() throws Exception {
         sampleRepo.init();
@@ -79,9 +82,36 @@ public class LibraryStepTest {
         r.assertLogContains("using constant vs. constant", b);
     }
 
+    @Test public void classesFromWrongPlace() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/some/pkg/Lib.groovy", "package some.pkg; class Lib {static void m() {}}");
+        sampleRepo.git("add", "src");
+        sampleRepo.git("commit", "--message=init");
+        sampleRepo2.init();
+        sampleRepo2.write("src/other/pkg/Lib.groovy", "package other.pkg; class Lib {static void m() {}}");
+        sampleRepo2.git("add", "src");
+        sampleRepo2.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Arrays.asList(
+            new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true))),
+            new LibraryConfiguration("stuph", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo2.toString(), "", "*", "", true)))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("library('stuff@master').some.pkg.Lib.m()", true));
+        WorkflowRun b = r.buildAndAssertSuccess(p);
+        p.setDefinition(new CpsFlowDefinition("library('stuph@master').other.pkg.Lib.m()", true));
+        b = r.buildAndAssertSuccess(p);
+        p.setDefinition(new CpsFlowDefinition("library('stuph@master'); library('stuff@master').other.pkg.Lib.m()", true));
+        b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+        r.assertLogContains(IllegalAccessException.class.getName(), b);
+        p.setDefinition(new CpsFlowDefinition("library('stuff@master'); library('stuph@master').some.pkg.Lib.m()", true));
+        b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+        r.assertLogContains(IllegalAccessException.class.getName(), b);
+        p.setDefinition(new CpsFlowDefinition("library('stuff@master').java.beans.Introspector.flushCaches()", true));
+        b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+        r.assertLogContains(IllegalAccessException.class.getName(), b);
+    }
+
     // TODO call methods with one or two arguments or nulls
     // TODO classes from untrusted libs
-    // TODO return value cannot be used to access unrelated classes, or classes from another library
     // TODO configRoundtrip test
     // TODO duplicated library (@Library + library; library + library) should merely load existing library
     // TODO no matching library

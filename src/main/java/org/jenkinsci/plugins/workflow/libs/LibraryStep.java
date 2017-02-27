@@ -34,11 +34,13 @@ import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import java.io.File;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
+import java.security.CodeSource;
 import java.util.Collections;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -143,7 +145,8 @@ public class LibraryStep extends AbstractStepImpl {
                 loader.addURL(u);
             }
             run.save(); // persist changes to LibrariesAction.libraries*.variables
-            return new LoadedClasses(name, trusted, "", null);
+            String srcUrl = new File(run.getRootDir(), "libs/" + name + "/src").toURI().toString(); // cf. LibraryAdder.retrieve
+            return new LoadedClasses(name, trusted, "", null, srcUrl);
         }
 
     }
@@ -156,12 +159,15 @@ public class LibraryStep extends AbstractStepImpl {
         private final @Nonnull String prefix;
         /** {@link Class#getName} minus package prefix */
         private final @CheckForNull String clazz;
+        /** {@code file:/…/libs/NAME/src/} */
+        private final @Nonnull String srcUrl;
 
-        LoadedClasses(String library, boolean trusted, String prefix, String clazz) {
+        LoadedClasses(String library, boolean trusted, String prefix, String clazz, String srcUrl) {
             this.library = library;
             this.trusted = trusted;
             this.prefix = prefix;
             this.clazz = clazz;
+            this.srcUrl = srcUrl;
         }
 
         @Override public Object getProperty(String property) {
@@ -170,7 +176,7 @@ public class LibraryStep extends AbstractStepImpl {
                 String fullClazz = clazz != null ? clazz + '$' + property : property;
                 loadClass(prefix + fullClazz);
                 // OK, class really exists, stash it and await methods
-                return new LoadedClasses(library, trusted, prefix, fullClazz);
+                return new LoadedClasses(library, trusted, prefix, fullClazz, srcUrl);
             } else if (clazz != null) {
                 // Field access?
                 try {
@@ -181,7 +187,7 @@ public class LibraryStep extends AbstractStepImpl {
                 }
             } else {
                 // Still selecting package components.
-                return new LoadedClasses(library, trusted, prefix + property + '.', null);
+                return new LoadedClasses(library, trusted, prefix + property + '.', null, srcUrl);
             }
         }
 
@@ -215,7 +221,12 @@ public class LibraryStep extends AbstractStepImpl {
                 if (definingLoader != loader) {
                     throw new IllegalAccessException("cannot access " + c + " via library handle: " + definingLoader + " is not " + loader);
                 }
-                // TODO verify that the specified class is in fact in the named library
+                // Note that this goes through GroovyCodeSource.<init>(File, String), which unlike (say) URLClassLoader set the “location” to the actual file, *not* the root.
+                CodeSource codeSource = c.getProtectionDomain().getCodeSource();
+                String actual = codeSource != null ? codeSource.getLocation().toString() : "<unknown>";
+                if (!actual.startsWith(srcUrl)) {
+                    throw new IllegalAccessException(name + " was defined in " + actual + " which was not inside " + srcUrl);
+                }
                 if (!Modifier.isPublic(c.getModifiers())) { // unlikely since Groovy makes classes implicitly public
                     throw new IllegalAccessException(c + " is not public");
                 }
