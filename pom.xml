@@ -63,12 +63,13 @@
     </pluginRepositories>
     <properties>
         <jenkins.version>1.642.3</jenkins.version>
+        <workflow-cps-plugin.version>2.28</workflow-cps-plugin.version>
     </properties>
     <dependencies>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-cps</artifactId>
-            <version>2.28</version>
+            <version>${workflow-cps-plugin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -146,6 +147,20 @@
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-scm-step</artifactId>
             <version>2.3</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-step-api</artifactId>
+            <version>2.9</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-cps</artifactId>
+            <version>${workflow-cps-plugin.version}</version>
             <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>

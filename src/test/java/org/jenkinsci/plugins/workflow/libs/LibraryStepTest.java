@@ -25,13 +25,16 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import hudson.model.Result;
+import hudson.plugins.git.GitSCM;
 import java.util.Arrays;
 import java.util.Collections;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.SnippetizerTester;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.steps.StepConfigTester;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.ClassRule;
@@ -46,6 +49,21 @@ public class LibraryStepTest {
     @Rule public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
     @Rule public GitSampleRepoRule sampleRepo2 = new GitSampleRepoRule();
 
+    @Test public void configRoundtrip() throws Exception {
+        StepConfigTester stepTester = new StepConfigTester(r);
+        SnippetizerTester snippetizerTester = new SnippetizerTester(r);
+        LibraryStep s = new LibraryStep("foo");
+        r.assertEqualDataBoundBeans(s, stepTester.configRoundTrip(s));
+        snippetizerTester.assertRoundTrip(s, "library 'foo'");
+        s.setRetriever(new SCMSourceRetriever(new GitSCMSource("id", "https://nowhere.net/", "", "*", "", true)));
+        r.assertEqualDataBoundBeans(s, stepTester.configRoundTrip(s));
+        // TODO should fix up common SCMSource implementations to use proper @DataBoundConstructor/@DataBoundSetter hygiene and add @Symbol
+        snippetizerTester.assertRoundTrip(s, "library identifier: 'foo', retriever: [$class: 'SCMSourceRetriever', scm: [$class: 'GitSCMSource', credentialsId: '', excludes: '', id: 'id', ignoreOnPushNotifications: true, includes: '*', remote: 'https://nowhere.net/']]");
+        s.setRetriever(new SCMRetriever(new GitSCM("https://phony.jenkins.io/bar.git")));
+        r.assertEqualDataBoundBeans(s, stepTester.configRoundTrip(s));
+        // TODO GitSCM form too ugly to bother testing for now
+    }
+
     @Test public void vars() throws Exception {
         sampleRepo.init();
         sampleRepo.write("vars/x.groovy", "def call() {echo 'ran library'}");
@@ -59,7 +77,6 @@ public class LibraryStepTest {
         LibrariesAction action = b.getAction(LibrariesAction.class);
         assertNotNull(action);
         assertEquals("[LibraryRecord{name=stuff, version=master, variables=[x], trusted=true}]", action.getLibraries().toString());
-        // TODO should fix up common SCMSource implementations to use proper @DataBoundConstructor/@DataBoundSetter hygiene and add @Symbol
         p.setDefinition(new CpsFlowDefinition("library identifier: 'otherstuff@master', retriever: [$class: 'SCMSourceRetriever', scm: [$class: 'GitSCMSource', remote: '" + sampleRepo + "', credentialsId: '']]; x()", true));
         b = r.buildAndAssertSuccess(p);
         r.assertLogContains("ran library", b);

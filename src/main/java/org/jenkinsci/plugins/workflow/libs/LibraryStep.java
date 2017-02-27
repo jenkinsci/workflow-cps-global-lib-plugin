@@ -41,10 +41,12 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.security.CodeSource;
+import java.util.Collection;
 import java.util.Collections;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
+import jenkins.model.Jenkins;
 import org.apache.commons.lang3.reflect.ConstructorUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.AbstractWhitelist;
@@ -55,6 +57,8 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousNonBlockingStepExecution;
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
@@ -82,8 +86,6 @@ public class LibraryStep extends AbstractStepImpl {
         this.retriever = retriever;
     }
 
-    // TODO config.jelly
-
     @Extension public static class DescriptorImpl extends AbstractStepDescriptorImpl {
 
         public DescriptorImpl() {
@@ -96,6 +98,11 @@ public class LibraryStep extends AbstractStepImpl {
 
         @Override public String getDisplayName() {
             return "Load a shared library on the fly";
+        }
+
+        @Restricted(DoNotUse.class) // Jelly
+        public Collection<LibraryRetrieverDescriptor> getRetrieverDescriptors() {
+            return Jenkins.getActiveInstance().getDescriptorByType(LibraryConfiguration.DescriptorImpl.class).getRetrieverDescriptors();
         }
 
     }
