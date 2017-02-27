@@ -27,6 +27,7 @@ package org.jenkinsci.plugins.workflow.libs;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
+import hudson.Functions;
 import hudson.model.TaskListener;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -111,7 +112,7 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
                         if (x instanceof AbortException) {
                             listener.error(x.getMessage());
                         } else {
-                            x.printStackTrace(listener.getLogger());
+                            listener.getLogger().println(Functions.printThrowable(x).trim()); // TODO 2.43+ use Functions.printStackTrace
                         }
                         throw new CompilationFailedException(Phases.CONVERSION, source);
                     } catch (IOException x2) {
