@@ -25,7 +25,7 @@ THE SOFTWARE.
 
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-    <f:entry field="identifier" title="%{Name and optional version}">
+    <f:entry field="identifier" title="${%Name and optional version}">
         <f:textbox/>
     </f:entry>
     <f:descriptorRadioList varName="retriever" instance="${instance.retriever}" descriptors="${descriptor.retrieverDescriptors}" title="${%Retrieval method}"/>
