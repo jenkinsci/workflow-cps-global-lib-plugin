@@ -186,6 +186,4 @@ public class LibraryStepTest {
         assertEquals(1, libraries.size());
     }
 
-    // TODO restart test of classes and vars
-
 }
