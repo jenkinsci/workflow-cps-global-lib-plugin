@@ -24,14 +24,18 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import com.cloudbees.hudson.plugins.folder.Folder;
+import com.google.common.collect.ImmutableMap;
 import hudson.model.Result;
 import hudson.plugins.git.GitSCM;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.SnippetizerTester;
+import org.jenkinsci.plugins.workflow.cps.replay.ReplayAction;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.steps.StepConfigTester;
@@ -139,10 +143,49 @@ public class LibraryStepTest {
         r.assertLogContains("CONST=constant x=33 append=nonnull", b);
     }
 
-    // TODO classes from untrusted libs
-    // TODO duplicated library (@Library + library; library + library) should merely load existing library
-    // TODO no matching library
-    // TODO replay
+    @Test public void untrustedAndReplay() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/p/C.groovy", "package p; class C {static String message() {'used library'}}");
+        sampleRepo.write("vars/x.groovy", "def call() {'ran library'}");
+        sampleRepo.git("add", "src", "vars");
+        sampleRepo.git("commit", "--message=init");
+        Folder d = r.jenkins.createProject(Folder.class, "d");
+        d.getProperties().add(new FolderLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true))))));
+        WorkflowJob p = d.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("echo(/${library('stuff@master').p.C.message()} and ${x()}/)", true));
+        WorkflowRun b1 = r.buildAndAssertSuccess(p);
+        r.assertLogContains("used library and ran library", b1);
+        ReplayAction ra = b1.getAction(ReplayAction.class);
+        WorkflowRun b2 = r.assertBuildStatusSuccess((WorkflowRun) ra.run(ra.getOriginalScript(), ImmutableMap.of("p.C", "package p; class C {static String message() {'reused library'}}", "x", "def call() {'reran library'}")).get());
+        r.assertLogContains("reused library and reran library", b2);
+    }
+
+    @Test public void nonexistentLibrary() throws Exception {
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("library 'nonexistent'", true));
+        WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+        r.assertLogContains("No library named nonexistent found", b);
+    }
+
+    @Test public void duplicatedLibrary() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("vars/x.groovy", "def call() {echo 'ran library'}");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        LibraryConfiguration cfg = new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
+        cfg.setDefaultVersion("master");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(cfg));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff') _; library 'stuff'; library 'stuff'; x()", true));
+        WorkflowRun b = r.buildAndAssertSuccess(p);
+        r.assertLogContains("ran library", b);
+        r.assertLogContains("Only using first definition of library stuff", b);
+        List<LibrariesAction> actions = b.getActions(LibrariesAction.class);
+        assertEquals(1, actions.size());
+        List<LibraryRecord> libraries = actions.get(0).getLibraries();
+        assertEquals(1, libraries.size());
+    }
+
     // TODO restart test of classes and vars
 
 }

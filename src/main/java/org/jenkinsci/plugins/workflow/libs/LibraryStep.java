@@ -43,6 +43,7 @@ import java.net.URL;
 import java.security.CodeSource;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -143,7 +144,14 @@ public class LibraryStep extends AbstractStepImpl {
                 action = new LibrariesAction(Lists.newArrayList(record));
                 run.addAction(action);
             } else {
-                action.getLibraries().add(record);
+                List<LibraryRecord> libraries = action.getLibraries();
+                for (LibraryRecord existing : libraries) {
+                    if (existing.name.equals(name)) {
+                        listener.getLogger().println("Only using first definition of library " + name);
+                        return new LoadedClasses(name, trusted, run);
+                    }
+                }
+                libraries.add(record);
             }
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
             CpsFlowExecution exec = (CpsFlowExecution) getContext().get(FlowExecution.class);
@@ -152,8 +160,7 @@ public class LibraryStep extends AbstractStepImpl {
                 loader.addURL(u);
             }
             run.save(); // persist changes to LibrariesAction.libraries*.variables
-            String srcUrl = new File(run.getRootDir(), "libs/" + name + "/src").toURI().toString(); // cf. LibraryAdder.retrieve
-            return new LoadedClasses(name, trusted, "", null, srcUrl);
+            return new LoadedClasses(name, trusted, run);
         }
 
     }
@@ -168,6 +175,10 @@ public class LibraryStep extends AbstractStepImpl {
         private final @CheckForNull String clazz;
         /** {@code file:/…/libs/NAME/src/} */
         private final @Nonnull String srcUrl;
+
+        LoadedClasses(String library, boolean trusted, Run<?,?> run) {
+            this(library, trusted, "", null, /* cf. LibraryAdder.retrieve */ new File(run.getRootDir(), "libs/" + library + "/src").toURI().toString());
+        }
 
         LoadedClasses(String library, boolean trusted, String prefix, String clazz, String srcUrl) {
             this.library = library;
