@@ -127,9 +127,19 @@ public class LibraryStepTest {
         r.assertLogContains(IllegalAccessException.class.getName(), b);
     }
 
-    // TODO call methods with one or two arguments or nulls
+    @Test public void callSites() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/p/C.groovy", "package p; class C {int x; C(int x) {this.x = x}; public static final String CONST = 'constant'; static String append(String x, String y) {x + y}}");
+        sampleRepo.git("add", "src");
+        sampleRepo.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("x", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("def klazz = library('x@master').p.C; echo(/CONST=${klazz.CONST} x=${klazz.new(33).x} append=${klazz.append('non', null)}/)", true));
+        WorkflowRun b = r.buildAndAssertSuccess(p);
+        r.assertLogContains("CONST=constant x=33 append=nonnull", b);
+    }
+
     // TODO classes from untrusted libs
-    // TODO configRoundtrip test
     // TODO duplicated library (@Library + library; library + library) should merely load existing library
     // TODO no matching library
     // TODO replay

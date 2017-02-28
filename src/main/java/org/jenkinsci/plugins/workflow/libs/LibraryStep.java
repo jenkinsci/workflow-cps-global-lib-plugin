@@ -178,20 +178,23 @@ public class LibraryStep extends AbstractStepImpl {
         }
 
         @Override public Object getProperty(String property) {
+            if (clazz != null) {
+                // Field access?
+                try {
+                    // not doing a Whitelist check since GroovyClassLoaderWhitelist would be allowing it anyway
+                    return loadClass(prefix + clazz).getField(property).get(null);
+                } catch (NoSuchFieldException x) {
+                    // guessed wrong
+                } catch (IllegalAccessException x) {
+                    throw new GroovyRuntimeException(x);
+                }
+            }
             if (property.matches("^[A-Z].*")) {
                 // looks like a class name component
                 String fullClazz = clazz != null ? clazz + '$' + property : property;
                 loadClass(prefix + fullClazz);
                 // OK, class really exists, stash it and await methods
                 return new LoadedClasses(library, trusted, prefix, fullClazz, srcUrl);
-            } else if (clazz != null) {
-                // Field access?
-                try {
-                    // not doing a Whitelist check since GroovyClassLoaderWhitelist would be allowing it anyway
-                    return loadClass(prefix + clazz).getField(property).get(null);
-                } catch (NoSuchFieldException | IllegalAccessException x) {
-                    throw new GroovyRuntimeException(x);
-                }
             } else {
                 // Still selecting package components.
                 return new LoadedClasses(library, trusted, prefix + property + '.', null, srcUrl);
