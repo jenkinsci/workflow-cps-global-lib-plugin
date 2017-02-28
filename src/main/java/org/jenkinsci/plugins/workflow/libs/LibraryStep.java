@@ -32,8 +32,14 @@ import groovy.lang.GroovyRuntimeException;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
+import hudson.model.AutoCompletionCandidates;
+import hudson.model.Item;
+import hudson.model.ItemGroup;
+import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.security.AccessControlled;
+import hudson.security.Permission;
 import java.io.File;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
@@ -44,6 +50,8 @@ import java.security.CodeSource;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -60,8 +68,10 @@ import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousNonBlockingStepEx
 import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
 
 /**
  * Dynamically injects a library into the running build.
@@ -104,6 +114,24 @@ public class LibraryStep extends AbstractStepImpl {
         @Restricted(DoNotUse.class) // Jelly
         public Collection<LibraryRetrieverDescriptor> getRetrieverDescriptors() {
             return Jenkins.getActiveInstance().getDescriptorByType(LibraryConfiguration.DescriptorImpl.class).getRetrieverDescriptors();
+        }
+
+        public AutoCompletionCandidates doAutoCompleteIdentifier(@AncestorInPath ItemGroup<?> group, @QueryParameter String value) {
+            Set<String> names = new TreeSet<>();
+            if (group instanceof AccessControlled && ((AccessControlled) group).hasPermission(Item.EXTENDED_READ)) {
+                for (LibraryResolver resolver : ExtensionList.lookup(LibraryResolver.class)) {
+                    for (LibraryConfiguration cfg : resolver.suggestedConfigurations(group)) {
+                        names.add(cfg.getName());
+                    }
+                }
+            }
+            AutoCompletionCandidates candidates = new AutoCompletionCandidates();
+            for (String name : names) {
+                if (name.startsWith(value)) {
+                    candidates.add(name);
+                }
+            }
+            return candidates;
         }
 
     }

@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.CheckForNull;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
@@ -68,10 +69,10 @@ public class FolderLibraries extends AbstractFolderProperty<AbstractFolder<?>> {
             return false;
         }
 
-        @Override public Collection<LibraryConfiguration> forJob(Job<?,?> job, Map<String,String> libraryVersions) {
+        private Collection<LibraryConfiguration> forGroup(@CheckForNull ItemGroup<?> group) {
             List<LibraryConfiguration> libraries = new ArrayList<>();
-            for (ItemGroup<?> group = job.getParent(); group instanceof AbstractFolder; group = ((AbstractFolder) group).getParent()) {
-                FolderLibraries prop = ((AbstractFolder<?>) group).getProperties().get(FolderLibraries.class);
+            for (ItemGroup<?> g = group; g instanceof AbstractFolder; g = ((AbstractFolder) g).getParent()) {
+                FolderLibraries prop = ((AbstractFolder<?>) g).getProperties().get(FolderLibraries.class);
                 if (prop != null) {
                     libraries.addAll(prop.getLibraries());
                 }
@@ -79,15 +80,16 @@ public class FolderLibraries extends AbstractFolderProperty<AbstractFolder<?>> {
             return libraries;
         }
 
+        @Override public Collection<LibraryConfiguration> forJob(Job<?,?> job, Map<String,String> libraryVersions) {
+            return forGroup(job.getParent());
+        }
+
         @Override public Collection<LibraryConfiguration> fromConfiguration(StaplerRequest request) {
-            List<LibraryConfiguration> libraries = new ArrayList<>();
-            for (ItemGroup<?> group = request.findAncestorObject(AbstractFolder.class); group instanceof AbstractFolder; group = ((AbstractFolder) group).getParent()) {
-                FolderLibraries prop = ((AbstractFolder<?>) group).getProperties().get(FolderLibraries.class);
-                if (prop != null) {
-                    libraries.addAll(prop.getLibraries());
-                }
-            }
-            return libraries;
+            return forGroup(request.findAncestorObject(AbstractFolder.class));
+        }
+
+        @Override public Collection<LibraryConfiguration> suggestedConfigurations(ItemGroup<?> group) {
+            return forGroup(group);
         }
 
     }
