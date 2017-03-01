@@ -27,7 +27,11 @@ package org.jenkinsci.plugins.workflow.libs;
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.google.common.collect.ImmutableMap;
 import hudson.model.Result;
+import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
+import hudson.plugins.git.SubmoduleConfig;
+import hudson.plugins.git.UserRemoteConfig;
+import hudson.plugins.git.extensions.GitSCMExtension;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -59,13 +63,15 @@ public class LibraryStepTest {
         LibraryStep s = new LibraryStep("foo");
         r.assertEqualDataBoundBeans(s, stepTester.configRoundTrip(s));
         snippetizerTester.assertRoundTrip(s, "library 'foo'");
+        s = new LibraryStep("foo@master");
         s.setRetriever(new SCMSourceRetriever(new GitSCMSource("id", "https://nowhere.net/", "", "*", "", true)));
         r.assertEqualDataBoundBeans(s, stepTester.configRoundTrip(s));
-        // TODO should fix up common SCMSource implementations to use proper @DataBoundConstructor/@DataBoundSetter hygiene and add @Symbol
-        snippetizerTester.assertRoundTrip(s, "library identifier: 'foo', retriever: [$class: 'SCMSourceRetriever', scm: [$class: 'GitSCMSource', credentialsId: '', excludes: '', id: 'id', ignoreOnPushNotifications: true, includes: '*', remote: 'https://nowhere.net/']]");
-        s.setRetriever(new SCMRetriever(new GitSCM("https://phony.jenkins.io/bar.git")));
+        snippetizerTester.assertRoundTrip(s, "library identifier: 'foo@master', retriever: modernSCM([$class: 'GitSCMSource', credentialsId: '', excludes: '', id: 'id', ignoreOnPushNotifications: true, includes: '*', remote: 'https://nowhere.net/'])");
+        s.setRetriever(new SCMRetriever(new GitSCM(Collections.singletonList(new UserRemoteConfig("https://nowhere.net/", null, null, null)),
+            Collections.singletonList(new BranchSpec("${library.foo.version}")),
+            false, Collections.<SubmoduleConfig>emptyList(), null, null, Collections.<GitSCMExtension>emptyList())));
         r.assertEqualDataBoundBeans(s, stepTester.configRoundTrip(s));
-        // TODO GitSCM form too ugly to bother testing for now
+        snippetizerTester.assertRoundTrip(s, "library identifier: 'foo@master', retriever: legacySCM([$class: 'GitSCM', branches: [[name: '${library.foo.version}']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[url: 'https://nowhere.net/']]])");
     }
 
     @Test public void vars() throws Exception {
@@ -81,7 +87,7 @@ public class LibraryStepTest {
         LibrariesAction action = b.getAction(LibrariesAction.class);
         assertNotNull(action);
         assertEquals("[LibraryRecord{name=stuff, version=master, variables=[x], trusted=true}]", action.getLibraries().toString());
-        p.setDefinition(new CpsFlowDefinition("library identifier: 'otherstuff@master', retriever: [$class: 'SCMSourceRetriever', scm: [$class: 'GitSCMSource', remote: '" + sampleRepo + "', credentialsId: '']]; x()", true));
+        p.setDefinition(new CpsFlowDefinition("library identifier: 'otherstuff@master', retriever: modernSCM([$class: 'GitSCMSource', remote: '" + sampleRepo + "', credentialsId: '']); x()", true));
         b = r.buildAndAssertSuccess(p);
         r.assertLogContains("ran library", b);
         action = b.getAction(LibrariesAction.class);
