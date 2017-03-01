@@ -192,4 +192,20 @@ public class LibraryStepTest {
         assertEquals(1, libraries.size());
     }
 
+    @Test public void usingInterpolation() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/pkg/Lib.groovy", "package pkg; public class Lib {public static final String CONST = 'initial'}");
+        sampleRepo.git("add", "src");
+        sampleRepo.git("commit", "--message=init");
+        sampleRepo.git("tag", "initial");
+        sampleRepo.write("src/pkg/Lib.groovy", "package pkg; public class Lib {public static final String CONST = 'modified'}");
+        sampleRepo.git("commit", "--all", "--message=modified");
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        String retriever = "legacySCM([$class: 'GitSCM', branches: [[name: '${library.stuff.version}']], userRemoteConfigs: [[url: '" + sampleRepo.fileUrl() + "']]])";
+        p.setDefinition(new CpsFlowDefinition("echo(/using ${library(identifier: 'stuff@master', retriever: " + retriever + ").pkg.Lib.CONST}/)", true));
+        r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
+        p.setDefinition(new CpsFlowDefinition("echo(/using ${library(identifier: 'stuff@initial', retriever: " + retriever + ").pkg.Lib.CONST}/)", true));
+        r.assertLogContains("using initial", r.buildAndAssertSuccess(p));
+    }
+
 }
