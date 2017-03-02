@@ -176,7 +176,9 @@ public class FolderLibrariesTest {
         WorkflowJob p = d.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("@Library('grape@master') import pkg.Wrapper; echo(/should not have been able to run ${pkg.Wrapper.list()}/)", true));
         ScriptApproval.get().approveSignature("new org.apache.commons.collections.primitives.ArrayIntList");
-        r.assertLogContains("GrapeIvy.chooseClassLoader", r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
+        // Groovy 1: java.lang.RuntimeException: No suitable ClassLoader found for grab (within groovy.grape.GrapeIvy.chooseClassLoader)
+        // Groovy 2: org.jenkinsci.plugins.scriptsecurity.sandbox.RejectedAccessException: Scripts not permitted to use staticMethod groovy.grape.Grape grab java.util.Map java.util.Map[]
+        r.assertLogContains("groovy.grape.Grape", r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
     }
 
     // TODO test replay of `load`ed scripts as well as libraries
