@@ -48,8 +48,10 @@ import static org.junit.Assert.*;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
+@Issue("JENKINS-39450")
 public class LibraryStepTest {
 
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
