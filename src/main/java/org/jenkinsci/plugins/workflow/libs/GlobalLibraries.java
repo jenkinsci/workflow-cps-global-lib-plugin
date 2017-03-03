@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import hudson.Extension;
+import hudson.model.ItemGroup;
 import hudson.model.Job;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -88,6 +89,10 @@ import org.kohsuke.stapler.StaplerRequest;
         }
 
         @Override public Collection<LibraryConfiguration> fromConfiguration(StaplerRequest request) {
+            return GlobalLibraries.get().getLibraries();
+        }
+
+        @Override public Collection<LibraryConfiguration> suggestedConfigurations(ItemGroup<?> group) {
             return GlobalLibraries.get().getLibraries();
         }
 

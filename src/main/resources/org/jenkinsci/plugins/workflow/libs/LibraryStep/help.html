@@ -1,0 +1,19 @@
+<div>
+    <p>
+        Load a library dynamically rather than using <code>@Library</code> syntax.
+        You may use global variables defined in the library thereafter:
+    </p>
+    <pre><code>
+library 'mylib@master'
+usefulFunction()
+</code></pre>
+    <p>
+        You may also load classes defined in the library by selecting their fully-qualified names
+        like properties on the return value of this step, then call static methods
+        or call constructors as if they were a method named <code>new</code>:
+    </p>
+    <pre><code>
+def utils = library('mylib').com.mycorp.jenkins.Utils.new(this)
+utils.handyStuff()
+</code></pre>
+</div>

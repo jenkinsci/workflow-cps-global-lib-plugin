@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import hudson.ExtensionPoint;
+import hudson.model.ItemGroup;
 import hudson.model.Job;
 import java.util.Collection;
 import java.util.Collections;
@@ -68,6 +69,17 @@ public abstract class LibraryResolver implements ExtensionPoint {
      * @return known libraries, if any (empty by default)
      */
     public @Nonnull Collection<LibraryConfiguration> fromConfiguration(@Nonnull StaplerRequest request) {
+        return Collections.emptySet();
+    }
+
+    /**
+     * A list of libraries that might be visible in a given location.
+     * Typically would be the same as {@link #forJob} applied to {@link Job#getParent}.
+     * If a resolver can dynamically generate library configurations, it can simply return one or more examples here.
+     * @param group Jenkins root or some folder
+     * @return any suggested libraries (empty by default)
+     */
+    public @Nonnull Collection<LibraryConfiguration> suggestedConfigurations(@Nonnull ItemGroup<?> group) {
         return Collections.emptySet();
     }
 
