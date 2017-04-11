@@ -251,7 +251,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                                     continue;
                                 }
                                 for (FilePath groovy : root.list("**/*.groovy")) {
-                                    String clazz = groovy.getRemote().replaceFirst("^\\Q" + root.getRemote() + "\\E[/\\\\](.+)[.]groovy", "$1").replace('/', '.');
+                                    String clazz = groovy.getRemote().replaceFirst("^\\Q" + root.getRemote() + "\\E[/\\\\](.+)[.]groovy", "$1").replace('/', '.').replace('\\', '.');
                                     scripts.put(clazz, groovy.readToString()); // TODO no idea what encoding the Groovy compiler uses
                                 }
                             }
