@@ -49,7 +49,7 @@ public class GlobalLibrariesTest {
         GlobalLibraries gl = GlobalLibraries.get();
         assertEquals(Collections.emptyList(), gl.getLibraries());
         LibraryConfiguration foo = new LibraryConfiguration("foo", new SCMSourceRetriever(new SubversionSCMSource("foo", "https://phony.jenkins.io/foo/")));
-        LibraryConfiguration bar = new LibraryConfiguration("bar", new SCMSourceRetriever(new GitSCMSource(null, "https://phony.jenkins.io/bar.git", "", "*", "", true)));
+        LibraryConfiguration bar = new LibraryConfiguration("bar", new SCMSourceRetriever(new GitSCMSource(null, "https://phony.jenkins.io/bar.git", "", "origin", "+refs/heads/*:refs/remotes/origin/*", "*", "", true)));
         bar.setDefaultVersion("master");
         bar.setImplicit(true);
         bar.setAllowVersionOverride(false);
