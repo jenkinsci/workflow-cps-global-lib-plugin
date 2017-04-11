@@ -50,6 +50,7 @@ import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
+import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
 import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
 import org.kohsuke.accmod.Restricted;
@@ -133,6 +134,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
         }
     }
 
+    @Symbol("modernSCM")
     @Extension public static class DescriptorImpl extends LibraryRetrieverDescriptor {
 
         @Override public String getDisplayName() {

@@ -39,6 +39,7 @@ import hudson.util.FormValidation;
 import java.util.ArrayList;
 import java.util.List;
 import jenkins.model.Jenkins;
+import org.jenkinsci.Symbol;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -71,6 +72,7 @@ public class SCMRetriever extends LibraryRetriever {
             Jenkins.getActiveInstance().getDescriptorByType(SCMSourceRetriever.DescriptorImpl.class).getDisplayName() + " if available.");
     }
 
+    @Symbol("legacySCM")
     @Extension(ordinal=-100) public static class DescriptorImpl extends LibraryRetrieverDescriptor {
         
         @Override public String getDisplayName() {

@@ -135,7 +135,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         return additions;
     }
 
-    private static @Nonnull String[] parse(@Nonnull String identifier) {
+    static @Nonnull String[] parse(@Nonnull String identifier) {
         int at = identifier.indexOf('@');
         if (at == -1) {
             return new String[] {identifier, null}; // pick up defaultVersion
@@ -145,7 +145,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
     }
 
     /** Retrieve library files. */
-    private static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
+    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
         FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
         retriever.retrieve(name, version, libDir, run, listener);
         // Replace any classes requested for replay:

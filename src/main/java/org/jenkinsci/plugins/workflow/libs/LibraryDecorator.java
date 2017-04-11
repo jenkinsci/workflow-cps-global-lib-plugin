@@ -27,6 +27,7 @@ package org.jenkinsci.plugins.workflow.libs;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
+import hudson.Functions;
 import hudson.model.TaskListener;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -83,14 +84,28 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
                                     // In the CONVERSION phase we will not have resolved the implicit import yet.
                                     name.equals(Library.class.getSimpleName())) {
                                 Expression value = annotationNode.getMember("value");
-                                if (value instanceof ConstantExpression) { // one library
-                                    libraries.add((String) ((ConstantExpression) value).getValue());
-                                } else { // several libraries
-                                    for (Expression element : ((ListExpression) value).getExpressions()) {
-                                        libraries.add((String) ((ConstantExpression) element).getValue());
-                                    }
+                                if (value == null) {
+                                    source.getErrorCollector().addErrorAndContinue(Message.create("@Library was missing a value", source));
+                                } else {
+                                    processExpression(source, libraries, value);
                                 }
                             }
+                        }
+                    }
+                    private void processExpression(SourceUnit source, List<String> libraries, Expression value) {
+                        if (value instanceof ConstantExpression) { // one library
+                            Object constantValue = ((ConstantExpression) value).getValue();
+                            if (constantValue instanceof String) {
+                                libraries.add((String) constantValue);
+                            } else {
+                                source.getErrorCollector().addErrorAndContinue(Message.create("@Library value ‘" + constantValue + "’ was not a string", source));
+                            }
+                        } else if (value instanceof ListExpression) { // several libraries
+                            for (Expression element : ((ListExpression) value).getExpressions()) {
+                                processExpression(source, libraries, element);
+                            }
+                        } else {
+                            source.getErrorCollector().addErrorAndContinue(Message.create("@Library value ‘" + value.getText() + "’ was not a constant; did you mean to use the ‘library’ step instead?", source));
                         }
                     }
                 }.visitClass(classNode);
@@ -111,7 +126,7 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
                         if (x instanceof AbortException) {
                             listener.error(x.getMessage());
                         } else {
-                            x.printStackTrace(listener.getLogger());
+                            listener.getLogger().println(Functions.printThrowable(x).trim()); // TODO 2.43+ use Functions.printStackTrace
                         }
                         throw new CompilationFailedException(Phases.CONVERSION, source);
                     } catch (IOException x2) {

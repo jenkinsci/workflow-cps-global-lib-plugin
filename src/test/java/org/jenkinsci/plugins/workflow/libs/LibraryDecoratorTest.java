@@ -38,6 +38,7 @@ import org.junit.Test;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
 
@@ -73,10 +74,21 @@ public class LibraryDecoratorTest {
         }
     }
 
+    @Issue("JENKINS-39450")
     @Test public void malformedAnnotation() throws Exception {
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
-        p.setDefinition(new CpsFlowDefinition("@Library(99) import /* irrelevant */ java.lang.Void", true));
-        r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+        p.setDefinition(new CpsFlowDefinition("@Library(\"stuff@$BRANCH_NAME\") _", true));
+        r.assertLogContains("‘stuff@$BRANCH_NAME’", r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
+        p.setDefinition(new CpsFlowDefinition("@Library(99) _", true));
+        r.assertLogContains("‘99’", r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
+        p.setDefinition(new CpsFlowDefinition("@Library([\"stuff@$BRANCH_NAME\"]) _", true));
+        r.assertLogContains("‘stuff@$BRANCH_NAME’", r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
+        p.setDefinition(new CpsFlowDefinition("@Library([99]) _", true));
+        r.assertLogContains("‘99’", r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
+        p.setDefinition(new CpsFlowDefinition("@Library _", true));
+        r.assertLogContains("@Library was missing a value", r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
+        p.setDefinition(new CpsFlowDefinition("@Library([]) _", true));
+        r.buildAndAssertSuccess(p); // legal, if pointless
     }
 
     @Test public void adderError() throws Exception {

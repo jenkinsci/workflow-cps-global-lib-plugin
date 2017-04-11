@@ -157,4 +157,46 @@ public class RestartTest {
         });
     }
 
+    @Test public void step() throws Exception {
+        rr.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                sampleRepo.init();
+                sampleRepo.write("src/pkg/Slow.groovy", "package pkg; class Slow {static void wait(script) {script.semaphore 'wait-class'}}");
+                sampleRepo.write("vars/slow.groovy", "def call() {semaphore 'wait-var'}");
+                sampleRepo.git("add", "src", "vars");
+                sampleRepo.git("commit", "--message=init");
+                GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+                WorkflowJob p = rr.j.jenkins.createProject(WorkflowJob.class, "p");
+                p.setDefinition(new CpsFlowDefinition("semaphore 'start'; def lib = library('stuff@master'); echo 'at the beginning'; lib.pkg.Slow.wait(this); echo 'in the middle'; slow(); echo 'at the end'", true));
+                WorkflowRun b = p.scheduleBuild2(0).waitForStart();
+                SemaphoreStep.waitForStart("start/1", b);
+            }
+        });
+        rr.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                WorkflowJob p = rr.j.jenkins.getItemByFullName("p", WorkflowJob.class);
+                WorkflowRun b = p.getLastBuild();
+                SemaphoreStep.success("start/1", null);
+                SemaphoreStep.waitForStart("wait-class/1", b);
+            }
+        });
+        rr.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                WorkflowJob p = rr.j.jenkins.getItemByFullName("p", WorkflowJob.class);
+                WorkflowRun b = p.getLastBuild();
+                SemaphoreStep.success("wait-class/1", null);
+                SemaphoreStep.waitForStart("wait-var/1", b);
+            }
+        });
+        rr.addStep(new Statement() {
+            @Override public void evaluate() throws Throwable {
+                WorkflowJob p = rr.j.jenkins.getItemByFullName("p", WorkflowJob.class);
+                WorkflowRun b = p.getLastBuild();
+                SemaphoreStep.success("wait-var/1", null);
+                rr.j.assertLogContains("at the end", rr.j.waitForCompletion(b));
+                assertEquals(1, b.getActions(LibrariesAction.class).size());
+            }
+        });
+    }
+
 }
