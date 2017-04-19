@@ -49,7 +49,6 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
@@ -182,7 +181,6 @@ public class FolderLibrariesTest {
         r.assertLogContains("groovy.grape.Grape", r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
     }
 
-    @Ignore("TODO fails")
     @Issue("JENKINS-43019")
     @Test public void classCastException() throws Exception {
         sampleRepo1.init();

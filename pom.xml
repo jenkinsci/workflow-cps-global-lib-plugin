@@ -64,7 +64,7 @@
     <properties>
         <jenkins.version>1.642.3</jenkins.version>
         <jenkins-test-harness.version>2.19</jenkins-test-harness.version>
-        <workflow-cps-plugin.version>2.28</workflow-cps-plugin.version>
+        <workflow-cps-plugin.version>2.30-20170419.221956-2</workflow-cps-plugin.version> <!-- TODO https://github.com/jenkinsci/workflow-cps-plugin/pull/120 -->
         <git-plugin.version>3.1.0</git-plugin.version>
         <scm-api-plugin.version>2.1.1</scm-api-plugin.version>
     </properties>
