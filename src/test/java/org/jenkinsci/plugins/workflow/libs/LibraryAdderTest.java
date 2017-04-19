@@ -192,21 +192,23 @@ public class LibraryAdderTest {
         sampleRepo.git("add", "src");
         sampleRepo.git("commit", "--message=init");
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
-        p.setDefinition(new CpsFlowDefinition("@Library('" + sampleRepo + "') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
+        DynamicResolver.remote = sampleRepo.toString();
+        p.setDefinition(new CpsFlowDefinition("@Library('dynamic') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
         r.assertLogContains("using constant", r.buildAndAssertSuccess(p));
     }
     @TestExtension("dynamicLibraries") public static class DynamicResolver extends LibraryResolver {
         @Override public boolean isTrusted() {
             return false;
         }
+        static String remote;
         @Override public Collection<LibraryConfiguration> forJob(Job<?,?> job, Map<String,String> libraryVersions) {
-            List<LibraryConfiguration> cfgs = new ArrayList<>();
-            for (String url : libraryVersions.keySet()) {
-                LibraryConfiguration cfg = new LibraryConfiguration(url, new SCMSourceRetriever(new GitSCMSource(null, url, "", "*", "", true)));
+            if (libraryVersions.containsKey("dynamic")) {
+                LibraryConfiguration cfg = new LibraryConfiguration("dynamic", new SCMSourceRetriever(new GitSCMSource(null, remote, "", "*", "", true)));
                 cfg.setDefaultVersion("master");
-                cfgs.add(cfg);
+                return Collections.singleton(cfg);
+            } else {
+                return Collections.emptySet();
             }
-            return cfgs;
         }
     }
 
@@ -290,7 +292,7 @@ public class LibraryAdderTest {
             clearInvocationCaches.invoke(metaClass);
         }
         for (WeakReference<ClassLoader> loaderRef : LOADERS) {
-            MemoryAssert.assertGC(loaderRef);
+            MemoryAssert.assertGC(loaderRef, false);
         }
     }
 

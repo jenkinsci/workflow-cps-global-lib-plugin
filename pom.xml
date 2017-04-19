@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>2.23</version>
+        <version>2.25</version>
         <relativePath />
     </parent>
     <groupId>org.jenkins-ci.plugins.workflow</groupId>
@@ -63,7 +63,10 @@
     </pluginRepositories>
     <properties>
         <jenkins.version>1.642.3</jenkins.version>
+        <jenkins-test-harness.version>2.19</jenkins-test-harness.version>
         <workflow-cps-plugin.version>2.28</workflow-cps-plugin.version>
+        <git-plugin.version>3.1.0</git-plugin.version>
+        <scm-api-plugin.version>2.1.1</scm-api-plugin.version>
     </properties>
     <dependencies>
         <dependency>
@@ -74,7 +77,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>git-server</artifactId>
-            <version>1.5</version>
+            <version>1.7</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.httpcomponents</groupId>
@@ -85,12 +88,12 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>git-client</artifactId>
-            <version>1.19.7</version> <!-- do not pick up an obsolete version from git-server -->
+            <version>2.3.0</version> <!-- do not pick up an obsolete version from git-server -->
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>scm-api</artifactId>
-            <version>1.3</version>
+            <version>${scm-api-plugin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -101,6 +104,11 @@
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-scm-step</artifactId>
             <version>2.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>script-security</artifactId>
+            <version>1.27</version>
         </dependency>
         <dependency>
             <groupId>org.apache.ivy</groupId>
@@ -115,7 +123,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-support</artifactId>
-            <version>2.12</version>
+            <version>2.13</version>
             <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>
@@ -135,12 +143,6 @@
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-durable-task-step</artifactId>
             <version>2.8</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins</groupId>
-            <artifactId>git</artifactId>
-            <version>3.0.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -166,8 +168,21 @@
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>scm-api</artifactId>
+            <version>${scm-api-plugin.version}</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>git</artifactId>
-            <version>3.0.1</version>
+            <version>${git-plugin.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>git</artifactId>
+            <version>${git-plugin.version}</version>
             <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>
@@ -188,6 +203,18 @@
             <groupId>org.tmatesoft.svnkit</groupId>
             <artifactId>svnkit-cli</artifactId>
             <version>1.8.14</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>mailer</artifactId>
+            <version>1.19</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>junit</artifactId>
+            <version>1.20</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

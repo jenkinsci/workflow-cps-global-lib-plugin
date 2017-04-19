@@ -35,23 +35,27 @@ import hudson.ExtensionList;
 import hudson.model.AutoCompletionCandidates;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
-import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.security.AccessControlled;
-import hudson.security.Permission;
 import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Paths;
 import java.security.CodeSource;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -77,6 +81,8 @@ import org.kohsuke.stapler.QueryParameter;
  * Dynamically injects a library into the running build.
  */
 public class LibraryStep extends AbstractStepImpl {
+
+    private static final Logger LOGGER = Logger.getLogger(LibraryStep.class.getName());
 
     private final String identifier;
     private LibraryRetriever retriever;
@@ -272,9 +278,13 @@ public class LibraryStep extends AbstractStepImpl {
                 }
                 // Note that this goes through GroovyCodeSource.<init>(File, String), which unlike (say) URLClassLoader set the “location” to the actual file, *not* the root.
                 CodeSource codeSource = c.getProtectionDomain().getCodeSource();
-                String actual = codeSource != null ? codeSource.getLocation().toString() : "<unknown>";
-                if (!actual.startsWith(srcUrl)) {
-                    throw new IllegalAccessException(name + " was defined in " + actual + " which was not inside " + srcUrl);
+                if (codeSource == null) {
+                    throw new IllegalAccessException(name + " had no defined code source");
+                }
+                String actual = canonicalize(codeSource.getLocation().toString());
+                String srcUrlC = canonicalize(srcUrl); // do not do this in constructor: path might not actually exist
+                if (!actual.startsWith(srcUrlC)) {
+                    throw new IllegalAccessException(name + " was defined in " + actual + " which was not inside " + srcUrlC);
                 }
                 if (!Modifier.isPublic(c.getModifiers())) { // unlikely since Groovy makes classes implicitly public
                     throw new IllegalAccessException(c + " is not public");
@@ -283,6 +293,17 @@ public class LibraryStep extends AbstractStepImpl {
             } catch (ClassNotFoundException | IllegalAccessException x) {
                 throw new GroovyRuntimeException(x);
             }
+        }
+
+        private static String canonicalize(String uri) {
+            if (uri.startsWith("file:/")) {
+                try {
+                    return Paths.get(new URI(uri)).toRealPath().toUri().toString();
+                } catch (IOException | URISyntaxException x) {
+                    LOGGER.log(Level.WARNING, "could not canonicalize " + uri, x);
+                }
+            }
+            return uri;
         }
 
     }

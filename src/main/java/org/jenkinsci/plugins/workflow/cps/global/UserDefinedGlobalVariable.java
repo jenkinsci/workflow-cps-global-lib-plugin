@@ -69,7 +69,10 @@ public class UserDefinedGlobalVariable extends GlobalVariable {
     public @CheckForNull String getHelpHtml() throws IOException {
         if (!help.exists())     return null;
 
-        return Jenkins.getActiveInstance().getMarkupFormatter().translate(FileUtils.readFileToString(help, Charsets.UTF_8));
+        return Jenkins.getActiveInstance().getMarkupFormatter().translate(
+            FileUtils.readFileToString(help, Charsets.UTF_8).
+            // Util.escape translates \n but not \r, and we do not know what platform the library will be checked out on:
+            replace("\r\n", "\n"));
     }
 
     @Override
