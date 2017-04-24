@@ -181,6 +181,41 @@ public class FolderLibrariesTest {
         r.assertLogContains("groovy.grape.Grape", r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
     }
 
+    @Issue("JENKINS-43019")
+    @Test public void classCastException() throws Exception {
+        sampleRepo1.init();
+        sampleRepo1.write("src/pkg/Obj.groovy", "package pkg; public class Obj implements Serializable {public Obj() {}}");
+        sampleRepo1.write("vars/objs.groovy", "@groovy.transform.Field final pkg.Obj OBJ = new pkg.Obj()");
+        sampleRepo1.git("add", "src", "vars");
+        sampleRepo1.git("commit", "--message=init");
+        sampleRepo2.init();
+        ScriptApproval.get().approveSignature("method java.lang.Class getClassLoader");
+        ScriptApproval.get().approveSignature("method java.lang.ClassLoader getParent");
+        ScriptApproval.get().approveSignature("method java.lang.Class getProtectionDomain");
+        ScriptApproval.get().approveSignature("method java.security.ProtectionDomain getCodeSource");
+        ScriptApproval.get().approveSignature("method java.security.CodeSource getLocation");
+        String script =
+            "def descr(c) {/${c.classLoader} < ${c.classLoader.parent} @ ${c.protectionDomain.codeSource?.location}/}\n" +
+            "echo(/this: ${descr(this.getClass())} Obj: ${descr(pkg.Obj)} objs: ${descr(objs.getClass())} objs.OBJ: ${descr(objs.OBJ.getClass())}/)\n" +
+            "pkg.Obj obj = objs.OBJ\n" +
+            "echo(/loaded $obj/)";
+        { // Trusted lib (control):
+            GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("global-objs", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo1.toString(), "", "*", "", true)))));
+            WorkflowJob p = r.createProject(WorkflowJob.class, "p");
+            p.setDefinition(new CpsFlowDefinition("@Library('global-objs@master') _; " + script, true));
+            r.assertLogContains("loaded pkg.Obj@", r.buildAndAssertSuccess(p));
+        }
+        { // Untrusted (test):
+            Folder d = r.jenkins.createProject(Folder.class, "d");
+            d.getProperties().add(new FolderLibraries(Collections.singletonList(new LibraryConfiguration("folder-objs", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo1.toString(), "", "*", "", true))))));
+            WorkflowJob p = d.createProject(WorkflowJob.class, "p");
+            p.setDefinition(new CpsFlowDefinition("@Library('folder-objs@master') _; " + script, true));
+            for (int i = 0; i < 50; i++) {
+                r.assertLogContains("loaded pkg.Obj@", r.buildAndAssertSuccess(p));
+            }
+        }
+    }
+
     // TODO test replay of `load`ed scripts as well as libraries
 
     // TODO test override of global or top folder scope

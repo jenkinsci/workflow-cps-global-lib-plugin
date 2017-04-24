@@ -64,9 +64,10 @@
     <properties>
         <jenkins.version>1.642.3</jenkins.version>
         <jenkins-test-harness.version>2.19</jenkins-test-harness.version>
-        <workflow-cps-plugin.version>2.28</workflow-cps-plugin.version>
+        <workflow-cps-plugin.version>2.30</workflow-cps-plugin.version>
         <git-plugin.version>3.1.0</git-plugin.version>
         <scm-api-plugin.version>2.1.1</scm-api-plugin.version>
+        <workflow-scm-step-plugin.version>2.4</workflow-scm-step-plugin.version>
     </properties>
     <dependencies>
         <dependency>
@@ -103,7 +104,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-scm-step</artifactId>
-            <version>2.3</version>
+            <version>${workflow-scm-step-plugin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -123,7 +124,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-support</artifactId>
-            <version>2.13</version>
+            <version>2.14</version>
             <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>
@@ -148,7 +149,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-scm-step</artifactId>
-            <version>2.3</version>
+            <version>${workflow-scm-step-plugin.version}</version>
             <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>
