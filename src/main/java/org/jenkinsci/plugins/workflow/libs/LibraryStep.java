@@ -154,6 +154,7 @@ public class LibraryStep extends AbstractStepImpl {
             String[] parsed = LibraryAdder.parse(step.identifier);
             String name = parsed[0], version = parsed[1];
             boolean trusted = false;
+            boolean changesets = true;
             LibraryRetriever retriever = step.getRetriever();
             if (retriever == null) {
                 for (LibraryResolver resolver : ExtensionList.lookup(LibraryResolver.class)) {
@@ -162,6 +163,7 @@ public class LibraryStep extends AbstractStepImpl {
                             retriever = cfg.getRetriever();
                             trusted = resolver.isTrusted();
                             version = cfg.defaultedVersion(version);
+                            changesets = cfg.getIncludeInChangesets();
                             break;
                         }
                     }
@@ -172,7 +174,7 @@ public class LibraryStep extends AbstractStepImpl {
             } else if (version == null) {
                 throw new AbortException("Must specify a version for library " + name);
             }
-            LibraryRecord record = new LibraryRecord(name, version, trusted);
+            LibraryRecord record = new LibraryRecord(name, version, trusted, changesets);
             LibrariesAction action = run.getAction(LibrariesAction.class);
             if (action == null) {
                 action = new LibrariesAction(Lists.newArrayList(record));
@@ -190,7 +192,7 @@ public class LibraryStep extends AbstractStepImpl {
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
             CpsFlowExecution exec = (CpsFlowExecution) getContext().get(FlowExecution.class);
             GroovyClassLoader loader = (trusted ? exec.getTrustedShell() : exec.getShell()).getClassLoader();
-            for (URL u : LibraryAdder.retrieve(record.name, record.version, retriever, record.trusted, listener, run, (CpsFlowExecution) getContext().get(FlowExecution.class), record.variables)) {
+            for (URL u : LibraryAdder.retrieve(record.name, record.version, retriever, record.trusted, record.changesets, listener, run, (CpsFlowExecution) getContext().get(FlowExecution.class), record.variables)) {
                 loader.addURL(u);
             }
             run.save(); // persist changes to LibrariesAction.libraries*.variables

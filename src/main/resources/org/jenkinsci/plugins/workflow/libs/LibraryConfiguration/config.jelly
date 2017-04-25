@@ -37,5 +37,8 @@ THE SOFTWARE.
     <f:entry field="allowVersionOverride" title="${%Allow default version to be overridden}">
         <f:checkbox default="true"/>
     </f:entry>
+    <f:entry field="includeInChangesets" title="${%Include library changes in job changesets}">
+        <f:checkbox default="true"/>
+    </f:entry>
     <f:descriptorRadioList varName="retriever" instance="${instance.retriever}" descriptors="${descriptor.retrieverDescriptors}" title="${%Retrieval method}"/>
 </j:jelly>

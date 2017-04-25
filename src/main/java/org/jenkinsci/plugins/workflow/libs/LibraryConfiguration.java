@@ -55,6 +55,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     private String defaultVersion;
     private boolean implicit;
     private boolean allowVersionOverride = true;
+    private boolean includeInChangesets = true;
 
     @DataBoundConstructor public LibraryConfiguration(String name, LibraryRetriever retriever) {
         this.name = name;
@@ -105,6 +106,17 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
 
     @DataBoundSetter public void setAllowVersionOverride(boolean allowVersionOverride) {
         this.allowVersionOverride = allowVersionOverride;
+    }
+
+    /**
+     * Whether to include library changes in reported changes in a job {@link #getIncludeInChangesets}.
+     */
+    public boolean getIncludeInChangesets() {
+        return includeInChangesets;
+    }
+
+    @DataBoundSetter public void setIncludeInChangesets(boolean includeInChangesets) {
+        this.includeInChangesets = includeInChangesets;
     }
 
     @Nonnull String defaultedVersion(@CheckForNull String version) throws AbortException {

@@ -42,12 +42,13 @@ public abstract class LibraryRetriever extends AbstractDescribableImpl<LibraryRe
      * Obtains library sources.
      * @param name the {@link LibraryConfiguration#getName}
      * @param version the version of the library, such as from {@link LibraryConfiguration#getDefaultVersion} or an override
+     * @param changesets whether to include changesets in the library in jobs using it from {@link LibraryConfiguration#getIncludeInChangesets}
      * @param target a directory in which to check out sources; should create {@code src/**}{@code /*.groovy} and/or {@code vars/*.groovy}, and optionally also {@code resources/}
      * @param run a build which will use the library
      * @param listener a way to report progress
      * @throws Exception if there is any problem (use {@link AbortException} for user errors)
      */
-    public abstract void retrieve(@Nonnull String name, @Nonnull String version, @Nonnull FilePath target, @Nonnull Run<?,?> run, @Nonnull TaskListener listener) throws Exception;
+    public abstract void retrieve(@Nonnull String name, @Nonnull String version, @Nonnull boolean changesets, @Nonnull FilePath target, @Nonnull Run<?,?> run, @Nonnull TaskListener listener) throws Exception;
 
     /**
      * Offer to validate a proposed {@code version} for {@link #retrieve}.
