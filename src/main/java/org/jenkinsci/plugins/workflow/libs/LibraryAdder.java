@@ -196,9 +196,9 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
 
         // normalise changeset to make life easier
         if (changeset != null) {
-            if (changeset.matches("(changesets|true|yes)")) {
+            if (changeset.matches("^(changesets|true|yes)$")) {
                 changeset = "true";
-            } else if (changeset.matches("(nochangesets|false|no)")) {
+            } else if (changeset.matches("^(nochangesets|false|no)$")) {
                 changeset = "false";
             }
         }
