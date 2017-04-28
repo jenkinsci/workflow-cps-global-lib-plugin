@@ -69,6 +69,7 @@ public class SCMSourceRetrieverTest {
         }
     }
 
+    @Issue("JENKINS-41497")
     @Test public void includeChanges() throws Exception {
         sampleRepo.init();
         sampleRepo.write("vars/myecho.groovy", "def call() {echo 'something special'}");
@@ -101,6 +102,7 @@ public class SCMSourceRetrieverTest {
         }
     }
 
+    @Issue("JENKINS-41497")
     @Test public void dontIncludeChanges() throws Exception {
         sampleRepo.init();
         sampleRepo.write("vars/myecho.groovy", "def call() {echo 'something special'}");

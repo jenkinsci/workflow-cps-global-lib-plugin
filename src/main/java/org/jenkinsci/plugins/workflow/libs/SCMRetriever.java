@@ -64,6 +64,9 @@ public class SCMRetriever extends LibraryRetriever {
         SCMSourceRetriever.doRetrieve(name, changesets, scm, target, run, listener);
     }
 
+    @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+        SCMSourceRetriever.doRetrieve(name, true, scm, target, run, listener);
+    }
     @Override public FormValidation validateVersion(String name, String version) {
         if (!Items.XSTREAM2.toXML(scm).contains("${library." + name + ".version}")) {
             return FormValidation.warningWithMarkup("When using <b>" + getDescriptor().getDisplayName() + "</b>, you will need to include <code>${library." + Util.escape(name) + ".version}</code> in the SCM configuration somewhere.");

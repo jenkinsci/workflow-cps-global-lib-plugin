@@ -119,6 +119,16 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
         this.includeInChangesets = includeInChangesets;
     }
 
+    @Nonnull boolean defaultedChangesets(@CheckForNull String changesets) throws AbortException {
+      if (changesets == null) {
+        return includeInChangesets;
+      }
+      if (!changesets.matches("(true|false)")) {
+        throw new AbortException("Only true, false or null are valid");
+      }
+      return Boolean.parseBoolean(changesets);
+    }
+
     @Nonnull String defaultedVersion(@CheckForNull String version) throws AbortException {
         if (version == null) {
             if (defaultVersion == null) {

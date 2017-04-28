@@ -84,6 +84,10 @@ public class SCMSourceRetriever extends LibraryRetriever {
         doRetrieve(name, changesets, scm.build(revision.getHead(), revision), target, run, listener);
     }
 
+    @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+        retrieve(name, version, true, target, run, listener);
+    }
+
     static void doRetrieve(String name, boolean changesets, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         // Adapted from CpsScmFlowDefinition:
         SCMStep delegate = new GenericSCMStep(scm);

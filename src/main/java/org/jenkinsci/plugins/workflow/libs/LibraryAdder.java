@@ -72,10 +72,12 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         }
         // First parse the library declarations (if any) looking for requested versions.
         Map<String,String> libraryVersions = new HashMap<>();
+        Map<String,String> libraryChangesets = new HashMap<>();
         Map<String,String> librariesUnparsed = new HashMap<>();
         for (String library : libraries) {
             String[] parsed = parse(library);
             libraryVersions.put(parsed[0], parsed[1]);
+            libraryChangesets.put(parsed[0], parsed[2]);
             librariesUnparsed.put(parsed[0], library);
         }
         List<Addition> additions = new ArrayList<>();
@@ -105,7 +107,6 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
             boolean kindTrusted = kind.isTrusted();
             for (LibraryConfiguration cfg : kind.forJob(build.getParent(), libraryVersions)) {
                 String name = cfg.getName();
-                boolean kindChangesets = cfg.getIncludeInChangesets();
                 if (!cfg.isImplicit() && !libraryVersions.containsKey(name)) {
                     continue; // not using this one at all
                 }
@@ -114,7 +115,8 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                     continue;
                 }
                 String version = cfg.defaultedVersion(libraryVersions.remove(name));
-                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted, kindChangesets));
+                boolean changesets = cfg.defaultedChangesets(libraryChangesets.remove(name));
+                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted, changesets));
                 retrievers.put(name, cfg.getRetriever());
             }
         }
@@ -137,12 +139,71 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
     }
 
     static @Nonnull String[] parse(@Nonnull String identifier) {
-        int at = identifier.indexOf('@');
-        if (at == -1) {
-            return new String[] {identifier, null}; // pick up defaultVersion
-        } else {
-            return new String[] {identifier.substring(0, at), identifier.substring(at + 1)};
+        String name = null;
+        String version = null;
+        String changeset = null;
+
+        //count the number of occurances of the separator to determine needs
+        int counter = 0;
+        for( int i=0; i<identifier.length(); i++ ) {
+            if( identifier.charAt(i) == '@' ) {
+                counter++;
+            }
         }
+
+        if (counter == 0) {
+          // pick up defaultVersion and default changeset configuration
+          name = identifier;
+        }
+
+        if (counter == 1) {
+            int at = identifier.indexOf('@');
+           // single @ means it's only a version so use that and use default changeset configuration
+            name = identifier.substring(0, at);
+            version = identifier.substring(at + 1);
+        }
+
+        if (counter == 2) {
+          // this could have no changeset behaviour defined and include @ in the version, or it could have changeset
+          int at = identifier.indexOf('@');
+          name = identifier.substring(0, at);
+          String remainder = identifier.substring(at + 1);
+          if (!remainder.matches("^.*@(changesets|nochangesets|true|false|yes|no)$")) {
+              version = remainder;
+          } else {
+              at = remainder.indexOf('@');
+              version = remainder.substring(0, at);
+              changeset = remainder.substring(at + 1);
+          }
+        }
+
+        if (counter == 3) {
+          // with 3 @ characters we have an svn style something@foo version so handle it
+          int at = identifier.indexOf('@');
+          name = identifier.substring(0, at);
+          String remainder = identifier.substring(at + 1);
+          at = remainder.lastIndexOf('@');
+          changeset = remainder.substring(at + 1);
+          version = remainder.substring(0, at);
+        }
+
+        // allow overriding changeset without also overriding version
+        if (version != null) {
+            if (version.equals("null")) {
+                version = null;
+          }
+        }
+
+        // normalise changeset to make life easier
+        if (changeset != null) {
+            if (changeset.matches("(changesets|true|yes)")) {
+                changeset = "true";
+            } else if (changeset.matches("(nochangesets|false|no)")) {
+                changeset = "false";
+            }
+        }
+
+        return new String[] {name, version, changeset};
     }
 
     /** Retrieve library files. */

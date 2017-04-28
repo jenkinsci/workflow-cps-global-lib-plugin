@@ -152,9 +152,9 @@ public class LibraryStep extends AbstractStepImpl {
 
         @Override protected LoadedClasses run() throws Exception {
             String[] parsed = LibraryAdder.parse(step.identifier);
-            String name = parsed[0], version = parsed[1];
+            String name = parsed[0], version = parsed[1], changesetsParsed = parsed[2];
             boolean trusted = false;
-            boolean changesets = true;
+            boolean changesets = true; //initialise this but it will get overridden
             LibraryRetriever retriever = step.getRetriever();
             if (retriever == null) {
                 for (LibraryResolver resolver : ExtensionList.lookup(LibraryResolver.class)) {
@@ -163,7 +163,7 @@ public class LibraryStep extends AbstractStepImpl {
                             retriever = cfg.getRetriever();
                             trusted = resolver.isTrusted();
                             version = cfg.defaultedVersion(version);
-                            changesets = cfg.getIncludeInChangesets();
+                            changesets = cfg.defaultedChangesets(changesetsParsed);
                             break;
                         }
                     }
