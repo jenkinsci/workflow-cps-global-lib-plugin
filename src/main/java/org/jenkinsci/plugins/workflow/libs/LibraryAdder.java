@@ -31,6 +31,7 @@ import hudson.FilePath;
 import hudson.model.Queue;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.model.User;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -46,6 +47,7 @@ import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
+import jenkins.model.Jenkins;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariableSet;
@@ -149,7 +151,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
         retriever.retrieve(name, version, libDir, run, listener);
         // Replace any classes requested for replay:
-        if (!trusted) {
+        if (!trusted || currentUserHasRunScriptsPermission()) {
             for (String clazz : ReplayAction.replacementsIn(execution)) {
                 for (String root : new String[] {"src", "vars"}) {
                     String rel = root + "/" + clazz.replace('.', '/') + ".groovy";
@@ -242,8 +244,8 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                     if (action != null) {
                         FilePath libs = new FilePath(run.getRootDir()).child("libs");
                         for (LibraryRecord library : action.getLibraries()) {
-                            if (library.trusted) {
-                                continue; // TODO JENKINS-41157 allow replay of trusted libraries if you have RUN_SCRIPTS
+                            if (library.trusted && !currentUserHasRunScriptsPermission()) {
+                                continue;
                             }
                             for (String rootName : new String[] {"src", "vars"}) {
                                 FilePath root = libs.child(library.name + "/" + rootName);
@@ -264,6 +266,13 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
             return scripts;
         }
 
+    }
+
+    private static boolean currentUserHasRunScriptsPermission() {
+        return Jenkins.getActiveInstance()
+                .getAuthorizationStrategy()
+                .getACL(User.current())
+                .hasPermission(Jenkins.RUN_SCRIPTS);
     }
 
     @Extension public static class Copier extends FlowCopier.ByRun {
