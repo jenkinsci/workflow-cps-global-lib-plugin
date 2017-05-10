@@ -31,7 +31,6 @@ import hudson.FilePath;
 import hudson.model.Queue;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-import hudson.model.User;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -270,8 +269,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
 
     private static boolean currentUserHasRunScriptsPermission() {
         return Jenkins.getActiveInstance()
-                .getAuthorizationStrategy()
-                .getACL(User.current())
+                .getACL()
                 .hasPermission(Jenkins.RUN_SCRIPTS);
     }
 
