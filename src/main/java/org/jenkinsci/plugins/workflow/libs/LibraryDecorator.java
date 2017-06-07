@@ -32,6 +32,7 @@ import hudson.model.TaskListener;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.codehaus.groovy.ast.AnnotatedNode;
@@ -72,6 +73,7 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
         cc.addCompilationCustomizers(new CompilationCustomizer(CompilePhase.CONVERSION) {
             @Override public void call(final SourceUnit source, GeneratorContext context, ClassNode classNode) throws CompilationFailedException {
                 final List<String> libraries = new ArrayList<>();
+                final HashMap<String, Boolean> changelogs = new HashMap<>();
                 new ClassCodeVisitorSupport() {
                     @Override protected SourceUnit getSourceUnit() {
                         return source;
@@ -84,19 +86,28 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
                                     // In the CONVERSION phase we will not have resolved the implicit import yet.
                                     name.equals(Library.class.getSimpleName())) {
                                 Expression value = annotationNode.getMember("value");
+                                Expression changelog = annotationNode.getMember("changelog");
                                 if (value == null) {
                                     source.getErrorCollector().addErrorAndContinue(Message.create("@Library was missing a value", source));
                                 } else {
-                                    processExpression(source, libraries, value);
+                                    processExpression(source, libraries, value, changelogs, changelog);
                                 }
                             }
                         }
                     }
+
                     private void processExpression(SourceUnit source, List<String> libraries, Expression value) {
+                      processExpression(source, libraries, value, null, null);
+                    }
+
+                    private void processExpression(SourceUnit source, List<String> libraries, Expression value, HashMap<String, Boolean> changelogs, Expression changelog) {
                         if (value instanceof ConstantExpression) { // one library
                             Object constantValue = ((ConstantExpression) value).getValue();
                             if (constantValue instanceof String) {
                                 libraries.add((String) constantValue);
+                                if (changelog != null) {
+                                changelogs.put((String) constantValue, (Boolean) ((ConstantExpression) changelog).getValue());
+                                }
                             } else {
                                 source.getErrorCollector().addErrorAndContinue(Message.create("@Library value ‘" + constantValue + "’ was not a string", source));
                             }
@@ -111,7 +122,7 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
                 }.visitClass(classNode);
                 try {
                     for (ClasspathAdder adder : ExtensionList.lookup(ClasspathAdder.class)) {
-                        for (ClasspathAdder.Addition addition : adder.add(execution, libraries)) {
+                        for (ClasspathAdder.Addition addition : adder.add(execution, libraries, changelogs)) {
                             addition.addTo(execution);
                         }
                     }

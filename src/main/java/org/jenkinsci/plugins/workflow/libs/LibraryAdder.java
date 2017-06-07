@@ -61,7 +61,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
 
     private static final Logger LOGGER = Logger.getLogger(LibraryAdder.class.getName());
 
-    @Override public List<Addition> add(CpsFlowExecution execution, List<String> libraries) throws Exception {
+    @Override public List<Addition> add(CpsFlowExecution execution, List<String> libraries, HashMap<String, Boolean> changelogs) throws Exception {
         Queue.Executable executable = execution.getOwner().getExecutable();
         Run<?,?> build;
         if (executable instanceof Run) {
@@ -72,12 +72,12 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         }
         // First parse the library declarations (if any) looking for requested versions.
         Map<String,String> libraryVersions = new HashMap<>();
-        Map<String,String> libraryChangesets = new HashMap<>();
+        Map<String,Boolean> libraryChangelogs = new HashMap<>();
         Map<String,String> librariesUnparsed = new HashMap<>();
         for (String library : libraries) {
             String[] parsed = parse(library);
             libraryVersions.put(parsed[0], parsed[1]);
-            libraryChangesets.put(parsed[0], parsed[2]);
+            libraryChangelogs.put(parsed[0], changelogs.get(library));
             librariesUnparsed.put(parsed[0], library);
         }
         List<Addition> additions = new ArrayList<>();
@@ -115,8 +115,8 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                     continue;
                 }
                 String version = cfg.defaultedVersion(libraryVersions.remove(name));
-                boolean changesets = cfg.defaultedChangesets(libraryChangesets.remove(name));
-                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted, changesets));
+                Boolean changelog = cfg.defaultedChangelogs(libraryChangelogs.remove(name));
+                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted, changelog));
                 retrievers.put(name, cfg.getRetriever());
             }
         }
@@ -131,7 +131,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         // Now actually try to retrieve the libraries.
         for (LibraryRecord record : librariesAdded.values()) {
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
-            for (URL u : retrieve(record.name, record.version, retrievers.get(record.name), record.trusted, record.changesets, listener, build, execution, record.variables)) {
+            for (URL u : retrieve(record.name, record.version, retrievers.get(record.name), record.trusted, record.changelog, listener, build, execution, record.variables)) {
                 additions.add(new Addition(u, record.trusted));
             }
         }
@@ -139,77 +139,18 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
     }
 
     static @Nonnull String[] parse(@Nonnull String identifier) {
-        String name = null;
-        String version = null;
-        String changeset = null;
-
-        //count the number of occurances of the separator to determine needs
-        int counter = 0;
-        for( int i=0; i<identifier.length(); i++ ) {
-            if( identifier.charAt(i) == '@' ) {
-                counter++;
-            }
+       int at = identifier.indexOf('@');
+        if (at == -1) {
+            return new String[] {identifier, null}; // pick up defaultVersion
+        } else {
+            return new String[] {identifier.substring(0, at), identifier.substring(at + 1)};
         }
-
-        if (counter == 0) {
-          // pick up defaultVersion and default changeset configuration
-          name = identifier;
-        }
-
-        if (counter == 1) {
-            int at = identifier.indexOf('@');
-           // single @ means it's only a version so use that and use default changeset configuration
-            name = identifier.substring(0, at);
-            version = identifier.substring(at + 1);
-        }
-
-        if (counter == 2) {
-          // this could have no changeset behaviour defined and include @ in the version, or it could have changeset
-          int at = identifier.indexOf('@');
-          name = identifier.substring(0, at);
-          String remainder = identifier.substring(at + 1);
-          if (!remainder.matches("^.*@(changesets|nochangesets|true|false|yes|no)$")) {
-              version = remainder;
-          } else {
-              at = remainder.indexOf('@');
-              version = remainder.substring(0, at);
-              changeset = remainder.substring(at + 1);
-          }
-        }
-
-        if (counter == 3) {
-          // with 3 @ characters we have an svn style something@foo version so handle it
-          int at = identifier.indexOf('@');
-          name = identifier.substring(0, at);
-          String remainder = identifier.substring(at + 1);
-          at = remainder.lastIndexOf('@');
-          changeset = remainder.substring(at + 1);
-          version = remainder.substring(0, at);
-        }
-
-        // allow overriding changeset without also overriding version
-        if (version != null) {
-            if (version.equals("null")) {
-                version = null;
-          }
-        }
-
-        // normalise changeset to make life easier
-        if (changeset != null) {
-            if (changeset.matches("^(changesets|true|yes)$")) {
-                changeset = "true";
-            } else if (changeset.matches("^(nochangesets|false|no)$")) {
-                changeset = "false";
-            }
-        }
-
-        return new String[] {name, version, changeset};
     }
 
     /** Retrieve library files. */
-    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, boolean changesets, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
+    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, Boolean changelog, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
         FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
-        retriever.retrieve(name, version, changesets, libDir, run, listener);
+        retriever.retrieve(name, version, changelog, libDir, run, listener);
         // Replace any classes requested for replay:
         if (!trusted) {
             for (String clazz : ReplayAction.replacementsIn(execution)) {

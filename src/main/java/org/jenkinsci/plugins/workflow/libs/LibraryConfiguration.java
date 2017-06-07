@@ -80,7 +80,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     public String getDefaultVersion() {
         return defaultVersion;
     }
-    
+
     @DataBoundSetter public void setDefaultVersion(String defaultVersion) {
         this.defaultVersion = Util.fixEmpty(defaultVersion);
     }
@@ -119,14 +119,12 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
         this.includeInChangesets = includeInChangesets;
     }
 
-    @Nonnull boolean defaultedChangesets(@CheckForNull String changesets) throws AbortException {
-      if (changesets == null) {
+    @Nonnull boolean defaultedChangelogs(@CheckForNull Boolean changelog) throws AbortException {
+      if (changelog == null) {
         return includeInChangesets;
+      } else {
+        return changelog;
       }
-      if (!changesets.matches("(true|false)")) {
-        throw new AbortException("Only true, false or null are valid");
-      }
-      return Boolean.parseBoolean(changesets);
     }
 
     @Nonnull String defaultedVersion(@CheckForNull String version) throws AbortException {

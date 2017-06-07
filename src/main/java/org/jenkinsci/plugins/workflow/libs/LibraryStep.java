@@ -85,6 +85,7 @@ public class LibraryStep extends AbstractStepImpl {
     private static final Logger LOGGER = Logger.getLogger(LibraryStep.class.getName());
 
     private final String identifier;
+    private Boolean changelog = true;
     private LibraryRetriever retriever;
 
     @DataBoundConstructor public LibraryStep(String identifier) {
@@ -99,8 +100,16 @@ public class LibraryStep extends AbstractStepImpl {
         return retriever;
     }
 
+    public Boolean getChangelog() {
+        return changelog;
+    }
     @DataBoundSetter public void setRetriever(LibraryRetriever retriever) {
         this.retriever = retriever;
+    }
+
+    // default to including changes of the library in job recent changes
+    @DataBoundSetter public void setChangelog(Boolean changelog) {
+        this.changelog = changelog;
     }
 
     @Extension public static class DescriptorImpl extends AbstractStepDescriptorImpl {
@@ -152,9 +161,9 @@ public class LibraryStep extends AbstractStepImpl {
 
         @Override protected LoadedClasses run() throws Exception {
             String[] parsed = LibraryAdder.parse(step.identifier);
-            String name = parsed[0], version = parsed[1], changesetsParsed = parsed[2];
+            String name = parsed[0], version = parsed[1];
             boolean trusted = false;
-            boolean changesets = true; //initialise this but it will get overridden
+            Boolean changelog = step.getChangelog();
             LibraryRetriever retriever = step.getRetriever();
             if (retriever == null) {
                 for (LibraryResolver resolver : ExtensionList.lookup(LibraryResolver.class)) {
@@ -163,7 +172,7 @@ public class LibraryStep extends AbstractStepImpl {
                             retriever = cfg.getRetriever();
                             trusted = resolver.isTrusted();
                             version = cfg.defaultedVersion(version);
-                            changesets = cfg.defaultedChangesets(changesetsParsed);
+                            changelog = cfg.defaultedChangelogs(changelog);
                             break;
                         }
                     }
@@ -174,7 +183,8 @@ public class LibraryStep extends AbstractStepImpl {
             } else if (version == null) {
                 throw new AbortException("Must specify a version for library " + name);
             }
-            LibraryRecord record = new LibraryRecord(name, version, trusted, changesets);
+
+            LibraryRecord record = new LibraryRecord(name, version, trusted, changelog);
             LibrariesAction action = run.getAction(LibrariesAction.class);
             if (action == null) {
                 action = new LibrariesAction(Lists.newArrayList(record));
@@ -184,7 +194,7 @@ public class LibraryStep extends AbstractStepImpl {
                 for (LibraryRecord existing : libraries) {
                     if (existing.name.equals(name)) {
                         listener.getLogger().println("Only using first definition of library " + name);
-                        return new LoadedClasses(name, trusted, run);
+                        return new LoadedClasses(name, trusted, changelog, run);
                     }
                 }
                 libraries.add(record);
@@ -192,11 +202,11 @@ public class LibraryStep extends AbstractStepImpl {
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
             CpsFlowExecution exec = (CpsFlowExecution) getContext().get(FlowExecution.class);
             GroovyClassLoader loader = (trusted ? exec.getTrustedShell() : exec.getShell()).getClassLoader();
-            for (URL u : LibraryAdder.retrieve(record.name, record.version, retriever, record.trusted, record.changesets, listener, run, (CpsFlowExecution) getContext().get(FlowExecution.class), record.variables)) {
+            for (URL u : LibraryAdder.retrieve(record.name, record.version, retriever, record.trusted, record.changelog, listener, run, (CpsFlowExecution) getContext().get(FlowExecution.class), record.variables)) {
                 loader.addURL(u);
             }
             run.save(); // persist changes to LibrariesAction.libraries*.variables
-            return new LoadedClasses(name, trusted, run);
+            return new LoadedClasses(name, trusted, changelog, run);
         }
 
     }
@@ -205,6 +215,7 @@ public class LibraryStep extends AbstractStepImpl {
 
         private final @Nonnull String library;
         private final boolean trusted;
+        private final Boolean changelog;
         /** package prefix, like {@code } or {@code some.pkg.} */
         private final @Nonnull String prefix;
         /** {@link Class#getName} minus package prefix */
@@ -212,13 +223,14 @@ public class LibraryStep extends AbstractStepImpl {
         /** {@code file:/…/libs/NAME/src/} */
         private final @Nonnull String srcUrl;
 
-        LoadedClasses(String library, boolean trusted, Run<?,?> run) {
-            this(library, trusted, "", null, /* cf. LibraryAdder.retrieve */ new File(run.getRootDir(), "libs/" + library + "/src").toURI().toString());
+        LoadedClasses(String library, boolean trusted, Boolean changelog, Run<?,?> run) {
+            this(library, trusted, changelog, "", null, /* cf. LibraryAdder.retrieve */ new File(run.getRootDir(), "libs/" + library + "/src").toURI().toString());
         }
 
-        LoadedClasses(String library, boolean trusted, String prefix, String clazz, String srcUrl) {
+        LoadedClasses(String library, boolean trusted, Boolean changelog, String prefix, String clazz, String srcUrl) {
             this.library = library;
             this.trusted = trusted;
+            this.changelog = changelog;
             this.prefix = prefix;
             this.clazz = clazz;
             this.srcUrl = srcUrl;
@@ -241,10 +253,10 @@ public class LibraryStep extends AbstractStepImpl {
                 String fullClazz = clazz != null ? clazz + '$' + property : property;
                 loadClass(prefix + fullClazz);
                 // OK, class really exists, stash it and await methods
-                return new LoadedClasses(library, trusted, prefix, fullClazz, srcUrl);
+                return new LoadedClasses(library, trusted, changelog, prefix, fullClazz, srcUrl);
             } else {
                 // Still selecting package components.
-                return new LoadedClasses(library, trusted, prefix + property + '.', null, srcUrl);
+                return new LoadedClasses(library, trusted, changelog, prefix + property + '.', null, srcUrl);
             }
         }
 

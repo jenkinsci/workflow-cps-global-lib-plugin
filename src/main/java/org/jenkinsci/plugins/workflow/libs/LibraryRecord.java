@@ -36,17 +36,17 @@ final class LibraryRecord {
     final String version;
     final Set<String> variables = new TreeSet<>();
     final boolean trusted;
-    final boolean changesets;
+    final boolean changelog;
 
-    LibraryRecord(String name, String version, boolean trusted, boolean changesets) {
+    LibraryRecord(String name, String version, boolean trusted, boolean changelog) {
         this.name = name;
         this.version = version;
         this.trusted = trusted;
-        this.changesets = changesets;
+        this.changelog = changelog;
     }
 
     @Override public String toString() {
-        return "LibraryRecord{name=" + name + ", version=" + version + ", variables=" + variables + ", trusted=" + trusted + ", changesets=" + changesets + '}';
+        return "LibraryRecord{name=" + name + ", version=" + version + ", variables=" + variables + ", trusted=" + trusted + ", changelog=" + changelog + '}';
     }
 
 }

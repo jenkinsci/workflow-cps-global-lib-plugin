@@ -28,6 +28,7 @@ import groovy.lang.GroovyShell;
 import hudson.ExtensionPoint;
 import java.net.URL;
 import java.util.List;
+import java.util.HashMap;
 import javax.annotation.Nonnull;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 
@@ -63,6 +64,6 @@ public abstract class ClasspathAdder implements ExtensionPoint {
      * @return a possibly empty list of additions
      * @throws Exception for whatever reason (will fail compilation)
      */
-    public abstract @Nonnull List<Addition> add(@Nonnull CpsFlowExecution execution, @Nonnull List<String> libraries) throws Exception;
+    public abstract @Nonnull List<Addition> add(@Nonnull CpsFlowExecution execution, @Nonnull List<String> libraries, @Nonnull HashMap<String, Boolean> changelogs) throws Exception;
 
 }
