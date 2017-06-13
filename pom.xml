@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>2.25</version>
+        <version>2.31-20170612.235547-1</version> <!-- TODO https://github.com/jenkinsci/plugin-pom/pull/67 -->
         <relativePath />
     </parent>
     <groupId>org.jenkins-ci.plugins.workflow</groupId>
@@ -63,7 +63,6 @@
     </pluginRepositories>
     <properties>
         <jenkins.version>1.642.3</jenkins.version>
-        <jenkins-test-harness.version>2.19</jenkins-test-harness.version>
         <workflow-cps-plugin.version>2.30</workflow-cps-plugin.version>
         <git-plugin.version>3.1.0</git-plugin.version>
         <scm-api-plugin.version>2.1.1</scm-api-plugin.version>
@@ -156,7 +155,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-step-api</artifactId>
-            <version>2.9</version>
+            <version>2.11</version>
             <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>
