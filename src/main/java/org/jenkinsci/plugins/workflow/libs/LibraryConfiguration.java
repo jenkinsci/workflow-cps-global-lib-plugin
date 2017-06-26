@@ -38,7 +38,7 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
@@ -124,7 +124,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     @Extension public static class DescriptorImpl extends Descriptor<LibraryConfiguration> {
 
         // TODO JENKINS-20020 ought to be unnecessary
-        @Restricted(DoNotUse.class) // Jelly
+        @Restricted(NoExternalUse.class) // Jelly
         public Collection<LibraryRetrieverDescriptor> getRetrieverDescriptors() {
             StaplerRequest req = Stapler.getCurrentRequest();
             Item it = req != null ? req.findAncestorObject(Item.class) : null;
