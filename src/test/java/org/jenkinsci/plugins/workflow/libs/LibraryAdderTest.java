@@ -24,15 +24,20 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import com.google.common.collect.ImmutableMap;
 import groovy.lang.MetaClass;
+import hudson.model.Item;
 import hudson.model.Job;
 import hudson.model.Result;
+import hudson.model.User;
+import hudson.model.View;
 import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.SubmoduleConfig;
 import hudson.plugins.git.UserRemoteConfig;
 import hudson.plugins.git.extensions.GitSCMExtension;
 import hudson.scm.SubversionSCM;
+import hudson.security.ACL;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -41,6 +46,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import jenkins.model.Jenkins;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.scm.impl.subversion.SubversionSCMSource;
@@ -56,12 +62,13 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import static org.junit.Assert.*;
 import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.Rule;
+import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MemoryAssert;
+import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.TestExtension;
 
 public class LibraryAdderTest {
@@ -245,23 +252,57 @@ public class LibraryAdderTest {
         r.assertLogContains("1.0.0 > 1.2.0? false", b);
     }
 
-    @Test public void noReplayTrustedLibraries() throws Exception {
+    @Issue("JENKINS-41157")
+    @Test public void noReplayTrustedLibrariesWithoutRunScripts() throws Exception {
+        r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
+        r.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy().
+                grantWithoutImplication(Jenkins.ADMINISTER).everywhere().to("bob").
+                grant(Jenkins.READ, Item.READ, View.READ).everywhere().to("bob"));
+
         sampleRepo.init();
-        String originalMessage = "must not be edited";
+        final String originalMessage = "must not be edited";
+        final String originalScript = "def call() {echo '" + originalMessage + "'}";
+        sampleRepo.write("vars/trusted.groovy", originalScript);
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("trusted", new SCMSourceRetriever(
+                new GitSCMSource(null, sampleRepo.toString(),
+                        "", "*", "", true)))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('trusted@master') import trusted; trusted()", true));
+        final WorkflowRun b1 = r.buildAndAssertSuccess(p);
+        r.assertLogContains(originalMessage, b1);
+
+        ACL.impersonate(User.get("bob").impersonate(), new Runnable() {
+            @Override public void run() {
+                ReplayAction ra = b1.getAction(ReplayAction.class);
+                assertEquals(Collections.emptyMap(), ra.getOriginalLoadedScripts());
+            }
+        });
+
+    }
+
+    @Issue("JENKINS-41157")
+    @Test public void replayTrustedLibrariesWithRunScripts() throws Exception {
+        sampleRepo.init();
+        String originalMessage = "can be edited";
         String originalScript = "def call() {echo '" + originalMessage + "'}";
         sampleRepo.write("vars/trusted.groovy", originalScript);
         sampleRepo.git("add", "vars");
         sampleRepo.git("commit", "--message=init");
-        GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("trusted", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+        GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("trusted", new SCMSourceRetriever(
+                new GitSCMSource(null, sampleRepo.toString(),
+                        "", "*", "", true)))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("@Library('trusted@master') import trusted; trusted()", true));
         WorkflowRun b1 = r.buildAndAssertSuccess(p);
         r.assertLogContains(originalMessage, b1);
         ReplayAction ra = b1.getAction(ReplayAction.class);
-        assertEquals(Collections.emptyMap(), ra.getOriginalLoadedScripts());
-        WorkflowRun b2 = (WorkflowRun) ra.run(ra.getOriginalScript(), Collections.singletonMap("trusted", originalScript.replace(originalMessage, "should not allowed"))).get();
+        assertEquals(ImmutableMap.of("trusted", originalScript), ra.getOriginalLoadedScripts());
+        String replayedMessage = "should be allowed";
+        WorkflowRun b2 = (WorkflowRun) ra.run(ra.getOriginalScript(), Collections.singletonMap("trusted", originalScript.replace(originalMessage, replayedMessage))).get();
         r.assertBuildStatusSuccess(b2); // currently do not throw an error, since the GUI does not offer it anyway
-        r.assertLogContains(originalMessage, b2);
+        r.assertLogContains(replayedMessage, b2);
     }
 
     private static final List<WeakReference<ClassLoader>> LOADERS = new ArrayList<>();
