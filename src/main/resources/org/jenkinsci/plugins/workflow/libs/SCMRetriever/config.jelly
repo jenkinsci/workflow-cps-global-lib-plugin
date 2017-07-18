@@ -25,5 +25,11 @@ THE SOFTWARE.
 
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-    <f:descriptorRadioList varName="scm" instance="${instance.scm}" descriptors="${descriptor.SCMDescriptors}" title="${%Source Code Management}"/>
+  <f:block>
+    <table width="100%">
+      <f:section title="${%Source Code Management}">
+        <f:dropdownDescriptorSelector field="scm" descriptors="${descriptor.SCMDescriptors}" title=""/>
+      </f:section>
+    </table>
+  </f:block>
 </j:jelly>

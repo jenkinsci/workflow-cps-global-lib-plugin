@@ -30,15 +30,19 @@ THE SOFTWARE.
             <f:block>
                 <j:out value="${%blurb}"/>
             </f:block>
-            <f:entry>
-                <f:repeatableProperty field="libraries" header="${%Library}">
-                    <f:entry title="">
-                        <div align="right">
-                            <f:repeatableDeleteButton/>
-                        </div>
+            <f:block>
+                <table width="100%">
+                    <f:entry>
+                        <f:repeatableProperty field="libraries" header="${%Library}">
+                            <f:entry title="">
+                                <div align="right">
+                                    <f:repeatableDeleteButton/>
+                                </div>
+                            </f:entry>
+                        </f:repeatableProperty>
                     </f:entry>
-                </f:repeatableProperty>
-            </f:entry>
+                </table>
+            </f:block>
         </f:section>
     </j:if>
 </j:jelly>

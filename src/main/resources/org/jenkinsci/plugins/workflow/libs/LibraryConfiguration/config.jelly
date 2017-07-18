@@ -37,5 +37,12 @@ THE SOFTWARE.
     <f:entry field="allowVersionOverride" title="${%Allow default version to be overridden}">
         <f:checkbox default="true"/>
     </f:entry>
-    <f:descriptorRadioList varName="retriever" instance="${instance.retriever}" descriptors="${descriptor.retrieverDescriptors}" title="${%Retrieval method}"/>
+    <f:block>
+        <table width="100%">
+            <f:section title="${%Retrieval method}">
+                <f:dropdownDescriptorSelector field="retriever" descriptors="${descriptor.retrieverDescriptors}"
+                                              title=""/>
+            </f:section>
+        </table>
+    </f:block>
 </j:jelly>
