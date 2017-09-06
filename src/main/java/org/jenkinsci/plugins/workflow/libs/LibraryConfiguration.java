@@ -53,11 +53,13 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     private final String name;
     private final LibraryRetriever retriever;
     private String defaultVersion;
+    private String sourceDir;
     private boolean implicit;
     private boolean allowVersionOverride = true;
 
     @DataBoundConstructor public LibraryConfiguration(String name, LibraryRetriever retriever) {
         this.name = name;
+        this.sourceDir = "";
         this.retriever = retriever;
     }
 
@@ -82,6 +84,14 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     
     @DataBoundSetter public void setDefaultVersion(String defaultVersion) {
         this.defaultVersion = Util.fixEmpty(defaultVersion);
+    }
+
+    public String getSourceDir() {
+        return sourceDir;
+    }
+
+    @DataBoundSetter public void setSourceDir(String sourceDir) {
+        this.sourceDir = Util.fixNull(sourceDir);
     }
 
     /**
@@ -139,6 +149,8 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
             return FormValidation.ok();
         }
 
+        // TODO Validation for sourceDir ?
+
         public FormValidation doCheckDefaultVersion(@QueryParameter String defaultVersion, @QueryParameter boolean implicit, @QueryParameter boolean allowVersionOverride, @QueryParameter String name) {
             if (defaultVersion.isEmpty()) {
                 if (implicit) {
@@ -184,5 +196,4 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
         */
 
     }
-
 }

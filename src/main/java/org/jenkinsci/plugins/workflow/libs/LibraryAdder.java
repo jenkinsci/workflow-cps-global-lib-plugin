@@ -105,6 +105,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
             boolean kindTrusted = kind.isTrusted();
             for (LibraryConfiguration cfg : kind.forJob(build.getParent(), libraryVersions)) {
                 String name = cfg.getName();
+                String sourceDir = cfg.getSourceDir();
                 if (!cfg.isImplicit() && !libraryVersions.containsKey(name)) {
                     continue; // not using this one at all
                 }
@@ -113,7 +114,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                     continue;
                 }
                 String version = cfg.defaultedVersion(libraryVersions.remove(name));
-                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted));
+                librariesAdded.put(name, new LibraryRecord(name, version, sourceDir, kindTrusted));
                 retrievers.put(name, cfg.getRetriever());
             }
         }
@@ -128,7 +129,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         // Now actually try to retrieve the libraries.
         for (LibraryRecord record : librariesAdded.values()) {
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
-            for (URL u : retrieve(record.name, record.version, retrievers.get(record.name), record.trusted, listener, build, execution, record.variables)) {
+            for (URL u : retrieve(record.name, record.version, record.sourceDir, retrievers.get(record.name), record.trusted, listener, build, execution, record.variables)) {
                 additions.add(new Addition(u, record.trusted));
             }
         }
@@ -145,9 +146,9 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
     }
 
     /** Retrieve library files. */
-    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
+    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull String sourceDir, @Nonnull LibraryRetriever retriever, boolean trusted, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
         FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
-        retriever.retrieve(name, version, libDir, run, listener);
+        retriever.retrieve(name, version, sourceDir, libDir, run, listener);
         // Replace any classes requested for replay:
         if (!trusted) {
             for (String clazz : ReplayAction.replacementsIn(execution)) {

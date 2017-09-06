@@ -60,8 +60,8 @@ public class SCMRetriever extends LibraryRetriever {
         return scm;
     }
 
-    @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
-        SCMSourceRetriever.doRetrieve(name, scm, target, run, listener);
+    @Override public void retrieve(String name, String version, String sourceDir, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+        SCMSourceRetriever.doRetrieve(name, scm, sourceDir, target, run, listener);
     }
 
     @Override public FormValidation validateVersion(String name, String version) {

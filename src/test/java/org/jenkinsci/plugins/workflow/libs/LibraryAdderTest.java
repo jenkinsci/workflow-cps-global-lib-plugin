@@ -90,6 +90,35 @@ public class LibraryAdderTest {
         r.assertLogContains("using constant", r.buildAndAssertSuccess(p));
     }
 
+    @Test public void useSourceDir() throws Exception {
+        sampleRepo.init();
+        String lib = "package pkg; class Lib { static String CONST = 'const' }";
+        String script = "@Library('lib@master') import static pkg.Lib.*; echo(/using ${CONST}/)";
+        sampleRepo.write("jenkins/src/pkg/Lib.groovy", lib);
+        sampleRepo.git("add", "jenkins");
+        sampleRepo.git("commit", "--message=init");
+        LibraryConfiguration libCfg = new LibraryConfiguration(
+                "lib",
+                new SCMSourceRetriever(
+                        new GitSCMSource(
+                                null,
+                                sampleRepo.toString(),
+                                "",
+                                "*",
+                                "",
+                                true
+                        )
+                )
+        );
+        libCfg.setSourceDir("jenkins");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(libCfg));
+
+        WorkflowJob job = r.jenkins.createProject(WorkflowJob.class, "job");
+        job.setDefinition(new CpsFlowDefinition(script, true));
+
+        r.assertLogContains("using const", r.buildAndAssertSuccess(job));
+    }
+
     @Test public void usingInterpolation() throws Exception {
         sampleRepo.init();
         sampleRepo.write("src/pkg/Lib.groovy", "package pkg; class Lib {static String CONST = 'initial'}");

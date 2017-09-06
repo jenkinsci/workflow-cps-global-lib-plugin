@@ -24,28 +24,12 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
-import hudson.AbortException;
-import hudson.Extension;
-import hudson.ExtensionList;
-import hudson.FilePath;
-import hudson.Util;
-import hudson.model.Computer;
-import hudson.model.Descriptor;
-import hudson.model.DescriptorVisibilityFilter;
-import hudson.model.Node;
-import hudson.model.Run;
-import hudson.model.TaskListener;
-import hudson.model.TopLevelItem;
+import hudson.*;
+import hudson.model.*;
 import hudson.scm.SCM;
 import hudson.slaves.WorkspaceList;
 import hudson.util.FormValidation;
 import hudson.util.StreamTaskListener;
-import java.io.IOException;
-import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
@@ -57,6 +41,13 @@ import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
+
+import javax.annotation.Nonnull;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Uses {@link SCMSource#fetch(String, TaskListener)} to retrieve a specific revision.
@@ -76,15 +67,15 @@ public class SCMSourceRetriever extends LibraryRetriever {
         return scm;
     }
 
-    @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    @Override public void retrieve(String name, String version, String sourceDir, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         SCMRevision revision = scm.fetch(version, listener);
         if (revision == null) {
             throw new AbortException("No version " + version + " found for library " + name);
         }
-        doRetrieve(name, scm.build(revision.getHead(), revision), target, run, listener);
+        doRetrieve(name, scm.build(revision.getHead(), revision), sourceDir, target, run, listener);
     }
 
-    static void doRetrieve(String name, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    static void doRetrieve(String name, @Nonnull SCM scm, String sourceDir, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         // Adapted from CpsScmFlowDefinition:
         SCMStep delegate = new GenericSCMStep(scm);
         delegate.setPoll(false); // TODO we have no API for determining if a given SCMHead is branch-like or tag-like; would we want to turn on polling if the former?
@@ -107,8 +98,14 @@ public class SCMSourceRetriever extends LibraryRetriever {
         try (WorkspaceList.Lease lease = computer.getWorkspaceList().allocate(dir)) {
             delegate.checkout(run, lease.path, listener, node.createLauncher(listener));
             // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
+            FilePath source = lease.path.child(Util.fixNull(sourceDir));
+            if (!source.getParent().equals(lease.path) && !source.equals(lease.path)) {
+                // XXX Should it rather log a warning and use "lease.path" instead?
+                throw new AbortException("The source directory '" + sourceDir + "' does not exist!");
+
+            }
             // Copy sources with relevant files from the checkout:
-            lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);
+            source.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);
         }
     }
 

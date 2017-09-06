@@ -34,17 +34,19 @@ final class LibraryRecord {
 
     final String name;
     final String version;
+    final String sourceDir;
     final Set<String> variables = new TreeSet<>();
     final boolean trusted;
 
-    LibraryRecord(String name, String version, boolean trusted) {
+    LibraryRecord(String name, String version, String sourceDir, boolean trusted) {
         this.name = name;
         this.version = version;
+        this.sourceDir = sourceDir;
         this.trusted = trusted;
     }
 
     @Override public String toString() {
-        return "LibraryRecord{name=" + name + ", version=" + version + ", variables=" + variables + ", trusted=" + trusted + '}';
+        return "LibraryRecord{name=" + name + ", version=" + version + ", sourceDir="+ sourceDir +", variables=" + variables + ", trusted=" + trusted + '}';
     }
 
 }

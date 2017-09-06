@@ -31,6 +31,9 @@ THE SOFTWARE.
     <f:entry field="defaultVersion" title="${%Default version}">
         <f:textbox/>
     </f:entry>
+    <f:entry field="sourceDir" title="${%Source directory}">
+        <f:textbox/>
+    </f:entry>
     <f:entry field="implicit" title="${%Load implicitly}">
         <f:checkbox/>
     </f:entry>

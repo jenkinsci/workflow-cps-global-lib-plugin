@@ -32,6 +32,7 @@ import groovy.lang.GroovyRuntimeException;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
+import hudson.Util;
 import hudson.model.AutoCompletionCandidates;
 import hudson.model.Item;
 import hudson.model.ItemGroup;
@@ -85,14 +86,24 @@ public class LibraryStep extends AbstractStepImpl {
     private static final Logger LOGGER = Logger.getLogger(LibraryStep.class.getName());
 
     private final String identifier;
+    private String sourceDir;
     private LibraryRetriever retriever;
 
     @DataBoundConstructor public LibraryStep(String identifier) {
         this.identifier = identifier;
+        this.sourceDir = "";
     }
 
     public String getIdentifier() {
         return identifier;
+    }
+
+    public String getSourceDir() {
+        return sourceDir;
+    }
+
+    @DataBoundSetter public void setSourceDir(String sourceDir) {
+        this.sourceDir = Util.fixNull(sourceDir);
     }
 
     public LibraryRetriever getRetriever() {
@@ -153,12 +164,14 @@ public class LibraryStep extends AbstractStepImpl {
         @Override protected LoadedClasses run() throws Exception {
             String[] parsed = LibraryAdder.parse(step.identifier);
             String name = parsed[0], version = parsed[1];
+            String sourceDir = step.getSourceDir();
             boolean trusted = false;
             LibraryRetriever retriever = step.getRetriever();
             if (retriever == null) {
                 for (LibraryResolver resolver : ExtensionList.lookup(LibraryResolver.class)) {
                     for (LibraryConfiguration cfg : resolver.forJob(run.getParent(), Collections.singletonMap(name, version))) {
                         if (cfg.getName().equals(name)) {
+                            sourceDir = cfg.getSourceDir();
                             retriever = cfg.getRetriever();
                             trusted = resolver.isTrusted();
                             version = cfg.defaultedVersion(version);
@@ -172,7 +185,7 @@ public class LibraryStep extends AbstractStepImpl {
             } else if (version == null) {
                 throw new AbortException("Must specify a version for library " + name);
             }
-            LibraryRecord record = new LibraryRecord(name, version, trusted);
+            LibraryRecord record = new LibraryRecord(name, version, sourceDir, trusted);
             LibrariesAction action = run.getAction(LibrariesAction.class);
             if (action == null) {
                 action = new LibrariesAction(Lists.newArrayList(record));
@@ -190,7 +203,7 @@ public class LibraryStep extends AbstractStepImpl {
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
             CpsFlowExecution exec = (CpsFlowExecution) getContext().get(FlowExecution.class);
             GroovyClassLoader loader = (trusted ? exec.getTrustedShell() : exec.getShell()).getClassLoader();
-            for (URL u : LibraryAdder.retrieve(record.name, record.version, retriever, record.trusted, listener, run, (CpsFlowExecution) getContext().get(FlowExecution.class), record.variables)) {
+            for (URL u : LibraryAdder.retrieve(record.name, record.version, record.sourceDir, retriever, record.trusted, listener, run, (CpsFlowExecution) getContext().get(FlowExecution.class), record.variables)) {
                 loader.addURL(u);
             }
             run.save(); // persist changes to LibrariesAction.libraries*.variables
@@ -314,5 +327,4 @@ public class LibraryStep extends AbstractStepImpl {
             return receiver instanceof LoadedClasses && method.getDeclaringClass() == GroovyObject.class && (name.equals("getProperty") || name.equals("invokeMethod"));
         }
     }
-
 }

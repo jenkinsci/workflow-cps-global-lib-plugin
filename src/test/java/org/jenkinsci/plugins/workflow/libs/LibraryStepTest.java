@@ -88,13 +88,13 @@ public class LibraryStepTest {
         r.assertLogContains("ran library", b);
         LibrariesAction action = b.getAction(LibrariesAction.class);
         assertNotNull(action);
-        assertEquals("[LibraryRecord{name=stuff, version=master, variables=[x], trusted=true}]", action.getLibraries().toString());
+        assertEquals("[LibraryRecord{name=stuff, version=master, sourceDir=, variables=[x], trusted=true}]", action.getLibraries().toString());
         p.setDefinition(new CpsFlowDefinition("library identifier: 'otherstuff@master', retriever: modernSCM([$class: 'GitSCMSource', remote: $/" + sampleRepo + "/$, credentialsId: '']); x()", true));
         b = r.buildAndAssertSuccess(p);
         r.assertLogContains("ran library", b);
         action = b.getAction(LibrariesAction.class);
         assertNotNull(action);
-        assertEquals("[LibraryRecord{name=otherstuff, version=master, variables=[x], trusted=false}]", action.getLibraries().toString());
+        assertEquals("[LibraryRecord{name=otherstuff, version=master, sourceDir=, variables=[x], trusted=false}]", action.getLibraries().toString());
     }
 
     @Test public void classes() throws Exception {
