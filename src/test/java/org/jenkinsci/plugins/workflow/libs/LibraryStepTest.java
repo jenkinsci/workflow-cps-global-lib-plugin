@@ -67,13 +67,15 @@ public class LibraryStepTest {
         snippetizerTester.assertRoundTrip(s, "library 'foo'");
         s = new LibraryStep("foo@master");
         s.setRetriever(new SCMSourceRetriever(new GitSCMSource("id", "https://nowhere.net/", "", "origin", "+refs/heads/*:refs/remotes/origin/*", "*", "", true)));
+        s.setChangelog(true);
         r.assertEqualDataBoundBeans(s, stepTester.configRoundTrip(s));
         snippetizerTester.assertRoundTrip(s, "library identifier: 'foo@master', retriever: modernSCM([$class: 'GitSCMSource', credentialsId: '', excludes: '', id: 'id', ignoreOnPushNotifications: true, includes: '*', rawRefSpecs: '+refs/heads/*:refs/remotes/origin/*', remote: 'https://nowhere.net/', remoteName: 'origin'])");
         s.setRetriever(new SCMRetriever(new GitSCM(Collections.singletonList(new UserRemoteConfig("https://nowhere.net/", null, null, null)),
             Collections.singletonList(new BranchSpec("${library.foo.version}")),
             false, Collections.<SubmoduleConfig>emptyList(), null, null, Collections.<GitSCMExtension>emptyList())));
+        s.setChangelog(false);
         r.assertEqualDataBoundBeans(s, stepTester.configRoundTrip(s));
-        snippetizerTester.assertRoundTrip(s, "library identifier: 'foo@master', retriever: legacySCM([$class: 'GitSCM', branches: [[name: '${library.foo.version}']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[url: 'https://nowhere.net/']]])");
+        snippetizerTester.assertRoundTrip(s, "library changelog: false, identifier: 'foo@master', retriever: legacySCM([$class: 'GitSCM', branches: [[name: '${library.foo.version}']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[url: 'https://nowhere.net/']]])");
     }
 
     @Test public void vars() throws Exception {
@@ -88,13 +90,13 @@ public class LibraryStepTest {
         r.assertLogContains("ran library", b);
         LibrariesAction action = b.getAction(LibrariesAction.class);
         assertNotNull(action);
-        assertEquals("[LibraryRecord{name=stuff, version=master, variables=[x], trusted=true}]", action.getLibraries().toString());
-        p.setDefinition(new CpsFlowDefinition("library identifier: 'otherstuff@master', retriever: modernSCM([$class: 'GitSCMSource', remote: $/" + sampleRepo + "/$, credentialsId: '']); x()", true));
+        assertEquals("[LibraryRecord{name=stuff, version=master, variables=[x], trusted=true, changelog=true}]", action.getLibraries().toString());
+        p.setDefinition(new CpsFlowDefinition("library identifier: 'otherstuff@master', retriever: modernSCM([$class: 'GitSCMSource', remote: $/" + sampleRepo + "/$, credentialsId: '']), changelog: false; x()", true));
         b = r.buildAndAssertSuccess(p);
         r.assertLogContains("ran library", b);
         action = b.getAction(LibrariesAction.class);
         assertNotNull(action);
-        assertEquals("[LibraryRecord{name=otherstuff, version=master, variables=[x], trusted=false}]", action.getLibraries().toString());
+        assertEquals("[LibraryRecord{name=otherstuff, version=master, variables=[x], trusted=false, changelog=false}]", action.getLibraries().toString());
     }
 
     @Test public void classes() throws Exception {

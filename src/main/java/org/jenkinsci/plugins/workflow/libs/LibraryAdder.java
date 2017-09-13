@@ -61,7 +61,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
 
     private static final Logger LOGGER = Logger.getLogger(LibraryAdder.class.getName());
 
-    @Override public List<Addition> add(CpsFlowExecution execution, List<String> libraries) throws Exception {
+    @Override public List<Addition> add(CpsFlowExecution execution, List<String> libraries, HashMap<String, Boolean> changelogs) throws Exception {
         Queue.Executable executable = execution.getOwner().getExecutable();
         Run<?,?> build;
         if (executable instanceof Run) {
@@ -72,10 +72,12 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         }
         // First parse the library declarations (if any) looking for requested versions.
         Map<String,String> libraryVersions = new HashMap<>();
+        Map<String,Boolean> libraryChangelogs = new HashMap<>();
         Map<String,String> librariesUnparsed = new HashMap<>();
         for (String library : libraries) {
             String[] parsed = parse(library);
             libraryVersions.put(parsed[0], parsed[1]);
+            libraryChangelogs.put(parsed[0], changelogs.get(library));
             librariesUnparsed.put(parsed[0], library);
         }
         List<Addition> additions = new ArrayList<>();
@@ -113,7 +115,8 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                     continue;
                 }
                 String version = cfg.defaultedVersion(libraryVersions.remove(name));
-                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted));
+                Boolean changelog = cfg.defaultedChangelogs(libraryChangelogs.remove(name));
+                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted, changelog));
                 retrievers.put(name, cfg.getRetriever());
             }
         }
@@ -128,7 +131,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         // Now actually try to retrieve the libraries.
         for (LibraryRecord record : librariesAdded.values()) {
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
-            for (URL u : retrieve(record.name, record.version, retrievers.get(record.name), record.trusted, listener, build, execution, record.variables)) {
+            for (URL u : retrieve(record.name, record.version, retrievers.get(record.name), record.trusted, record.changelog, listener, build, execution, record.variables)) {
                 additions.add(new Addition(u, record.trusted));
             }
         }
@@ -136,7 +139,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
     }
 
     static @Nonnull String[] parse(@Nonnull String identifier) {
-        int at = identifier.indexOf('@');
+       int at = identifier.indexOf('@');
         if (at == -1) {
             return new String[] {identifier, null}; // pick up defaultVersion
         } else {
@@ -145,9 +148,9 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
     }
 
     /** Retrieve library files. */
-    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
+    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, Boolean changelog, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
         FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
-        retriever.retrieve(name, version, libDir, run, listener);
+        retriever.retrieve(name, version, changelog, libDir, run, listener);
         // Replace any classes requested for replay:
         if (!trusted) {
             for (String clazz : ReplayAction.replacementsIn(execution)) {

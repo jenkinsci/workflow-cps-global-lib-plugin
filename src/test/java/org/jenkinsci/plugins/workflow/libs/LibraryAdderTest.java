@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import groovy.lang.MetaClass;
+import hudson.FilePath;
 import hudson.model.Job;
 import hudson.model.Result;
 import hudson.plugins.git.BranchSpec;
@@ -32,13 +33,16 @@ import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.SubmoduleConfig;
 import hudson.plugins.git.UserRemoteConfig;
 import hudson.plugins.git.extensions.GitSCMExtension;
+import hudson.slaves.WorkspaceList;
 import hudson.scm.SubversionSCM;
+import hudson.scm.ChangeLogSet;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import jenkins.plugins.git.GitSCMSource;
@@ -166,6 +170,64 @@ public class LibraryAdderTest {
         // (the converse is that we may not have an @ inside a library name):
         p.setDefinition(new CpsFlowDefinition("@Library('stuff@trunk@" + tag + "') import pkg.Lib; echo(/using ${Lib.CONST}/)", true));
         r.assertLogContains("using initial", r.buildAndAssertSuccess(p));
+    }
+
+    @Issue("JENKINS-41497")
+    @Test public void dontIncludeChangesetsOverriden() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("vars/myecho.groovy", "def call() {echo 'something special'}");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        LibraryConfiguration lc = new LibraryConfiguration("dont_include_changes", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
+        lc.setIncludeInChangesets(false);
+        GlobalLibraries.get().setLibraries(Collections.singletonList(lc));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library(value='dont_include_changes@master', changelog=true) import myecho; myecho()", true));
+        FilePath base = r.jenkins.getWorkspaceFor(p).withSuffix("@libs").child("dont_include_changes");
+        try (WorkspaceList.Lease lease = r.jenkins.toComputer().getWorkspaceList().acquire(base)) {
+            WorkflowRun a = r.buildAndAssertSuccess(p);
+            r.assertLogContains("something special", a);
+        }
+        sampleRepo.write("vars/myecho.groovy", "def call() {echo 'something even more special'}");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=shared_library_commit");
+        try (WorkspaceList.Lease lease = r.jenkins.toComputer().getWorkspaceList().acquire(base)) {
+            WorkflowRun b = r.buildAndAssertSuccess(p);
+            List<ChangeLogSet<? extends ChangeLogSet.Entry>> changeSets = b.getChangeSets();
+            assertEquals(1, changeSets.size());
+            ChangeLogSet<? extends ChangeLogSet.Entry> changeSet = changeSets.get(0);
+            assertEquals(b, changeSet.getRun());
+            assertEquals("git", changeSet.getKind());
+            Iterator<? extends ChangeLogSet.Entry> iterator = changeSet.iterator();
+            ChangeLogSet.Entry entry = iterator.next();
+            assertEquals("shared_library_commit", entry.getMsg() );
+            r.assertLogContains("something even more special", b);
+        }
+    }
+
+    @Issue("JENKINS-41497")
+    @Test public void includeChangesetsOverridden() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("vars/myecho.groovy", "def call() {echo 'something special'}");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        LibraryConfiguration lc = new LibraryConfiguration("include_changes", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
+        lc.setIncludeInChangesets(true);
+        GlobalLibraries.get().setLibraries(Collections.singletonList(lc));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library(value='include_changes@master', changelog=false) import myecho; myecho()", true));
+        FilePath base = r.jenkins.getWorkspaceFor(p).withSuffix("@libs").child("include_changes");
+        try (WorkspaceList.Lease lease = r.jenkins.toComputer().getWorkspaceList().acquire(base)) {
+            WorkflowRun a = r.buildAndAssertSuccess(p);
+        }
+        sampleRepo.write("vars/myecho.groovy", "def call() {echo 'something even more special'}");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=shared_library_commit");
+        try (WorkspaceList.Lease lease = r.jenkins.toComputer().getWorkspaceList().acquire(base)) {
+            WorkflowRun b = r.buildAndAssertSuccess(p);
+            List<ChangeLogSet<? extends ChangeLogSet.Entry>> changeSets = b.getChangeSets();
+            assertEquals(0, changeSets.size());
+        }
     }
 
     @Test public void globalVariable() throws Exception {

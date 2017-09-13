@@ -76,19 +76,23 @@ public class SCMSourceRetriever extends LibraryRetriever {
         return scm;
     }
 
-    @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    @Override public void retrieve(String name, String version, boolean changelog, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         SCMRevision revision = scm.fetch(version, listener);
         if (revision == null) {
             throw new AbortException("No version " + version + " found for library " + name);
         }
-        doRetrieve(name, scm.build(revision.getHead(), revision), target, run, listener);
+        doRetrieve(name, changelog, scm.build(revision.getHead(), revision), target, run, listener);
     }
 
-    static void doRetrieve(String name, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+        retrieve(name, version, true, target, run, listener);
+    }
+
+    static void doRetrieve(String name, boolean changelog, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         // Adapted from CpsScmFlowDefinition:
         SCMStep delegate = new GenericSCMStep(scm);
         delegate.setPoll(false); // TODO we have no API for determining if a given SCMHead is branch-like or tag-like; would we want to turn on polling if the former?
-        delegate.setChangelog(true); // TODO is this desirable?
+        delegate.setChangelog(changelog);
         FilePath dir;
         Node node = Jenkins.getActiveInstance();
         if (run.getParent() instanceof TopLevelItem) {
