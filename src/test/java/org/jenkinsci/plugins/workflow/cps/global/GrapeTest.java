@@ -93,7 +93,6 @@ public class GrapeTest {
 
     // TODO test transitive dependencies; need to find something in Central which has a dependency not in this plugin’s test classpath and which could be used easily from a script
 
-    @Ignore("TODO ClassNodeResolver.tryAsLoaderClassOrScript swallows the CompilationFailedException and throws a generic GroovyBugError; fixed in Jenkins 2 / Groovy 2")
     @Test public void nonexistentLibrary() throws Exception {
         story.addStep(new Statement() {
             @Override public void evaluate() throws Throwable {
@@ -108,7 +107,6 @@ public class GrapeTest {
         });
     }
 
-    @Ignore("TODO ditto")
     @Test public void nonexistentImport() throws Exception {
         story.addStep(new Statement() {
             @Override public void evaluate() throws Throwable {
@@ -144,7 +142,6 @@ public class GrapeTest {
         });
     }
 
-    @Ignore("TODO works in Jenkins 2 / Groovy 2; in 1, fails with (concealed): unable to resolve class org.jenkinsci.plugins.docker.workflow.Docker")
     @Test public void useSource() throws Exception {
         story.addStep(new Statement() {
             @Override public void evaluate() throws Throwable {
