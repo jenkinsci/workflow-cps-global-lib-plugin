@@ -142,6 +142,7 @@ public class GrapeTest {
         });
     }
 
+    @Ignore("TODO fails on CI and inside a Docker container, though for different reasons: `download failed` vs. `/var/maven/.groovy/grapes/resolved-caller-all-caller-working61.xml (No such file or directory)`; and a test-scoped dep on docker-workflow:1.7 does not help")
     @Test public void useSource() throws Exception {
         story.addStep(new Statement() {
             @Override public void evaluate() throws Throwable {
