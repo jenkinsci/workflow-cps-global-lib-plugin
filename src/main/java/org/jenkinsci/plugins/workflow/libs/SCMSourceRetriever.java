@@ -116,7 +116,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
         }
     }
 
-    // TODO 1.652 has tempDir API but there is no API to make other variants
+    // TODO there is WorkspaceList.tempDir but no API to make other variants
     private static String getFilePathSuffix() {
         return System.getProperty(WorkspaceList.class.getName(), "@");
     }
