@@ -65,7 +65,7 @@
         <jenkins.version>2.7.3</jenkins.version>
         <java.level>7</java.level>
         <workflow-cps-plugin.version>2.39</workflow-cps-plugin.version>
-        <git-plugin.version>3.6.5-20171201.030040-1</git-plugin.version> <!-- TODO https://github.com/jenkinsci/git-plugin/pull/557 -->
+        <git-plugin.version>3.6.4</git-plugin.version>
         <scm-api-plugin.version>2.2.5</scm-api-plugin.version>
         <workflow-scm-step-plugin.version>2.4</workflow-scm-step-plugin.version>
     </properties>
