@@ -241,4 +241,15 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <reuseForks>false</reuseForks> <!-- TODO reuse seems to cause problems in LibraryMemoryTest -->
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
