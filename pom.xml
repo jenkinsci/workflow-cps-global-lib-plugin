@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>2.33</version>
+        <version>3.2</version>
         <relativePath />
     </parent>
     <groupId>org.jenkins-ci.plugins.workflow</groupId>
@@ -36,11 +36,11 @@
     <version>2.10-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Pipeline: Shared Groovy Libraries</name>
-    <url>https://wiki.jenkins-ci.org/display/JENKINS/Pipeline+Shared+Groovy+Libraries+Plugin</url>
+    <url>https://wiki.jenkins.io/display/JENKINS/Pipeline+Shared+Groovy+Libraries+Plugin</url>
     <licenses>
         <license>
             <name>MIT License</name>
-            <url>http://opensource.org/licenses/MIT</url>
+            <url>https://opensource.org/licenses/MIT</url>
         </license>
     </licenses>
     <scm>
@@ -63,9 +63,10 @@
     </pluginRepositories>
     <properties>
         <jenkins.version>2.7.3</jenkins.version>
+        <java.level>7</java.level>
         <workflow-cps-plugin.version>2.39</workflow-cps-plugin.version>
-        <git-plugin.version>3.1.0</git-plugin.version>
-        <scm-api-plugin.version>2.1.1</scm-api-plugin.version>
+        <git-plugin.version>3.6.4</git-plugin.version>
+        <scm-api-plugin.version>2.2.5</scm-api-plugin.version>
         <workflow-scm-step-plugin.version>2.4</workflow-scm-step-plugin.version>
     </properties>
     <dependencies>
@@ -88,7 +89,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>git-client</artifactId>
-            <version>2.3.0</version> <!-- do not pick up an obsolete version from git-server -->
+            <version>2.6.0</version> <!-- do not pick up an obsolete version from git-server -->
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -109,6 +110,16 @@
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>script-security</artifactId>
             <version>1.33</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>structs</artifactId>
+            <version>1.10</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>credentials</artifactId>
+            <version>2.1.14</version>
         </dependency>
         <dependency>
             <groupId>org.apache.ivy</groupId>
@@ -178,6 +189,12 @@
             <artifactId>git</artifactId>
             <version>${git-plugin.version}</version>
             <scope>test</scope>
+            <exclusions> <!-- TODO possibly bug in git-plugin/pom.xml -->
+                <exclusion>
+                    <groupId>org.jenkins-ci</groupId>
+                    <artifactId>annotation-indexer</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -185,6 +202,12 @@
             <version>${git-plugin.version}</version>
             <classifier>tests</classifier>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.jenkins-ci</groupId>
+                    <artifactId>annotation-indexer</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -218,4 +241,15 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <reuseForks>false</reuseForks> <!-- TODO reuse seems to cause problems in LibraryMemoryTest -->
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

@@ -69,7 +69,7 @@ public class LibraryStepTest {
         s.setRetriever(new SCMSourceRetriever(new GitSCMSource("id", "https://nowhere.net/", "", "origin", "+refs/heads/*:refs/remotes/origin/*", "*", "", true)));
         s.setChangelog(true);
         r.assertEqualDataBoundBeans(s, stepTester.configRoundTrip(s));
-        snippetizerTester.assertRoundTrip(s, "library identifier: 'foo@master', retriever: modernSCM([$class: 'GitSCMSource', credentialsId: '', excludes: '', id: 'id', ignoreOnPushNotifications: true, includes: '*', rawRefSpecs: '+refs/heads/*:refs/remotes/origin/*', remote: 'https://nowhere.net/', remoteName: 'origin'])");
+        snippetizerTester.assertRoundTrip(s, "library identifier: 'foo@master', retriever: modernSCM([$class: 'GitSCMSource', credentialsId: '', id: 'id', remote: 'https://nowhere.net/', traits: [[$class: 'BranchDiscoveryTrait'], [$class: 'IgnoreOnPushNotificationTrait']]])");
         s.setRetriever(new SCMRetriever(new GitSCM(Collections.singletonList(new UserRemoteConfig("https://nowhere.net/", null, null, null)),
             Collections.singletonList(new BranchSpec("${library.foo.version}")),
             false, Collections.<SubmoduleConfig>emptyList(), null, null, Collections.<GitSCMExtension>emptyList())));
