@@ -62,7 +62,7 @@
         </pluginRepository>
     </pluginRepositories>
     <properties>
-        <jenkins.version>2.7.3</jenkins.version>
+        <jenkins.version>2.60.3</jenkins.version>
         <java.level>7</java.level>
         <workflow-cps-plugin.version>2.39</workflow-cps-plugin.version>
         <git-plugin.version>3.6.4</git-plugin.version>

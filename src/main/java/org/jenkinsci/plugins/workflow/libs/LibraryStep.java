@@ -186,10 +186,7 @@ public class LibraryStep extends AbstractStepImpl {
 
             LibraryRecord record = new LibraryRecord(name, version, trusted, changelog);
             LibrariesAction action = run.getAction(LibrariesAction.class);
-            if (action == null) {
-                action = new LibrariesAction(Lists.newArrayList(record));
-                run.addAction(action);
-            } else {
+            if (action != null) {
                 List<LibraryRecord> libraries = action.getLibraries();
                 for (LibraryRecord existing : libraries) {
                     if (existing.name.equals(name)) {
@@ -197,13 +194,18 @@ public class LibraryStep extends AbstractStepImpl {
                         return new LoadedClasses(name, trusted, changelog, run);
                     }
                 }
-                libraries.add(record);
             }
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
             CpsFlowExecution exec = (CpsFlowExecution) getContext().get(FlowExecution.class);
             GroovyClassLoader loader = (trusted ? exec.getTrustedShell() : exec.getShell()).getClassLoader();
             for (URL u : LibraryAdder.retrieve(record.name, record.version, retriever, record.trusted, record.changelog, listener, run, (CpsFlowExecution) getContext().get(FlowExecution.class), record.variables)) {
                 loader.addURL(u);
+            }
+            if (action == null) {
+                action = new LibrariesAction(Lists.newArrayList(record));
+                run.addAction(action);
+            } else {
+            	action.getLibraries().add(record);
             }
             run.save(); // persist changes to LibrariesAction.libraries*.variables
             return new LoadedClasses(name, trusted, changelog, run);

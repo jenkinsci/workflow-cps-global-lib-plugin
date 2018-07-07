@@ -78,6 +78,21 @@ public class LibraryStepTest {
         snippetizerTester.assertRoundTrip(s, "library changelog: false, identifier: 'foo@master', retriever: legacySCM([$class: 'GitSCM', branches: [[name: '${library.foo.version}']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[url: 'https://nowhere.net/']]])");
     }
 
+    @Test public void retry() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("vars/x.groovy", "def call() {echo 'ran library'}");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("def i=0; retry(3) {if(i==0) {i++; library 'stuff@invalid_branch';}; library 'stuff@master';}; x()", true));
+        WorkflowRun b = r.buildAndAssertSuccess(p);
+        r.assertLogContains("ran library", b);
+        LibrariesAction action = b.getAction(LibrariesAction.class);
+        assertNotNull(action);
+        assertEquals("[LibraryRecord{name=stuff, version=master, variables=[x], trusted=true, changelog=true}]", action.getLibraries().toString());
+    }
+
     @Test public void vars() throws Exception {
         sampleRepo.init();
         sampleRepo.write("vars/x.groovy", "def call() {echo 'ran library'}");
