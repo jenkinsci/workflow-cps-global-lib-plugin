@@ -25,12 +25,15 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import hudson.FilePath;
+import hudson.model.Result;
 import hudson.slaves.WorkspaceList;
+
 import java.util.List;
 import java.util.Iterator;
 import java.util.Collections;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import jenkins.scm.api.SCMSource;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -64,6 +67,7 @@ public class SCMSourceRetrieverTest {
         try (WorkspaceList.Lease lease = r.jenkins.toComputer().getWorkspaceList().acquire(base)) {
             WorkflowRun b = r.buildAndAssertSuccess(p);
             r.assertLogContains("something special", b);
+            r.assertLogNotContains("Retrying after 10 seconds", b);
             assertFalse(base.child("vars").exists());
             assertTrue(base.withSuffix("@2").child("vars").exists());
         }
@@ -99,6 +103,7 @@ public class SCMSourceRetrieverTest {
             ChangeLogSet.Entry entry = iterator.next();
             assertEquals("shared_library_commit", entry.getMsg() );
             r.assertLogContains("something even more special", b);
+            r.assertLogNotContains("Retrying after 10 seconds", b);
         }
     }
 
@@ -124,6 +129,25 @@ public class SCMSourceRetrieverTest {
             WorkflowRun b = r.buildAndAssertSuccess(p);
             List<ChangeLogSet<? extends ChangeLogSet.Entry>> changeSets = b.getChangeSets();
             assertEquals(0, changeSets.size());
+            r.assertLogNotContains("Retrying after 10 seconds", b);
         }
+    }
+
+    @Test public void retry() throws Exception {
+        final SCMSource scmSource = new FailingSCMSource();
+        final SCMSourceRetriever retriever = new SCMSourceRetriever(scmSource);
+        final LibraryConfiguration libraryConfiguration = new LibraryConfiguration("retry", retriever);
+        final List<LibraryConfiguration> libraries = Collections.singletonList(libraryConfiguration);
+        GlobalLibraries.get().setLibraries(libraries);
+        final WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        final String script = "@Library('retry@master') import myecho; myecho()";
+        final CpsFlowDefinition def = new CpsFlowDefinition(script, true);
+        p.setDefinition(def);
+        r.jenkins.setScmCheckoutRetryCount(1);
+
+        WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+
+        r.assertLogContains("Failing 'checkout' on purpose!", b);
+        r.assertLogContains("Retrying after 10 seconds", b);
     }
 }
