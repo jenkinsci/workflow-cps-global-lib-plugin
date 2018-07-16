@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.libs;
 
 import hudson.AbortException;
 import hudson.Extension;
+import hudson.Util;
 import java.util.Map;
 import javax.inject.Inject;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
@@ -34,6 +35,7 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 /**
  * Step to load a resource from a library.
@@ -41,6 +43,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 public class ResourceStep extends AbstractStepImpl {
 
     private final String resource;
+    private String encoding;
 
     @DataBoundConstructor public ResourceStep(String resource) {
         this.resource = resource;
@@ -48,6 +51,14 @@ public class ResourceStep extends AbstractStepImpl {
 
     public String getResource() {
         return resource;
+    }
+
+    public String getEncoding() {
+        return encoding;
+    }
+
+    @DataBoundSetter public void setEncoding(String encoding) {
+        this.encoding = Util.fixEmptyAndTrim(encoding);
     }
 
     @Extension public static class DescriptorImpl extends AbstractStepDescriptorImpl {
@@ -74,7 +85,7 @@ public class ResourceStep extends AbstractStepImpl {
 
         @Override protected String run() throws Exception {
             String resource = step.resource;
-            Map<String,String> contents = LibraryAdder.findResources((CpsFlowExecution) getContext().get(FlowExecution.class), resource);
+            Map<String,String> contents = LibraryAdder.findResources((CpsFlowExecution) getContext().get(FlowExecution.class), resource, step.encoding);
             if (contents.isEmpty()) {
                 throw new AbortException(Messages.ResourceStep_no_such_library_resource_could_be_found_(resource));
             } else if (contents.size() == 1) {

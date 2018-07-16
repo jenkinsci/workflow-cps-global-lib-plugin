@@ -45,7 +45,10 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariableSet;
@@ -191,7 +194,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
      * @param name a resource name, à la {@link Class#getResource(String)} but with no leading {@code /} allowed
      * @return a map from {@link LibraryRecord#name} to file contents
      */
-    static @Nonnull Map<String,String> findResources(@Nonnull CpsFlowExecution execution, @Nonnull String name) throws IOException, InterruptedException {
+    static @Nonnull Map<String,String> findResources(@Nonnull CpsFlowExecution execution, @Nonnull String name, @CheckForNull String encoding) throws IOException, InterruptedException {
         Map<String,String> resources = new TreeMap<>();
         Queue.Executable executable = execution.getOwner().getExecutable();
         if (executable instanceof Run) {
@@ -202,12 +205,20 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                 for (LibraryRecord library : action.getLibraries()) {
                     FilePath f = libs.child(library.name + "/resources/" + name);
                     if (f.exists()) {
-                        resources.put(library.name, f.readToString());
+                        resources.put(library.name, readResource(f, encoding));
                     }
                 }
             }
         }
         return resources;
+    }
+
+    private static String readResource(FilePath file, @CheckForNull String encoding) throws IOException, InterruptedException {
+        if ("Base64".equals(encoding)) {
+            return Base64.encodeBase64String(IOUtils.toByteArray(file.read()));
+        } else {
+            return IOUtils.toString(file.read(), encoding);
+        }
     }
 
     @Extension public static class GlobalVars extends GlobalVariableSet {
