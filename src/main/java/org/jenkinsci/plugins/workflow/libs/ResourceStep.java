@@ -28,6 +28,7 @@ import hudson.AbortException;
 import hudson.Extension;
 import hudson.Util;
 import java.util.Map;
+import javax.annotation.CheckForNull;
 import javax.inject.Inject;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
@@ -53,10 +54,15 @@ public class ResourceStep extends AbstractStepImpl {
         return resource;
     }
 
-    public String getEncoding() {
+    public @CheckForNull String getEncoding() {
         return encoding;
     }
 
+    /**
+     * Set the encoding to be used when loading the resource. If the specified value is null or
+     * whitespace-only, then the platform default encoding will be used. Binary resources can be
+     * loaded as a Base64-encoded string by specifying {@code Base64} as the encoding.
+     */
     @DataBoundSetter public void setEncoding(String encoding) {
         this.encoding = Util.fixEmptyAndTrim(encoding);
     }

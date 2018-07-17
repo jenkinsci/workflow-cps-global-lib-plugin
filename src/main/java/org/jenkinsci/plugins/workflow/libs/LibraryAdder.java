@@ -217,7 +217,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         if ("Base64".equals(encoding)) {
             return Base64.getEncoder().encodeToString(IOUtils.toByteArray(file.read()));
         } else {
-            return IOUtils.toString(file.read(), encoding);
+            return IOUtils.toString(file.read(), encoding); // The platform default is used if encoding is null.
         }
     }
 
