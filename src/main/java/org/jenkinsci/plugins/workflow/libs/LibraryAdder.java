@@ -35,6 +35,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -47,7 +48,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
@@ -215,7 +215,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
 
     private static String readResource(FilePath file, @CheckForNull String encoding) throws IOException, InterruptedException {
         if ("Base64".equals(encoding)) {
-            return Base64.encodeBase64String(IOUtils.toByteArray(file.read()));
+            return Base64.getEncoder().encodeToString(IOUtils.toByteArray(file.read()));
         } else {
             return IOUtils.toString(file.read(), encoding);
         }
