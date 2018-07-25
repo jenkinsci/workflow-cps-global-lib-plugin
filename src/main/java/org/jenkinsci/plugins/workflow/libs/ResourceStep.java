@@ -34,6 +34,7 @@ import org.jenkinsci.plugins.workflow.steps.AbstractStepDescriptorImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractStepImpl;
 import org.jenkinsci.plugins.workflow.steps.AbstractSynchronousStepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 /**
  * Step to load a resource from a library.
@@ -41,6 +42,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 public class ResourceStep extends AbstractStepImpl {
 
     private final String resource;
+    private String libraryName;
 
     @DataBoundConstructor public ResourceStep(String resource) {
         this.resource = resource;
@@ -48,6 +50,15 @@ public class ResourceStep extends AbstractStepImpl {
 
     public String getResource() {
         return resource;
+    }
+    
+    public String getLibraryName() {
+        return libraryName;
+    }
+    
+    @DataBoundSetter
+    public void setLibraryName(String libraryName) {
+        this.libraryName = libraryName;
     }
 
     @Extension public static class DescriptorImpl extends AbstractStepDescriptorImpl {
@@ -74,10 +85,13 @@ public class ResourceStep extends AbstractStepImpl {
 
         @Override protected String run() throws Exception {
             String resource = step.resource;
+            String libraryName = step.libraryName;
             Map<String,String> contents = LibraryAdder.findResources((CpsFlowExecution) getContext().get(FlowExecution.class), resource);
-            if (contents.isEmpty()) {
+            if (libraryName != null && contents.containsKey(libraryName)) {
+                return contents.get(libraryName);
+            } else if (contents.isEmpty() || (libraryName != null && !contents.containsKey(libraryName))) {
                 throw new AbortException(Messages.ResourceStep_no_such_library_resource_could_be_found_(resource));
-            } else if (contents.size() == 1) {
+            }  else if (libraryName == null && contents.size() == 1) {
                 return contents.values().iterator().next();
             } else {
                 throw new AbortException(Messages.ResourceStep_library_resource_ambiguous_among_librari(resource, contents.keySet()));

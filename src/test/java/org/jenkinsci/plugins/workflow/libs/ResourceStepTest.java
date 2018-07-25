@@ -62,23 +62,55 @@ public class ResourceStepTest {
         r.assertLogContains(Messages.ResourceStep_no_such_library_resource_could_be_found_("whatever"), r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
     }
 
+    @Test public void missingResourceWithLibraryNme() throws Exception {
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("libraryResource resource: 'whatever', libraryName: 'library'", true));
+        r.assertLogContains(Messages.ResourceStep_no_such_library_resource_could_be_found_("whatever"), r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
+    }
+
+
     @Test public void duplicatedResources() throws Exception {
+        createSampleRepo(null);
+        GlobalLibraries.get().setLibraries(Arrays.asList(createLibrary("stuff1", "v1"),
+                createLibrary("stuff2", "master")));
+        WorkflowJob p = createDuplicateLibraryJob();
+        r.assertLogContains(Messages.ResourceStep_library_resource_ambiguous_among_librari("pkg/file", "[stuff1, stuff2]"), r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
+    }
+
+    @Test public void duplicatedResourcesWithLibraryName() throws Exception {
+        createSampleRepo("stuff2");
+        GlobalLibraries.get().setLibraries(Arrays.asList(createLibrary("stuff1", "v1"),
+                createLibrary("stuff2", "master")));
+        WorkflowJob p = createDuplicateLibraryJob();
+        r.assertLogContains("subsequent contents", r.buildAndAssertSuccess(p));
+    }
+
+    private void createSampleRepo(String libraryName) throws Exception {
+        String groovyScript = "package pkg; class Stuff {static def contents(script) {script.libraryResource resource: 'pkg/file'";
+        if (libraryName != null) {
+            groovyScript += ", libraryName: '" + libraryName + "'";
+        }
+        groovyScript += "}}";
         sampleRepo.init();
-        sampleRepo.write("src/pkg/Stuff.groovy", "package pkg; class Stuff {static def contents(script) {script.libraryResource 'pkg/file'}}");
+        sampleRepo.write("src/pkg/Stuff.groovy", groovyScript);
         sampleRepo.write("resources/pkg/file", "initial contents");
         sampleRepo.git("add", "src", "resources");
         sampleRepo.git("commit", "--message=init");
         sampleRepo.git("tag", "v1");
         sampleRepo.write("resources/pkg/file", "subsequent contents");
         sampleRepo.git("commit", "--all", "--message=edited");
-        LibraryConfiguration stuff1 = new LibraryConfiguration("stuff1", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
-        stuff1.setDefaultVersion("v1");
-        LibraryConfiguration stuff2 = new LibraryConfiguration("stuff2", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
-        stuff2.setDefaultVersion("master");
-        GlobalLibraries.get().setLibraries(Arrays.asList(stuff1, stuff2));
+    }
+
+    private LibraryConfiguration createLibrary(String name, String version) {
+        LibraryConfiguration library = new LibraryConfiguration(name, new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
+        library.setDefaultVersion(version);
+        return library;
+    }
+
+    private WorkflowJob createDuplicateLibraryJob() throws Exception {
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("@Library(['stuff1', 'stuff2']) import pkg.Stuff; echo(/got ${Stuff.contents(this)}/)", true));
-        r.assertLogContains(Messages.ResourceStep_library_resource_ambiguous_among_librari("pkg/file", "[stuff1, stuff2]"), r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
+        return p;
     }
 
 }
