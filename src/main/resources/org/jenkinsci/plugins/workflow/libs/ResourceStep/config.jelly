@@ -28,4 +28,7 @@ THE SOFTWARE.
     <f:entry field="resource" title="Resource path">
         <f:textbox/>
     </f:entry>
+    <f:entry field="encoding" title="${%Character encoding}">
+        <f:textbox/>
+    </f:entry>
 </j:jelly>
