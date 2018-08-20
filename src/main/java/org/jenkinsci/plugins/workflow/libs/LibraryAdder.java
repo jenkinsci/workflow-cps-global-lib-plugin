@@ -119,7 +119,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                 }
                 String version = cfg.defaultedVersion(libraryVersions.remove(name));
                 Boolean changelog = cfg.defaultedChangelogs(libraryChangelogs.remove(name));
-                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted, changelog));
+                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted, changelog, cfg.getCacheVersions()));
                 retrievers.put(name, cfg.getRetriever());
             }
         }
@@ -134,7 +134,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         // Now actually try to retrieve the libraries.
         for (LibraryRecord record : librariesAdded.values()) {
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
-            for (URL u : retrieve(record.name, record.version, retrievers.get(record.name), record.trusted, record.changelog, listener, build, execution, record.variables)) {
+            for (URL u : retrieve(record.name, record.version, retrievers.get(record.name), record.trusted, record.changelog, record.cacheVersions, listener, build, execution, record.variables)) {
                 additions.add(new Addition(u, record.trusted));
             }
         }
@@ -151,9 +151,23 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
     }
 
     /** Retrieve library files. */
-    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, Boolean changelog, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
+    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, Boolean changelog, boolean cacheVersions, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
         FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
-        retriever.retrieve(name, version, changelog, libDir, run, listener);
+
+        if(cacheVersions) {
+            final File libraryCacheDir = new File(LibraryConfiguration.getGlobalLibrariesCacheDir(), name);
+            final FilePath versionCacheDir = new FilePath(new File(libraryCacheDir, version));
+            if(versionCacheDir.exists()) {
+                listener.getLogger().println("Library " + name + "@" + version + " is already cached. Copying from home.");
+            } else {
+                listener.getLogger().println("Caching library " + name + "@" + version);
+                retriever.retrieve(name, version, changelog, versionCacheDir, run, listener);
+            }
+            versionCacheDir.copyRecursiveTo(libDir);
+        } else {
+            retriever.retrieve(name, version, changelog, libDir, run, listener);
+        }
+
         // Replace any classes requested for replay:
         if (!trusted) {
             for (String clazz : ReplayAction.replacementsIn(execution)) {
