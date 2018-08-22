@@ -23,7 +23,7 @@ public final class LibraryCachingConfiguration {
     }
 
     public int getRefreshTimeMinutes() {
-        return  refreshTimeMinutes;
+        return refreshTimeMinutes;
     }
 
     public Boolean isRefreshEnabled() {
@@ -32,5 +32,11 @@ public final class LibraryCachingConfiguration {
 
     public Boolean isExcluded(String version) {
         return excludedVersions.contains(version);
+    }
+
+    @Override
+    public String toString() {
+        return "LibraryCachingConfiguration{enabled=" + enabled + ", refreshTimeMinutes=" + refreshTimeMinutes
+                + ", excludedVersions=" + excludedVersions + '}';
     }
 }

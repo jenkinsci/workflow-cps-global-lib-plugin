@@ -164,7 +164,7 @@ public class LibraryStep extends AbstractStepImpl {
             String name = parsed[0], version = parsed[1];
             boolean trusted = false;
             Boolean changelog = step.getChangelog();
-            LibraryCachingConfiguration cachingConfiguration = new LibraryCachingConfiguration();
+            LibraryCachingConfiguration cachingConfiguration = null;
             LibraryRetriever retriever = step.getRetriever();
             if (retriever == null) {
                 for (LibraryResolver resolver : ExtensionList.lookup(LibraryResolver.class)) {
