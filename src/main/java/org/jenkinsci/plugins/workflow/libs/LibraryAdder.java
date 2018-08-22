@@ -119,7 +119,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                 }
                 String version = cfg.defaultedVersion(libraryVersions.remove(name));
                 Boolean changelog = cfg.defaultedChangelogs(libraryChangelogs.remove(name));
-                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted, changelog, cfg.getCacheVersions()));
+                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted, changelog, cfg.getCachingConfiguration()));
                 retrievers.put(name, cfg.getRetriever());
             }
         }
@@ -134,7 +134,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         // Now actually try to retrieve the libraries.
         for (LibraryRecord record : librariesAdded.values()) {
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
-            for (URL u : retrieve(record.name, record.version, retrievers.get(record.name), record.trusted, record.changelog, record.cacheVersions, listener, build, execution, record.variables)) {
+            for (URL u : retrieve(record.name, record.version, retrievers.get(record.name), record.trusted, record.changelog, record.cachingConfiguration, listener, build, execution, record.variables)) {
                 additions.add(new Addition(u, record.trusted));
             }
         }
@@ -151,19 +151,39 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
     }
 
     /** Retrieve library files. */
-    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, Boolean changelog, boolean cacheVersions, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
+    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, Boolean changelog, @Nonnull LibraryCachingConfiguration cachingConfiguration, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
         FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
+        Boolean shouldCache = cachingConfiguration.isEnabled();
 
-        if(cacheVersions) {
+        if(shouldCache && cachingConfiguration.isExcluded(version)) {
+            listener.getLogger().println("Library " + name + "@" + version + " is excluded from caching.");
+            shouldCache = false;
+        }
+
+        if(shouldCache) {
             final File libraryCacheDir = new File(LibraryConfiguration.getGlobalLibrariesCacheDir(), name);
-            final FilePath versionCacheDir = new FilePath(new File(libraryCacheDir, version));
+            final File versionCacheDir = new File(libraryCacheDir, version);
+            final FilePath versionCacheDirFilePath = new FilePath(versionCacheDir);
+
+            
+            
+            if (cachingConfiguration.isRefreshEnabled()) {
+                final int cachingMinutes = cachingConfiguration.getRefreshTimeMinutes();
+                final long cachingMilliseconds = cachingMinutes * 60000;
+
+                if(versionCacheDir.exists() && (versionCacheDir.lastModified() + cachingMilliseconds) < System.currentTimeMillis()) {
+                    listener.getLogger().println("Library " + name + "@" + version + " is due for a refresh after " + cachingMinutes + " minutes, clearing.");
+                    versionCacheDirFilePath.deleteRecursive();                
+                }
+            }
+
             if(versionCacheDir.exists()) {
-                listener.getLogger().println("Library " + name + "@" + version + " is already cached. Copying from home.");
+                listener.getLogger().println("Library " + name + "@" + version + " is cached. Copying from home.");
             } else {
                 listener.getLogger().println("Caching library " + name + "@" + version);
-                retriever.retrieve(name, version, changelog, versionCacheDir, run, listener);
+                retriever.retrieve(name, version, changelog, versionCacheDirFilePath, run, listener);
             }
-            versionCacheDir.copyRecursiveTo(libDir);
+            versionCacheDirFilePath.copyRecursiveTo(libDir);
         } else {
             retriever.retrieve(name, version, changelog, libDir, run, listener);
         }

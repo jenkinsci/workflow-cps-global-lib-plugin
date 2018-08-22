@@ -40,9 +40,14 @@ THE SOFTWARE.
     <f:entry field="includeInChangesets" title="${%Include @Library changes in job recent changes}">
         <f:checkbox default="true"/>
     </f:entry>
-    <f:entry field="cacheVersions" title="${%Cache fetched versions on master for quick retrieval}">
-        <f:checkbox/>
-    </f:entry>
-    <f:validateButton title="${%Clear cache}" progress="${%Clearing...}" method="clearCache" with="name" />
+    <f:optionalBlock title="${%Cache fetched versions on master for quick retrieval}" field="cacheEnabled" inline="true">
+        <f:entry title="${%Refresh time in minutes}" field="cacheRefreshTimeMinutes">
+            <f:number default="0" />
+        </f:entry>
+        <f:entry title="${%Versions to exclude}" field="cacheExcludedVersionsStr">
+            <f:textbox />
+        </f:entry>
+        <f:validateButton title="${%Clear cache}" progress="${%Clearing...}" method="clearCache" with="name" />
+    </f:optionalBlock>
     <f:descriptorRadioList varName="retriever" instance="${instance.retriever}" descriptors="${descriptor.retrieverDescriptors}" title="${%Retrieval method}"/>
 </j:jelly>
