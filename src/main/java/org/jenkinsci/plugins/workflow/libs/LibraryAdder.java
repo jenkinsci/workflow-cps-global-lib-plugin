@@ -164,12 +164,10 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
             final File libraryCacheDir = new File(LibraryConfiguration.getGlobalLibrariesCacheDir(), name);
             final File versionCacheDir = new File(libraryCacheDir, version);
             final FilePath versionCacheDirFilePath = new FilePath(versionCacheDir);
-
-            
             
             if (cachingConfiguration.isRefreshEnabled()) {
-                final int cachingMinutes = cachingConfiguration.getRefreshTimeMinutes();
-                final long cachingMilliseconds = cachingMinutes * 60000;
+                final long cachingMinutes = cachingConfiguration.getRefreshTimeMinutes();
+                final long cachingMilliseconds = cachingConfiguration.getRefreshTimeMilliseconds();
 
                 if(versionCacheDir.exists() && (versionCacheDir.lastModified() + cachingMilliseconds) < System.currentTimeMillis()) {
                     listener.getLogger().println("Library " + name + "@" + version + " is due for a refresh after " + cachingMinutes + " minutes, clearing.");

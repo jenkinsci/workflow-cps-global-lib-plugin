@@ -26,6 +26,10 @@ public final class LibraryCachingConfiguration {
         return refreshTimeMinutes;
     }
 
+    public long getRefreshTimeMilliseconds() {
+        return Long.valueOf(getRefreshTimeMinutes()) * 60000;
+    }
+
     public Boolean isRefreshEnabled() {
         return refreshTimeMinutes > 0;
     }

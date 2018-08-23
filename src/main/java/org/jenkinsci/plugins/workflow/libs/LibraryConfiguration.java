@@ -69,8 +69,8 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     private boolean includeInChangesets = true;
     
     private boolean cacheEnabled = false;
-    private int cacheRefreshTimeMinutes;
-    private List<String> cacheExcludedVersions;
+    private int cacheRefreshTimeMinutes = 0;
+    private List<String> cacheExcludedVersions = new ArrayList<>();
 
     @DataBoundConstructor public LibraryConfiguration(String name, LibraryRetriever retriever) {
         this.name = name;

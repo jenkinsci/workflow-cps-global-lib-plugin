@@ -24,8 +24,11 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import hudson.FilePath;
 import hudson.model.Result;
 import hudson.model.Run;
+
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,6 +40,7 @@ import jenkins.plugins.git.GitSampleRepoRule;
 import org.apache.commons.codec.binary.Base64;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.junit.Test;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -51,16 +55,87 @@ public class ResourceStepTest {
     @Rule public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
 
     @Test public void smokes() throws Exception {
-        sampleRepo.init();
-        sampleRepo.write("src/pkg/Stuff.groovy", "package pkg; class Stuff {static def contents(script) {script.libraryResource 'pkg/file'}}");
-        sampleRepo.write("resources/pkg/file", "fixed contents");
-        sampleRepo.git("add", "src", "resources");
-        sampleRepo.git("commit", "--message=init");
+        initFixedContentLibrary();
+        
         GlobalLibraries.get().setLibraries(Collections.singletonList(
             new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') import pkg.Stuff; echo(/got ${Stuff.contents(this)}/)", true));
         r.assertLogContains("got fixed contents", r.buildAndAssertSuccess(p));
+    }
+
+    @Test public void caching() throws Exception {
+        clearCache("stuff");
+        initFixedContentLibrary();
+        
+        LibraryConfiguration libraryConfig =  new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
+        libraryConfig.setCacheEnabled(true);
+        GlobalLibraries.get().setLibraries(Collections.singletonList(libraryConfig));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') import pkg.Stuff; echo(/got ${Stuff.contents(this)}/)", true));
+        WorkflowRun firstBuild = r.buildAndAssertSuccess(p);
+        r.assertLogContains("got fixed contents", firstBuild);
+        r.assertLogContains("Caching library stuff@master", firstBuild);
+        r.assertLogContains("git", firstBuild); // git is called
+
+        WorkflowRun secondBuild = r.buildAndAssertSuccess(p);
+        r.assertLogContains("got fixed contents", secondBuild);
+        r.assertLogContains("Library stuff@master is cached. Copying from home.", secondBuild);
+        r.assertLogNotContains("git", secondBuild); // git is not called
+    }
+
+    @Test public void cachingExcludedLibrary() throws Exception {
+        clearCache("stuff");
+        initFixedContentLibrary();
+        
+        LibraryConfiguration libraryConfig =  new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
+        libraryConfig.setCacheEnabled(true);
+        libraryConfig.setCacheExcludedVersionsStr("test_unused other");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(libraryConfig));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') import pkg.Stuff; echo(/got ${Stuff.contents(this)}/)", true));
+        WorkflowRun firstBuild = r.buildAndAssertSuccess(p);
+        r.assertLogContains("got fixed contents", firstBuild);
+        r.assertLogContains("Caching library stuff@master", firstBuild);
+        r.assertLogContains("git", firstBuild); // git is called
+
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff@other') import pkg.Stuff; echo(/got ${Stuff.contents(this)}/)", true));
+        WorkflowRun secondBuild = r.buildAndAssertSuccess(p);
+        r.assertLogContains("got fixed contents", secondBuild);
+        r.assertLogContains("Library stuff@other is excluded from caching.", secondBuild);
+        r.assertLogContains("git", secondBuild); // git is called
+    }
+
+    @Test public void cachingRefresh() throws Exception {
+        clearCache("stuff");
+        initFixedContentLibrary();
+        
+        LibraryConfiguration libraryConfig =  new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
+        libraryConfig.setCacheEnabled(true);
+        libraryConfig.setCacheRefreshTimeMinutes(60);
+        GlobalLibraries.get().setLibraries(Collections.singletonList(libraryConfig));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') import pkg.Stuff; echo(/got ${Stuff.contents(this)}/)", true));
+        WorkflowRun firstBuild = r.buildAndAssertSuccess(p);
+        r.assertLogContains("got fixed contents", firstBuild);
+        r.assertLogContains("Caching library stuff@master", firstBuild);
+        r.assertLogContains("git", firstBuild); // git is called
+
+        modifyCacheTimestamp("stuff", "master", System.currentTimeMillis() - 60000 * 55); // 55 minutes have passed, still cached
+        WorkflowRun secondBuild = r.buildAndAssertSuccess(p);
+        r.assertLogContains("got fixed contents", secondBuild);
+        r.assertLogContains("Library stuff@master is cached. Copying from home.", secondBuild);
+        r.assertLogNotContains("git", secondBuild); // git is not called
+
+        modifyCacheTimestamp("stuff", "master", System.currentTimeMillis() - 60000 * 61); // 61 minutes have passed, due for a refresh
+        WorkflowRun thirdBuild = r.buildAndAssertSuccess(p);
+        r.assertLogContains("got fixed contents", thirdBuild);
+        r.assertLogContains("Library stuff@master is due for a refresh after 60 minutes, clearing.", thirdBuild);
+        r.assertLogContains("Caching library stuff@master", thirdBuild);
+        r.assertLogContains("git", thirdBuild); // git is called
     }
 
     @Test public void missingResource() throws Exception {
@@ -109,6 +184,30 @@ public class ResourceStepTest {
         Run run = r.buildAndAssertSuccess(p);
         r.assertLogContains("€", run);
         r.assertLogContains(Base64.encodeBase64String(binaryData), run);
+    }
+
+    public void initFixedContentLibrary() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/pkg/Stuff.groovy", "package pkg; class Stuff {static def contents(script) {script.libraryResource 'pkg/file'}}");
+        sampleRepo.write("resources/pkg/file", "fixed contents");
+        sampleRepo.git("add", "src", "resources");
+        sampleRepo.git("commit", "--message=init");
+        sampleRepo.git("branch", "other");
+    }
+
+    public void clearCache(String name) throws Exception {
+        FilePath cacheDir = new FilePath(new File(LibraryConfiguration.getGlobalLibrariesCacheDir(), name));
+        if (cacheDir.exists()) {
+            cacheDir.deleteRecursive();
+        }
+    }
+
+    public void modifyCacheTimestamp(String name, String version, long timestamp) throws Exception {
+        File cacheDir = new File(LibraryConfiguration.getGlobalLibrariesCacheDir(), name);
+        FilePath versionCacheDir = new FilePath(new File(cacheDir, version));
+        if (versionCacheDir.exists()) {
+            versionCacheDir.touch(timestamp);
+        }
     }
 
 }
