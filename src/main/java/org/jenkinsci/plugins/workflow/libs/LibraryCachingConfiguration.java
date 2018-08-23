@@ -1,15 +1,18 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public final class LibraryCachingConfiguration {
-    private Boolean enabled;
-    private int refreshTimeMinutes;
-    private List<String> excludedVersions;
+    final private Boolean enabled;
+    final private int refreshTimeMinutes;
+    final private List<String> excludedVersions;
 
     public LibraryCachingConfiguration() {
         this.enabled = false;
+        this.refreshTimeMinutes = 0;
+        this.excludedVersions = new ArrayList<String>();
     }
 
     public LibraryCachingConfiguration(Boolean enabled, int refreshTimeMinutes, List<String> excludedVersions) {
