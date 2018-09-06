@@ -61,7 +61,7 @@ public class ResourceStep extends AbstractStepImpl {
 
     @DataBoundSetter
     public void setLibraryName(String libraryName) {
-        this.libraryName = libraryName;
+        this.libraryName = Util.fixEmptyAndTrim(libraryName);
     }
 
     public @CheckForNull String getEncoding() {
@@ -105,8 +105,10 @@ public class ResourceStep extends AbstractStepImpl {
             Map<String,String> contents = LibraryAdder.findResources((CpsFlowExecution) getContext().get(FlowExecution.class), resource, step.encoding);
             if (libraryName != null && contents.containsKey(libraryName)) {
                 return contents.get(libraryName);
-            } else if (contents.isEmpty() || (libraryName != null && !contents.containsKey(libraryName))) {
+            } else if (contents.isEmpty()) {
                 throw new AbortException(Messages.ResourceStep_no_such_library_resource_could_be_found_(resource));
+            } else if (libraryName != null && !contents.containsKey(libraryName)) {
+               throw new AbortException(Messages.ResourceStep_no_matching_resource_found_in_library(resource, libraryName));
             }  else if (libraryName == null && contents.size() == 1) {
                 return contents.values().iterator().next();
             } else {
