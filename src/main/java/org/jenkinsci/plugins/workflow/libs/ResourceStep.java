@@ -26,7 +26,9 @@ package org.jenkinsci.plugins.workflow.libs;
 
 import hudson.AbortException;
 import hudson.Extension;
+import hudson.Util;
 import java.util.Map;
+import javax.annotation.CheckForNull;
 import javax.inject.Inject;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
@@ -43,6 +45,7 @@ public class ResourceStep extends AbstractStepImpl {
 
     private final String resource;
     private String libraryName;
+    private String encoding;
 
     @DataBoundConstructor public ResourceStep(String resource) {
         this.resource = resource;
@@ -51,14 +54,27 @@ public class ResourceStep extends AbstractStepImpl {
     public String getResource() {
         return resource;
     }
-    
+
     public String getLibraryName() {
         return libraryName;
     }
-    
+
     @DataBoundSetter
     public void setLibraryName(String libraryName) {
         this.libraryName = libraryName;
+    }
+
+    public @CheckForNull String getEncoding() {
+        return encoding;
+    }
+
+    /**
+     * Set the encoding to be used when loading the resource. If the specified value is null or
+     * whitespace-only, then the platform default encoding will be used. Binary resources can be
+     * loaded as a Base64-encoded string by specifying {@code Base64} as the encoding.
+     */
+    @DataBoundSetter public void setEncoding(String encoding) {
+        this.encoding = Util.fixEmptyAndTrim(encoding);
     }
 
     @Extension public static class DescriptorImpl extends AbstractStepDescriptorImpl {
@@ -86,7 +102,7 @@ public class ResourceStep extends AbstractStepImpl {
         @Override protected String run() throws Exception {
             String resource = step.resource;
             String libraryName = step.libraryName;
-            Map<String,String> contents = LibraryAdder.findResources((CpsFlowExecution) getContext().get(FlowExecution.class), resource);
+            Map<String,String> contents = LibraryAdder.findResources((CpsFlowExecution) getContext().get(FlowExecution.class), resource, step.encoding);
             if (libraryName != null && contents.containsKey(libraryName)) {
                 return contents.get(libraryName);
             } else if (contents.isEmpty() || (libraryName != null && !contents.containsKey(libraryName))) {

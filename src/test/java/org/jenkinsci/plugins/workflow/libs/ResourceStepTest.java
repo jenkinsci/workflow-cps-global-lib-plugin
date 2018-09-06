@@ -25,16 +25,23 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import hudson.model.Result;
+import hudson.model.Run;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import org.apache.commons.codec.binary.Base64;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.Test;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 public class ResourceStepTest {
@@ -111,6 +118,29 @@ public class ResourceStepTest {
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("@Library(['stuff1', 'stuff2']) import pkg.Stuff; echo(/got ${Stuff.contents(this)}/)", true));
         return p;
+    }
+
+    @Issue("JENKINS-52313")
+    @Test public void specifyResourceEncoding() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/pkg/Stuff.groovy", "package pkg; class Stuff {" +
+                "static def utf8(script) {script.libraryResource(resource: 'pkg/utf8', encoding: 'ISO-8859-15')}\n" +
+                "static def binary(script) {script.libraryResource(resource: 'pkg/binary', encoding: 'Base64')}}");
+        Path resourcesDir = Paths.get(sampleRepo.getRoot().getPath(), "resources", "pkg");
+        Files.createDirectories(resourcesDir);
+        // '¤' encoded using ISO-8859-1 should turn into '€' when decoding using ISO-8859-15.
+        Files.write(resourcesDir.resolve("utf8"), Arrays.asList("¤"), StandardCharsets.ISO_8859_1);
+        byte[] binaryData = {0x48, 0x45, 0x4c, 0x4c, 0x4f, (byte) 0x80, (byte) 0xec, (byte) 0xf4, 0x00, 0x0d, 0x1b};
+        Files.write(resourcesDir.resolve("binary"), binaryData);
+        sampleRepo.git("add", "src", "resources");
+        sampleRepo.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(
+            new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') import pkg.Stuff; echo(Stuff.utf8(this)); echo(Stuff.binary(this))", true));
+        Run run = r.buildAndAssertSuccess(p);
+        r.assertLogContains("€", run);
+        r.assertLogContains(Base64.encodeBase64String(binaryData), run);
     }
 
 }
