@@ -12,7 +12,14 @@ import java.io.NotSerializableException;
  */
 public class CompilationErrorException extends RuntimeException {
     public CompilationErrorException(MultipleCompilationErrorsException original) {
-        super(original.toString());
+        super(original.getMessage());
         setStackTrace(original.getStackTrace());
     }
+
+    @Override
+    public synchronized Throwable fillInStackTrace() {
+        return this;
+    }
+
+    public static final long serialVersionUID = 1;
 }

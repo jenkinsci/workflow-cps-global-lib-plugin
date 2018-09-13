@@ -54,7 +54,7 @@ public class UserDefinedGlobalVariable extends GlobalVariable {
 
             try {
                 instance = c.getExecution().getShell().getClassLoader().loadClass(getName()).newInstance();
-            } catch(MultipleCompilationErrorsException ex) {
+            } catch(MultipleCompilationErrorsException ex) { //JENKINS-40109
                 throw new CompilationErrorException(ex);
             }
             /* We could also skip registration of vars in GroovyShellDecoratorImpl and use:
