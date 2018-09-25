@@ -28,6 +28,7 @@ import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.FilePath;
+import hudson.Functions;
 import hudson.Util;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
@@ -41,6 +42,7 @@ import hudson.slaves.WorkspaceList;
 import hudson.util.FormValidation;
 import hudson.util.StreamTaskListener;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -109,7 +111,32 @@ public class SCMSourceRetriever extends LibraryRetriever {
             throw new IOException(node.getDisplayName() + " may be offline");
         }
         try (WorkspaceList.Lease lease = computer.getWorkspaceList().allocate(dir)) {
-            delegate.checkout(run, lease.path, listener, node.createLauncher(listener));
+            for (int retryCount = Jenkins.getInstance().getScmCheckoutRetryCount(); retryCount >= 0; retryCount--) {
+                try {
+                    delegate.checkout(run, lease.path, listener, node.createLauncher(listener));
+                    break;
+                }
+                catch (AbortException e) {
+                    // abort exception might have a null message.
+                    // If so, just skip echoing it.
+                    if (e.getMessage() != null) {
+                        listener.error(e.getMessage());
+                    }
+                }
+                catch (InterruptedIOException e) {
+                    throw e;
+                }
+                catch (IOException e) {
+                    // checkout error not yet reported
+                    listener.error("Checkout failed").println(Functions.printThrowable(e).trim()); // TODO 2.43+ use Functions.printStackTrace
+                }
+
+                if (retryCount == 0)   // all attempts failed
+                    throw new AbortException("Maximum checkout retry attempts reached, aborting");
+
+                listener.getLogger().println("Retrying after 10 seconds");
+                Thread.sleep(10000);
+            }
             // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
             // Copy sources with relevant files from the checkout:
             lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);
