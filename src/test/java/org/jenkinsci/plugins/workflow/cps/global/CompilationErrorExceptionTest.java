@@ -34,9 +34,10 @@ public class CompilationErrorExceptionTest extends Assert {
         sampleRepo.git("commit", "--message=init");
         GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("badlib", new SCMSourceRetriever(new GitSCMSource(sampleRepo.toString())))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
-        p.setDefinition(new CpsFlowDefinition("@Library('badlib@master') _; try { mymagic(); echo 'why are we here?' } catch(err) { echo 'forcing CPS serialization...'; sleep 1; echo 'did we die?' }", true));
+        p.setDefinition(new CpsFlowDefinition("@Library('badlib@master') _; try { mymagic(); echo 'why are we here?' } catch(err) { echo err.getMessage(); echo 'forcing CPS serialization...'; sleep 1; echo 'did we die?' }", true));
         Run run =  r.buildAndAssertSuccess(p);
         r.assertLogNotContains("why are we here?", run);
+        r.assertLogContains("unexpected token", run); //syntax error message
         r.assertLogContains("did we die?", run);
     }
 }
