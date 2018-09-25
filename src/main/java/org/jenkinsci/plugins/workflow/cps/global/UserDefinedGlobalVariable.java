@@ -3,6 +3,7 @@ package org.jenkinsci.plugins.workflow.cps.global;
 import groovy.lang.Binding;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
+import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.jenkinsci.plugins.workflow.cps.CpsScript;
 import org.jenkinsci.plugins.workflow.cps.CpsThread;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
@@ -51,7 +52,11 @@ public class UserDefinedGlobalVariable extends GlobalVariable {
             if (c==null)
                 throw new IllegalStateException("Expected to be called from CpsThread");
 
-            instance = c.getExecution().getShell().getClassLoader().loadClass(getName()).newInstance();
+            try {
+                instance = c.getExecution().getShell().getClassLoader().loadClass(getName()).newInstance();
+            } catch(MultipleCompilationErrorsException ex) { //JENKINS-40109
+                throw new CompilationErrorException(ex);
+            }
             /* We could also skip registration of vars in GroovyShellDecoratorImpl and use:
                  instance = c.getExecution().getShell().parse(source(".groovy"));
                But then the source will appear in CpsFlowExecution.loadedScripts and be offered up for ReplayAction.
