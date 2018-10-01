@@ -64,7 +64,7 @@
     <properties>
         <revision>2.12</revision>
         <changelist>-SNAPSHOT</changelist>
-        <jenkins.version>2.60.3</jenkins.version>
+        <jenkins.version>2.73.3</jenkins.version>
         <java.level>8</java.level>
         <workflow-cps-plugin.version>2.57-rc2111.c76df6037451</workflow-cps-plugin.version>
         <git-plugin.version>3.6.4</git-plugin.version>
