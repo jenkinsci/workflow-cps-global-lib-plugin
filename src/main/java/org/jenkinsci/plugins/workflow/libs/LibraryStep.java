@@ -62,7 +62,9 @@ import javax.inject.Inject;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang3.reflect.ConstructorUtils;
 import org.apache.commons.lang3.reflect.MethodUtils;
+import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.AbstractWhitelist;
+import org.jenkinsci.plugins.workflow.cps.CpsCompilationErrorsException;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.cps.CpsThread;
 import org.jenkinsci.plugins.workflow.flow.FlowExecution;
@@ -304,6 +306,8 @@ public class LibraryStep extends AbstractStepImpl {
                     throw new IllegalAccessException(c + " is not public");
                 }
                 return c;
+            } catch (MultipleCompilationErrorsException x) {
+                throw new CpsCompilationErrorsException(x);
             } catch (ClassNotFoundException | IllegalAccessException x) {
                 throw new GroovyRuntimeException(x);
             }

@@ -13,6 +13,7 @@ import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import jenkins.model.Jenkins;
+import org.jenkinsci.plugins.workflow.cps.CpsCompilationErrorsException;
 
 /**
  * Global variable backed by user-supplied script.
@@ -54,8 +55,9 @@ public class UserDefinedGlobalVariable extends GlobalVariable {
 
             try {
                 instance = c.getExecution().getShell().getClassLoader().loadClass(getName()).newInstance();
-            } catch(MultipleCompilationErrorsException ex) { //JENKINS-40109
-                throw new CompilationErrorException(ex);
+            } catch(MultipleCompilationErrorsException ex) {
+                // Convert to a serializable exception, see JENKINS-40109.
+                throw new CpsCompilationErrorsException(ex);
             }
             /* We could also skip registration of vars in GroovyShellDecoratorImpl and use:
                  instance = c.getExecution().getShell().parse(source(".groovy"));
