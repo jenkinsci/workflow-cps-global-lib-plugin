@@ -4,6 +4,7 @@ import groovy.lang.Binding;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
+import org.jenkinsci.plugins.workflow.cps.CpsCompilationErrorsException;
 import org.jenkinsci.plugins.workflow.cps.CpsScript;
 import org.jenkinsci.plugins.workflow.cps.CpsThread;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
@@ -13,7 +14,6 @@ import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import jenkins.model.Jenkins;
-import org.jenkinsci.plugins.workflow.cps.CpsCompilationErrorsException;
 
 /**
  * Global variable backed by user-supplied script.
