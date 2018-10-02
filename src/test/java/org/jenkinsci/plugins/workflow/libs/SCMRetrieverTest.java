@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import hudson.Functions;
 import java.util.Collections;
 import jenkins.branch.BranchSource;
 import jenkins.plugins.git.GitSCMSource;
@@ -34,6 +35,7 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProjectTest;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
+import org.junit.Assume;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.Rule;
@@ -49,6 +51,7 @@ public class SCMRetrieverTest {
 
     @Url("https://stackoverflow.com/a/49112612/12916")
     @Test public void selfTestLibraries() throws Exception {
+        Assume.assumeFalse("File names are too long for Windows", Functions.isWindows()); // Related to changes in plugin-pom version 3.22.
         sampleRepo.init();
         sampleRepo.write("vars/greet.groovy", "def call(recipient) {echo(/hello to $recipient/)}");
         sampleRepo.write("src/pkg/Clazz.groovy", "package pkg; class Clazz {static String whereAmI() {'earth'}}");
