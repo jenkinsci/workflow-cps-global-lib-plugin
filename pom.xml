@@ -71,6 +71,7 @@
         <scm-api-plugin.version>2.2.5</scm-api-plugin.version>
         <workflow-scm-step-plugin.version>2.4</workflow-scm-step-plugin.version>
         <workflow-multibranch-plugin.version>2.10</workflow-multibranch-plugin.version>
+        <jenkins-test-harness.version>2.44-20181005.160621-2</jenkins-test-harness.version> <!-- TODO https://github.com/jenkinsci/jenkins-test-harness/pull/113 -->
     </properties>
     <dependencies>
         <dependency>
