@@ -67,7 +67,7 @@ import org.kohsuke.stapler.StaplerRequest;
     }
 
     @Override public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
-        if (Jenkins.getActiveInstance().hasPermission(Jenkins.RUN_SCRIPTS)) {
+        if (Jenkins.get().hasPermission(Jenkins.RUN_SCRIPTS)) {
             setLibraries(Collections.<LibraryConfiguration>emptyList()); // allow last library to be deleted
             // TODO 2.19+ super.configure(req, json)
             req.bindJSON(this, json);

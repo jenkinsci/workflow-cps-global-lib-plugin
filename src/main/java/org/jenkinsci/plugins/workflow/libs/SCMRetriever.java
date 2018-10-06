@@ -72,7 +72,7 @@ public class SCMRetriever extends LibraryRetriever {
             return FormValidation.warningWithMarkup("When using <b>" + getDescriptor().getDisplayName() + "</b>, you will need to include <code>${library." + Util.escape(name) + ".version}</code> in the SCM configuration somewhere.");
         }
         return FormValidation.okWithMarkup("Cannot validate default version with legacy SCM plugins via <b>" + getDescriptor().getDisplayName() + "</b>. Use " +
-            Jenkins.getActiveInstance().getDescriptorByType(SCMSourceRetriever.DescriptorImpl.class).getDisplayName() + " if available.");
+            Jenkins.get().getDescriptorByType(SCMSourceRetriever.DescriptorImpl.class).getDisplayName() + " if available.");
     }
 
     @Symbol("legacySCM")
