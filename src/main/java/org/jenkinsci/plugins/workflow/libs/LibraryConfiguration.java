@@ -27,39 +27,25 @@ package org.jenkinsci.plugins.workflow.libs;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
-import hudson.FilePath;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.model.DescriptorVisibilityFilter;
 import hudson.model.Item;
 import hudson.util.FormValidation;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import jenkins.model.Jenkins;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
+import org.kohsuke.stapler.*;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import jenkins.model.Jenkins;
-
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.NoExternalUse;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.Stapler;
-import org.kohsuke.stapler.StaplerRequest;
-
+import java.util.Collection;
 
 /**
  * User configuration for one library.
  */
 public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfiguration> {
-    public static final String GLOBAL_LIBRARIES_DIR = "global-libraries-cache";
 
     private final String name;
     private final LibraryRetriever retriever;
@@ -67,10 +53,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     private boolean implicit;
     private boolean allowVersionOverride = true;
     private boolean includeInChangesets = true;
-    
-    private boolean cacheEnabled = false;
-    private int cacheRefreshTimeMinutes = 0;
-    private List<String> cacheExcludedVersions = new ArrayList<>();
+    private LibraryCachingConfiguration cachingConfiguration = null;
 
     @DataBoundConstructor public LibraryConfiguration(String name, LibraryRetriever retriever) {
         this.name = name;
@@ -134,48 +117,20 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
         this.includeInChangesets = includeInChangesets;
     }
 
-    public boolean getCacheEnabled() {
-        return cacheEnabled;
-    }
-
-    @DataBoundSetter public void setCacheEnabled(boolean cacheEnabled) {
-        this.cacheEnabled = cacheEnabled;
-    }
-
-    public int getCacheRefreshTimeMinutes() {
-        return cacheRefreshTimeMinutes;
-    }
-
-    @DataBoundSetter public void setCacheRefreshTimeMinutes(int cacheRefreshTimeMinutes) {
-        this.cacheRefreshTimeMinutes = cacheRefreshTimeMinutes;
-    }
-
-    public String getCacheExcludedVersionsStr() {
-        if (cacheExcludedVersions == null || cacheExcludedVersions.isEmpty()) {
-            return "";
-        } else {
-            return String.join(" ", cacheExcludedVersions);
-        }
-    }
-
-    @DataBoundSetter public void setCacheExcludedVersionsStr(String cacheExcludedVersionsStr) {
-        if (cacheExcludedVersionsStr.isEmpty()) {
-            this.cacheExcludedVersions = new ArrayList<String>();
-        } else {
-            this.cacheExcludedVersions = Arrays.asList(cacheExcludedVersionsStr.split(" "));
-        }
-    }
-
     public LibraryCachingConfiguration getCachingConfiguration() {
-        return new LibraryCachingConfiguration(cacheEnabled, cacheRefreshTimeMinutes, cacheExcludedVersions);
+        return cachingConfiguration;
+    }
+
+    @DataBoundSetter public void setCachingConfiguration(LibraryCachingConfiguration cachingConfiguration) {
+        this.cachingConfiguration = cachingConfiguration;
     }
 
     @Nonnull boolean defaultedChangelogs(@CheckForNull Boolean changelog) throws AbortException {
-      if (changelog == null) {
-        return includeInChangesets;
-      } else {
-        return changelog;
-      }
+        if (changelog == null) {
+            return includeInChangesets;
+        } else {
+            return changelog;
+        }
     }
 
     @Nonnull String defaultedVersion(@CheckForNull String version) throws AbortException {
@@ -192,13 +147,6 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
         }
     }
 
-    public static File getGlobalLibrariesCacheDir() {
-        Jenkins jenkins = Jenkins.getInstance();
-        final File jenkinsHome = jenkins.getRootDir();
-        return new File(jenkinsHome, LibraryConfiguration.GLOBAL_LIBRARIES_DIR);
-    }
-
-
     @Extension public static class DescriptorImpl extends Descriptor<LibraryConfiguration> {
 
         // TODO JENKINS-20020 ought to be unnecessary
@@ -206,7 +154,9 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
         public Collection<LibraryRetrieverDescriptor> getRetrieverDescriptors() {
             StaplerRequest req = Stapler.getCurrentRequest();
             Item it = req != null ? req.findAncestorObject(Item.class) : null;
-            return DescriptorVisibilityFilter.apply(it != null ? it : Jenkins.getActiveInstance(), ExtensionList.lookup(LibraryRetrieverDescriptor.class));
+            return DescriptorVisibilityFilter.apply(it != null ?
+                    it :
+                    Jenkins.getActiveInstance(), ExtensionList.lookup(LibraryRetrieverDescriptor.class));
         }
 
         public FormValidation doCheckName(@QueryParameter String name) {
@@ -236,18 +186,6 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
                 }
                 return FormValidation.ok("Cannot validate default version until after saving and reconfiguring.");
             }
-        }
-
-        public FormValidation doClearCache(@QueryParameter String name) throws InterruptedException {
-            FilePath cacheDir = new FilePath(new File(LibraryConfiguration.getGlobalLibrariesCacheDir(), name));
-                try {
-                    if (cacheDir.exists()) {
-                        cacheDir.deleteRecursive();
-                    }           
-                } catch (IOException ex) {
-                    return FormValidation.error("The cache dir was not deleted successfully.\n" + ex.toString());
-                }
-            return FormValidation.ok("The cache dir was deleted successfully.");
         }
 
         /* TODO currently impossible; autoCompleteField does not support passing neighboring fields:

@@ -69,7 +69,7 @@ public class ResourceStepTest {
         initFixedContentLibrary();
         
         LibraryConfiguration libraryConfig =  new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
-        libraryConfig.setCacheEnabled(true);
+        libraryConfig.setCachingConfiguration(new LibraryCachingConfiguration(0, ""));
         GlobalLibraries.get().setLibraries(Collections.singletonList(libraryConfig));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
 
@@ -90,8 +90,7 @@ public class ResourceStepTest {
         initFixedContentLibrary();
         
         LibraryConfiguration libraryConfig =  new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
-        libraryConfig.setCacheEnabled(true);
-        libraryConfig.setCacheExcludedVersionsStr("test_unused other");
+        libraryConfig.setCachingConfiguration(new LibraryCachingConfiguration(0, "test_unused other"));
         GlobalLibraries.get().setLibraries(Collections.singletonList(libraryConfig));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
 
@@ -113,8 +112,7 @@ public class ResourceStepTest {
         initFixedContentLibrary();
         
         LibraryConfiguration libraryConfig =  new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
-        libraryConfig.setCacheEnabled(true);
-        libraryConfig.setCacheRefreshTimeMinutes(60);
+        libraryConfig.setCachingConfiguration(new LibraryCachingConfiguration(60, "test_unused other"));
         GlobalLibraries.get().setLibraries(Collections.singletonList(libraryConfig));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
 
@@ -196,15 +194,15 @@ public class ResourceStepTest {
     }
 
     public void clearCache(String name) throws Exception {
-        FilePath cacheDir = new FilePath(new File(LibraryConfiguration.getGlobalLibrariesCacheDir(), name));
+        FilePath cacheDir = new FilePath(LibraryCachingConfiguration.getGlobalLibrariesCacheDir(), name);
         if (cacheDir.exists()) {
             cacheDir.deleteRecursive();
         }
     }
 
     public void modifyCacheTimestamp(String name, String version, long timestamp) throws Exception {
-        File cacheDir = new File(LibraryConfiguration.getGlobalLibrariesCacheDir(), name);
-        FilePath versionCacheDir = new FilePath(new File(cacheDir, version));
+        FilePath cacheDir = new FilePath(LibraryCachingConfiguration.getGlobalLibrariesCacheDir(), name);
+        FilePath versionCacheDir = new FilePath(cacheDir, version);
         if (versionCacheDir.exists()) {
             versionCacheDir.touch(timestamp);
         }

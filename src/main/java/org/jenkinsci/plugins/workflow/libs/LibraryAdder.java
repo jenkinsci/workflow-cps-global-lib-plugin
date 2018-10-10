@@ -152,37 +152,45 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
     }
 
     /** Retrieve library files. */
-    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, Boolean changelog, @Nonnull LibraryCachingConfiguration cachingConfiguration, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
+    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, Boolean changelog, LibraryCachingConfiguration cachingConfiguration, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
         FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
-        Boolean shouldCache = cachingConfiguration.isEnabled();
+        Boolean shouldCache = cachingConfiguration != null;
+        final FilePath libraryCacheDir = new FilePath(LibraryCachingConfiguration.getGlobalLibrariesCacheDir(), name);
+        final FilePath versionCacheDir = new FilePath(libraryCacheDir, version);
+        final FilePath retrieveLockFile = new FilePath(versionCacheDir, LibraryCachingConfiguration.RETRIEVE_LOCK_FILE);
+        final FilePath lastReadFile = new FilePath(versionCacheDir, LibraryCachingConfiguration.LAST_READ_FILE);
 
         if(shouldCache && cachingConfiguration.isExcluded(version)) {
             listener.getLogger().println("Library " + name + "@" + version + " is excluded from caching.");
             shouldCache = false;
         }
 
+        if(shouldCache && retrieveLockFile.exists()) {
+            listener.getLogger().println("Library " + name + "@" + version + " is currently being cached by another job, retrieving without cache.");
+            shouldCache = false;
+        }
+
         if(shouldCache) {
-            final File libraryCacheDir = new File(LibraryConfiguration.getGlobalLibrariesCacheDir(), name);
-            final File versionCacheDir = new File(libraryCacheDir, version);
-            final FilePath versionCacheDirFilePath = new FilePath(versionCacheDir);
-            
             if (cachingConfiguration.isRefreshEnabled()) {
                 final long cachingMinutes = cachingConfiguration.getRefreshTimeMinutes();
                 final long cachingMilliseconds = cachingConfiguration.getRefreshTimeMilliseconds();
 
                 if(versionCacheDir.exists() && (versionCacheDir.lastModified() + cachingMilliseconds) < System.currentTimeMillis()) {
                     listener.getLogger().println("Library " + name + "@" + version + " is due for a refresh after " + cachingMinutes + " minutes, clearing.");
-                    versionCacheDirFilePath.deleteRecursive();                
+                    versionCacheDir.deleteRecursive();
                 }
             }
 
             if(versionCacheDir.exists()) {
                 listener.getLogger().println("Library " + name + "@" + version + " is cached. Copying from home.");
+                lastReadFile.touch(System.currentTimeMillis());
             } else {
                 listener.getLogger().println("Caching library " + name + "@" + version);
-                retriever.retrieve(name, version, changelog, versionCacheDirFilePath, run, listener);
+                retrieveLockFile.write("", "utf-8");
+                retriever.retrieve(name, version, changelog, versionCacheDir, run, listener);
+                retrieveLockFile.delete();
             }
-            versionCacheDirFilePath.copyRecursiveTo(libDir);
+            versionCacheDir.copyRecursiveTo(libDir);
         } else {
             retriever.retrieve(name, version, changelog, libDir, run, listener);
         }

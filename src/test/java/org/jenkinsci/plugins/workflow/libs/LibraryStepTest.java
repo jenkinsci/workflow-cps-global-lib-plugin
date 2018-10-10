@@ -90,13 +90,13 @@ public class LibraryStepTest {
         r.assertLogContains("ran library", b);
         LibrariesAction action = b.getAction(LibrariesAction.class);
         assertNotNull(action);
-        assertEquals("[LibraryRecord{name=stuff, version=master, variables=[x], trusted=true, changelog=true, cachingConfiguration=LibraryCachingConfiguration{enabled=false, refreshTimeMinutes=0, excludedVersions=[]}}]", action.getLibraries().toString());
+        assertEquals("[LibraryRecord{name=stuff, version=master, variables=[x], trusted=true, changelog=true, cachingConfiguration=null}]", action.getLibraries().toString());
         p.setDefinition(new CpsFlowDefinition("library identifier: 'otherstuff@master', retriever: modernSCM([$class: 'GitSCMSource', remote: $/" + sampleRepo + "/$, credentialsId: '']), changelog: false; x()", true));
         b = r.buildAndAssertSuccess(p);
         r.assertLogContains("ran library", b);
         action = b.getAction(LibrariesAction.class);
         assertNotNull(action);
-        assertEquals("[LibraryRecord{name=otherstuff, version=master, variables=[x], trusted=false, changelog=false, cachingConfiguration=LibraryCachingConfiguration{enabled=false, refreshTimeMinutes=0, excludedVersions=[]}}]", action.getLibraries().toString());
+        assertEquals("[LibraryRecord{name=otherstuff, version=master, variables=[x], trusted=false, changelog=false, cachingConfiguration=null}]", action.getLibraries().toString());
     }
 
     @Test public void classes() throws Exception {
