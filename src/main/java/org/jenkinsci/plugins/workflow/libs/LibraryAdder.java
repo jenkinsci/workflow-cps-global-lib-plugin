@@ -186,6 +186,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                 lastReadFile.touch(System.currentTimeMillis());
             } else {
                 listener.getLogger().println("Caching library " + name + "@" + version);
+                versionCacheDir.mkdirs();
                 retrieveLockFile.touch(System.currentTimeMillis());
                 retriever.retrieve(name, version, changelog, versionCacheDir, run, listener);
                 retrieveLockFile.delete();
