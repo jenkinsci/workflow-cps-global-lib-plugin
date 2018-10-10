@@ -33,6 +33,7 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -246,10 +247,12 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
     }
 
     private static String readResource(FilePath file, @CheckForNull String encoding) throws IOException, InterruptedException {
-        if ("Base64".equals(encoding)) {
-            return Base64.getEncoder().encodeToString(IOUtils.toByteArray(file.read()));
-        } else {
-            return IOUtils.toString(file.read(), encoding); // The platform default is used if encoding is null.
+        try (InputStream in = file.read()) {
+            if ("Base64".equals(encoding)) {
+                return Base64.getEncoder().encodeToString(IOUtils.toByteArray(in));
+            } else {
+                return IOUtils.toString(in, encoding); // The platform default is used if encoding is null.
+            }
         }
     }
 
