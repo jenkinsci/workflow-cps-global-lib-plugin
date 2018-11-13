@@ -96,7 +96,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
         delegate.setPoll(false); // TODO we have no API for determining if a given SCMHead is branch-like or tag-like; would we want to turn on polling if the former?
         delegate.setChangelog(changelog);
         FilePath dir;
-        Node node = Jenkins.getActiveInstance();
+        Node node = Jenkins.get();
         if (run.getParent() instanceof TopLevelItem) {
             FilePath baseWorkspace = node.getWorkspaceFor((TopLevelItem) run.getParent());
             if (baseWorkspace == null) {
@@ -111,7 +111,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
             throw new IOException(node.getDisplayName() + " may be offline");
         }
         try (WorkspaceList.Lease lease = computer.getWorkspaceList().allocate(dir)) {
-            for (int retryCount = Jenkins.getInstance().getScmCheckoutRetryCount(); retryCount >= 0; retryCount--) {
+            for (int retryCount = Jenkins.get().getScmCheckoutRetryCount(); retryCount >= 0; retryCount--) {
                 try {
                     delegate.checkout(run, lease.path, listener, node.createLauncher(listener));
                     break;

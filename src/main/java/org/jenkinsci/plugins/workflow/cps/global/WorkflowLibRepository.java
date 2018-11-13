@@ -39,12 +39,12 @@ public class WorkflowLibRepository extends FileBackedHttpGitRepository implement
      * @return A {@link File} pointing to the {@link WorkflowLibRepository} git repository on the master.
      */
     public static File workspace() {
-        return new File(Jenkins.getActiveInstance().root, "workflow-libs");
+        return new File(Jenkins.get().root, "workflow-libs");
     }
 
     @Override
     protected void checkPushPermission() {
-        Jenkins.getActiveInstance().checkPermission(Jenkins.RUN_SCRIPTS);
+        Jenkins.get().checkPermission(Jenkins.RUN_SCRIPTS);
     }
 
     public String getIconFileName() {
