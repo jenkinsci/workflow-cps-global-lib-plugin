@@ -198,7 +198,6 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         if (urls.isEmpty()) {
             throw new AbortException("Library " + name + " expected to contain at least one of src or vars directories");
         }
-
         return urls;
     }
 
