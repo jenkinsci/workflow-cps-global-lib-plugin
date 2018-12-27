@@ -78,27 +78,23 @@ public class SCMSourceRetriever extends LibraryRetriever {
         return scm;
     }
 
-    @Override public void retrieve(String name, String version, boolean changelog, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    @Override public void retrieve(String name, String version, boolean changelog, boolean productionUseLibrary, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         SCMRevision revision = scm.fetch(version, listener);
         if (revision == null) {
             throw new AbortException("No version " + version + " found for library " + name);
         }
-        doRetrieve(name, version, changelog, scm.build(revision.getHead(), revision), target, run, listener);
+        doRetrieve(name, changelog, productionUseLibrary, scm.build(revision.getHead(), revision), target, run, listener);
     }
 
-    @Override public void retrieve(String name, String version, boolean changelog, Run<?, ?> run, TaskListener listener) throws Exception {
-        retrieve(name, version, changelog, null, run, listener);
+    @Override public void retrieve(String name, String version, boolean changelog, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+        retrieve(name, version, changelog, false, target, run, listener);
     }
 
     @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
-        retrieve(name, version, true, target, run, listener);
+        retrieve(name, version, true, false, target, run, listener);
     }
 
-    static void doRetrieve(String name, boolean changelog, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
-        doRetrieve(name, null, changelog, scm, target, run, listener);
-    }
-
-    static void doRetrieve(String name, String version, boolean changelog, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    static void doRetrieve(String name, boolean changelog, boolean productionUseLibrary, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         // Adapted from CpsScmFlowDefinition:
         SCMStep delegate = new GenericSCMStep(scm);
         delegate.setPoll(false); // TODO we have no API for determining if a given SCMHead is branch-like or tag-like; would we want to turn on polling if the former?
@@ -106,12 +102,8 @@ public class SCMSourceRetriever extends LibraryRetriever {
         FilePath dir;
 
         Node node = Jenkins.get();
-        if (target == null) {
-            FilePath baseDir = node.getRootPath();
-            if (baseDir == null) {
-                throw new IOException(node.getDisplayName() + " may be offline");
-            }
-            dir = baseDir.withSuffix("workflow@libs").child(name).child(version);
+        if (productionUseLibrary) {
+            dir = target;
         } else {
             if (run.getParent() instanceof TopLevelItem) {
                 FilePath baseWorkspace = node.getWorkspaceFor((TopLevelItem) run.getParent());
@@ -162,7 +154,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
             }
             // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
             // Copy sources with relevant files from the checkout:
-            if (target != null) {
+            if (!productionUseLibrary) {
                 lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);
             }
         }

@@ -54,6 +54,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     private final LibraryRetriever retriever;
     private String defaultVersion;
     private boolean implicit;
+    private boolean productionUsageOnly = false;
     private boolean allowVersionOverride = true;
     private boolean includeInChangesets = true;
 
@@ -95,6 +96,17 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
 
     @DataBoundSetter public void setImplicit(boolean implicit) {
         this.implicit = implicit;
+    }
+
+    /**
+     * Whether to checkout library in every run of a pipeline run or not and storing seprately in every job/run's workspace or in single space under jenkins_home {@link #isProductionUsageOnly}.
+     */
+    public boolean isProductionUsageOnly() {
+        return productionUsageOnly;
+    }
+
+    @DataBoundSetter public void setProductionUsageOnly(boolean productionUsageOnly) {
+        this.productionUsageOnly = productionUsageOnly;
     }
 
     /**

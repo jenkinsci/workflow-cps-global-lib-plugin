@@ -88,6 +88,7 @@ public class LibraryStep extends AbstractStepImpl {
 
     private final String identifier;
     private Boolean changelog = true;
+    private Boolean production = false;
     private LibraryRetriever retriever;
 
     @DataBoundConstructor public LibraryStep(String identifier) {
@@ -100,6 +101,13 @@ public class LibraryStep extends AbstractStepImpl {
 
     public LibraryRetriever getRetriever() {
         return retriever;
+    }
+
+    public Boolean getProduction() {
+        return production;
+    }
+    @DataBoundSetter public void setProduction(Boolean production) {
+        this.production = production;
     }
 
     public Boolean getChangelog() {
@@ -168,6 +176,7 @@ public class LibraryStep extends AbstractStepImpl {
             String name = parsed[0], version = parsed[1];
             boolean trusted = false;
             Boolean changelog = step.getChangelog();
+            Boolean prodcutionUsage = step.getProduction();
             LibraryRetriever retriever = step.getRetriever();
             if (retriever == null) {
                 for (LibraryResolver resolver : ExtensionList.lookup(LibraryResolver.class)) {
@@ -177,6 +186,7 @@ public class LibraryStep extends AbstractStepImpl {
                             trusted = resolver.isTrusted();
                             version = cfg.defaultedVersion(version);
                             changelog = cfg.defaultedChangelogs(changelog);
+                            prodcutionUsage = cfg.isProductionUsageOnly();
                             break;
                         }
                     }
@@ -188,7 +198,7 @@ public class LibraryStep extends AbstractStepImpl {
                 throw new AbortException("Must specify a version for library " + name);
             }
 
-            LibraryRecord record = new LibraryRecord(name, version, trusted, changelog);
+            LibraryRecord record = new LibraryRecord(name, version, trusted, changelog, prodcutionUsage);
             LibrariesAction action = run.getAction(LibrariesAction.class);
             if (action == null) {
                 action = new LibrariesAction(Lists.newArrayList(record));
@@ -210,7 +220,7 @@ public class LibraryStep extends AbstractStepImpl {
             listener.getLogger().println("Loading library non modified tags3 ");
             listener.getLogger().println("Loading library non modified tags30 "+retriever);
             listener.getLogger().println("Loading library non modified tags301 "+retriever);
-            for (URL u : LibraryAdder.retrieve(record.name, record.version, retriever, record.trusted, record.changelog, listener, run, (CpsFlowExecution) getContext().get(FlowExecution.class), record.variables)) {
+            for (URL u : LibraryAdder.retrieve(record.name, record.version, retriever, record.trusted, record.changelog, listener, run, (CpsFlowExecution) getContext().get(FlowExecution.class), record.variables, record.production)) {
                 listener.getLogger().println("Loading library non modified tags31 "+u);
                 loader.addURL(u);
             }
