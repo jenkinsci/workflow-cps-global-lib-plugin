@@ -100,27 +100,25 @@ public class SCMSourceRetriever extends LibraryRetriever {
         delegate.setPoll(false); // TODO we have no API for determining if a given SCMHead is branch-like or tag-like; would we want to turn on polling if the former?
         delegate.setChangelog(changelog);
         FilePath dir;
-
         Node node = Jenkins.get();
-        if (productionUseLibrary) {
-            dir = target;
-        } else {
-            if (run.getParent() instanceof TopLevelItem) {
-                FilePath baseWorkspace = node.getWorkspaceFor((TopLevelItem) run.getParent());
-                if (baseWorkspace == null) {
-                    throw new IOException(node.getDisplayName() + " may be offline");
-                }
-                dir = baseWorkspace.withSuffix(getFilePathSuffix() + "libs").child(name);
-            } else { // should not happen, but just in case:
-                throw new AbortException("Cannot check out in non-top-level build");
+        if (run.getParent() instanceof TopLevelItem) {
+            FilePath baseWorkspace = node.getWorkspaceFor((TopLevelItem) run.getParent());
+            if (baseWorkspace == null) {
+                throw new IOException(node.getDisplayName() + " may be offline");
             }
+            dir = baseWorkspace.withSuffix(getFilePathSuffix() + "libs").child(name);
+        } else { // should not happen, but just in case:
+            throw new AbortException("Cannot check out in non-top-level build");
         }
-
+        if (productionUseLibrary) {
+            dir.deleteRecursive();
+            listener.getLogger().println("Deleted copy of library at: "+dir);
+            dir = target;
+        }
         Computer computer = node.toComputer();
         if (computer == null) {
             throw new IOException(node.getDisplayName() + " may be offline");
         }
-
         try (WorkspaceList.Lease lease = computer.getWorkspaceList().allocate(dir)) {
             for (int retryCount = Jenkins.get().getScmCheckoutRetryCount(); retryCount >= 0; retryCount--) {
                 try {
