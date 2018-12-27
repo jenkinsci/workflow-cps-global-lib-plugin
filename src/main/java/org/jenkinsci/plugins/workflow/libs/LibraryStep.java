@@ -88,7 +88,6 @@ public class LibraryStep extends AbstractStepImpl {
 
     private final String identifier;
     private Boolean changelog = true;
-    private Boolean usingTagsOnly = false;
     private LibraryRetriever retriever;
 
     @DataBoundConstructor public LibraryStep(String identifier) {
@@ -101,13 +100,6 @@ public class LibraryStep extends AbstractStepImpl {
 
     public LibraryRetriever getRetriever() {
         return retriever;
-    }
-
-    public Boolean getProduction() {
-        return usingTagsOnly;
-    }
-    @DataBoundSetter public void setProduction(Boolean usingTagsOnly) {
-        this.usingTagsOnly = usingTagsOnly;
     }
 
     public Boolean getChangelog() {
@@ -174,7 +166,7 @@ public class LibraryStep extends AbstractStepImpl {
             String name = parsed[0], version = parsed[1];
             boolean trusted = false;
             Boolean changelog = step.getChangelog();
-            Boolean prodcutionUsage = step.getProduction();
+            Boolean isUsingTagsOnly = false;
             LibraryRetriever retriever = step.getRetriever();
             if (retriever == null) {
                 for (LibraryResolver resolver : ExtensionList.lookup(LibraryResolver.class)) {
@@ -184,7 +176,7 @@ public class LibraryStep extends AbstractStepImpl {
                             trusted = resolver.isTrusted();
                             version = cfg.defaultedVersion(version);
                             changelog = cfg.defaultedChangelogs(changelog);
-                            prodcutionUsage = cfg.isUsingTagsOnly();
+                            isUsingTagsOnly = cfg.isUsingTagsOnly();
                             break;
                         }
                     }
@@ -196,7 +188,7 @@ public class LibraryStep extends AbstractStepImpl {
                 throw new AbortException("Must specify a version for library " + name);
             }
 
-            LibraryRecord record = new LibraryRecord(name, version, trusted, changelog, prodcutionUsage);
+            LibraryRecord record = new LibraryRecord(name, version, trusted, changelog, isUsingTagsOnly);
             LibrariesAction action = run.getAction(LibrariesAction.class);
             if (action == null) {
                 action = new LibrariesAction(Lists.newArrayList(record));
