@@ -34,7 +34,7 @@ THE SOFTWARE.
     <f:entry field="implicit" title="${%Load implicitly}">
         <f:checkbox/>
     </f:entry>
-    <f:entry field="productionUsageOnly" title="${%Production use of library only}">
+    <f:entry field="usingTagsOnly" title="${%Using non modified tags only}">
         <f:checkbox/>
     </f:entry>
     <f:entry field="allowVersionOverride" title="${%Allow default version to be overridden}">

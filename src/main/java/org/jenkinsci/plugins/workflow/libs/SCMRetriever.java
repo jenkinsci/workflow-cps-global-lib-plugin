@@ -60,8 +60,8 @@ public class SCMRetriever extends LibraryRetriever {
         return scm;
     }
 
-    @Override public void retrieve(String name, String version, boolean changelog, boolean productionUseLibrary, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
-        SCMSourceRetriever.doRetrieve(name, changelog, productionUseLibrary, scm, target, run, listener);
+    @Override public void retrieve(String name, String version, boolean changelog, boolean usingTagsOnly, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+        SCMSourceRetriever.doRetrieve(name, changelog, usingTagsOnly, scm, target, run, listener);
     }
 
     @Override public void retrieve(String name, String version, boolean changelog, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {

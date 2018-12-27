@@ -88,7 +88,7 @@ public class LibraryStep extends AbstractStepImpl {
 
     private final String identifier;
     private Boolean changelog = true;
-    private Boolean production = false;
+    private Boolean usingTagsOnly = false;
     private LibraryRetriever retriever;
 
     @DataBoundConstructor public LibraryStep(String identifier) {
@@ -104,10 +104,10 @@ public class LibraryStep extends AbstractStepImpl {
     }
 
     public Boolean getProduction() {
-        return production;
+        return usingTagsOnly;
     }
-    @DataBoundSetter public void setProduction(Boolean production) {
-        this.production = production;
+    @DataBoundSetter public void setProduction(Boolean usingTagsOnly) {
+        this.usingTagsOnly = usingTagsOnly;
     }
 
     public Boolean getChangelog() {
@@ -184,7 +184,7 @@ public class LibraryStep extends AbstractStepImpl {
                             trusted = resolver.isTrusted();
                             version = cfg.defaultedVersion(version);
                             changelog = cfg.defaultedChangelogs(changelog);
-                            prodcutionUsage = cfg.isProductionUsageOnly();
+                            prodcutionUsage = cfg.isUsingTagsOnly();
                             break;
                         }
                     }
@@ -214,7 +214,7 @@ public class LibraryStep extends AbstractStepImpl {
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
             CpsFlowExecution exec = (CpsFlowExecution) getContext().get(FlowExecution.class);
             GroovyClassLoader loader = (trusted ? exec.getTrustedShell() : exec.getShell()).getClassLoader();
-            for (URL u : LibraryAdder.retrieve(record.name, record.version, retriever, record.trusted, record.changelog, listener, run, (CpsFlowExecution) getContext().get(FlowExecution.class), record.variables, record.production)) {
+            for (URL u : LibraryAdder.retrieve(record.name, record.version, retriever, record.trusted, record.changelog, listener, run, (CpsFlowExecution) getContext().get(FlowExecution.class), record.variables, record.usingTagsOnly)) {
                 loader.addURL(u);
             }
             run.save(); // persist changes to LibrariesAction.libraries*.variables

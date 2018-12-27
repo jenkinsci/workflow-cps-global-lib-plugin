@@ -43,13 +43,13 @@ public abstract class LibraryRetriever extends AbstractDescribableImpl<LibraryRe
      * @param name the {@link LibraryConfiguration#getName}
      * @param version the version of the library, such as from {@link LibraryConfiguration#getDefaultVersion} or an override
      * @param changelog whether to include changesets in the library in jobs using it from {@link LibraryConfiguration#getIncludeInChangesets}
-     * @param productionUseLibrary Whether to checkout library in every run of a pipeline run or not and storing seprately in every job/run's workspace or in single space under jenkins_home {@link LibraryConfiguration#isProductionUsageOnly}
+     * @param usingTagsOnly Whether library is using only non modified git tags only or not {@link LibraryConfiguration#isUsingTagsOnly}
      * @param target a directory in which to check out sources; should create {@code src/**}{@code /*.groovy} and/or {@code vars/*.groovy}, and optionally also {@code resources/}
      * @param run a build which will use the library
      * @param listener a way to report progress
      * @throws Exception if there is any problem (use {@link AbortException} for user errors)
      */
-    public abstract void retrieve(@Nonnull String name, @Nonnull String version, @Nonnull boolean changelog, @Nonnull boolean productionUseLibrary, @Nonnull FilePath target, @Nonnull Run<?,?> run, @Nonnull TaskListener listener) throws Exception;
+    public abstract void retrieve(@Nonnull String name, @Nonnull String version, @Nonnull boolean changelog, @Nonnull boolean usingTagsOnly, @Nonnull FilePath target, @Nonnull Run<?,?> run, @Nonnull TaskListener listener) throws Exception;
 
     /**
      * Obtains library sources.

@@ -54,7 +54,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     private final LibraryRetriever retriever;
     private String defaultVersion;
     private boolean implicit;
-    private boolean productionUsageOnly = false;
+    private boolean usingTagsOnly = false;
     private boolean allowVersionOverride = true;
     private boolean includeInChangesets = true;
 
@@ -99,14 +99,14 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     }
 
     /**
-     * Whether to checkout library in every run of a pipeline run or not and storing seprately in every job/run's workspace or in single space under jenkins_home {@link #isProductionUsageOnly}.
+     * Whether library is using only non modified git tags only or not {@link #isUsingTagsOnly}.
      */
-    public boolean isProductionUsageOnly() {
-        return productionUsageOnly;
+    public boolean isUsingTagsOnly() {
+        return usingTagsOnly;
     }
 
-    @DataBoundSetter public void setProductionUsageOnly(boolean productionUsageOnly) {
-        this.productionUsageOnly = productionUsageOnly;
+    @DataBoundSetter public void setUsingTagsOnly(boolean usingTagsOnly) {
+        this.usingTagsOnly = usingTagsOnly;
     }
 
     /**

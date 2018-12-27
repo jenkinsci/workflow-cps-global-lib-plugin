@@ -78,12 +78,12 @@ public class SCMSourceRetriever extends LibraryRetriever {
         return scm;
     }
 
-    @Override public void retrieve(String name, String version, boolean changelog, boolean productionUseLibrary, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    @Override public void retrieve(String name, String version, boolean changelog, boolean usingTagsOnly, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         SCMRevision revision = scm.fetch(version, listener);
         if (revision == null) {
             throw new AbortException("No version " + version + " found for library " + name);
         }
-        doRetrieve(name, changelog, productionUseLibrary, scm.build(revision.getHead(), revision), target, run, listener);
+        doRetrieve(name, changelog, usingTagsOnly, scm.build(revision.getHead(), revision), target, run, listener);
     }
 
     @Override public void retrieve(String name, String version, boolean changelog, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
@@ -94,7 +94,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
         retrieve(name, version, true, false, target, run, listener);
     }
 
-    static void doRetrieve(String name, boolean changelog, boolean productionUseLibrary, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    static void doRetrieve(String name, boolean changelog, boolean usingTagsOnly, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         // Adapted from CpsScmFlowDefinition:
         SCMStep delegate = new GenericSCMStep(scm);
         delegate.setPoll(false); // TODO we have no API for determining if a given SCMHead is branch-like or tag-like; would we want to turn on polling if the former?
@@ -110,7 +110,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
         } else { // should not happen, but just in case:
             throw new AbortException("Cannot check out in non-top-level build");
         }
-        if (productionUseLibrary) {
+        if (usingTagsOnly) {
             dir.deleteRecursive();
             listener.getLogger().println("Deleted copy of library at: "+dir);
             dir = target;
@@ -148,7 +148,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
             }
             // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
             // Copy sources with relevant files from the checkout:
-            if (!productionUseLibrary) {
+            if (!usingTagsOnly) {
                 lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);
             }
         }
