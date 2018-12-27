@@ -136,7 +136,6 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         // Now actually try to retrieve the libraries.
         for (LibraryRecord record : librariesAdded.values()) {
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
-            listener.getLogger().println("Loading static Retriever 0 ");
             for (URL u : retrieve(record.name, record.version, retrievers.get(record.name), record.trusted, record.changelog, listener, build, execution, record.variables, record.production)) {
                 additions.add(new Addition(u, record.trusted));
             }
@@ -156,19 +155,17 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
     /** Retrieve library files. */
     static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, Boolean changelog, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables, Boolean productionUsageOnly) throws Exception {
 
-        listener.getLogger().println("Loading Retriever 0 ");
-
         FilePath libDir;
         if (productionUsageOnly) {
             libDir = Jenkins.get().getRootPath().withSuffix("/workflow@libs").child(name).child(version);
         } else {
             libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
         }
-        if (!libDir.exists()) {
+        if (!productionUsageOnly || (productionUsageOnly && !libDir.exists())) {
             retriever.retrieve(name, version, changelog, productionUsageOnly, libDir, run, listener);
+        } else {
+            listener.getLogger().println("Found produciton library allready checked out so not loading from remote once again");
         }
-
-        listener.getLogger().println("Loading Retriever 01 "+libDir);
 
         // Replace any classes requested for replay:
         if (!trusted) {
@@ -202,7 +199,6 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
             throw new AbortException("Library " + name + " expected to contain at least one of src or vars directories");
         }
 
-        listener.getLogger().println("Loading Retriever 1 "+urls);
         return urls;
     }
 

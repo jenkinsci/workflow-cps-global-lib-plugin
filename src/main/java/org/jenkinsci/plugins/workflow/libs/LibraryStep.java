@@ -170,8 +170,6 @@ public class LibraryStep extends AbstractStepImpl {
         @StepContextParameter private transient TaskListener listener;
 
         @Override protected LoadedClasses run() throws Exception {
-            listener.getLogger().println("Loading library non modified tags ");
-
             String[] parsed = LibraryAdder.parse(step.identifier);
             String name = parsed[0], version = parsed[1];
             boolean trusted = false;
@@ -214,19 +212,12 @@ public class LibraryStep extends AbstractStepImpl {
                 libraries.add(record);
             }
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
-            listener.getLogger().println("Loading library non modified tags2 ");
             CpsFlowExecution exec = (CpsFlowExecution) getContext().get(FlowExecution.class);
             GroovyClassLoader loader = (trusted ? exec.getTrustedShell() : exec.getShell()).getClassLoader();
-            listener.getLogger().println("Loading library non modified tags3 ");
-            listener.getLogger().println("Loading library non modified tags30 "+retriever);
-            listener.getLogger().println("Loading library non modified tags301 "+retriever);
             for (URL u : LibraryAdder.retrieve(record.name, record.version, retriever, record.trusted, record.changelog, listener, run, (CpsFlowExecution) getContext().get(FlowExecution.class), record.variables, record.production)) {
-                listener.getLogger().println("Loading library non modified tags31 "+u);
                 loader.addURL(u);
             }
-            listener.getLogger().println("Loading library non modified tags32 ");
             run.save(); // persist changes to LibrariesAction.libraries*.variables
-            listener.getLogger().println("Loading library non modified tags4 ");
             return new LoadedClasses(name, trusted, changelog, run);
         }
 

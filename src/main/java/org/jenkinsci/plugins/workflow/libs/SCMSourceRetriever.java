@@ -121,11 +121,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
             throw new IOException(node.getDisplayName() + " may be offline");
         }
 
-        listener.getLogger().println("Loading library non modified path0 "+node.getRootPath());
-        listener.getLogger().println("Loading library non modified path01 "+run.getParent());
-        listener.getLogger().println("Loading library non modified path1 "+dir);
         try (WorkspaceList.Lease lease = computer.getWorkspaceList().allocate(dir)) {
-            listener.getLogger().println("Loading library non modified path2 "+lease.path);
             for (int retryCount = Jenkins.get().getScmCheckoutRetryCount(); retryCount >= 0; retryCount--) {
                 try {
                     delegate.checkout(run, lease.path, listener, node.createLauncher(listener));
