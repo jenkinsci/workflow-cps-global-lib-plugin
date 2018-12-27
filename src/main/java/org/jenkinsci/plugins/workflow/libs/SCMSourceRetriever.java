@@ -83,7 +83,11 @@ public class SCMSourceRetriever extends LibraryRetriever {
         if (revision == null) {
             throw new AbortException("No version " + version + " found for library " + name);
         }
-        doRetrieve(name, changelog, scm.build(revision.getHead(), revision), target, run, listener);
+        doRetrieve(name, version, changelog, scm.build(revision.getHead(), revision), target, run, listener);
+    }
+
+    @Override public void retrieve(String name, String version, boolean changelog, Run<?, ?> run, TaskListener listener) throws Exception {
+        retrieve(name, version, changelog, null, run, listener);
     }
 
     @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
@@ -91,26 +95,45 @@ public class SCMSourceRetriever extends LibraryRetriever {
     }
 
     static void doRetrieve(String name, boolean changelog, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+        doRetrieve(name, null, changelog, scm, target, run, listener);
+    }
+
+    static void doRetrieve(String name, String version, boolean changelog, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         // Adapted from CpsScmFlowDefinition:
         SCMStep delegate = new GenericSCMStep(scm);
         delegate.setPoll(false); // TODO we have no API for determining if a given SCMHead is branch-like or tag-like; would we want to turn on polling if the former?
         delegate.setChangelog(changelog);
         FilePath dir;
+
         Node node = Jenkins.get();
-        if (run.getParent() instanceof TopLevelItem) {
-            FilePath baseWorkspace = node.getWorkspaceFor((TopLevelItem) run.getParent());
-            if (baseWorkspace == null) {
+        if (target == null) {
+            FilePath baseDir = node.getRootPath();
+            if (baseDir == null) {
                 throw new IOException(node.getDisplayName() + " may be offline");
             }
-            dir = baseWorkspace.withSuffix(getFilePathSuffix() + "libs").child(name);
-        } else { // should not happen, but just in case:
-            throw new AbortException("Cannot check out in non-top-level build");
+            dir = baseDir.withSuffix("workflow@libs").child(name).child(version);
+        } else {
+            if (run.getParent() instanceof TopLevelItem) {
+                FilePath baseWorkspace = node.getWorkspaceFor((TopLevelItem) run.getParent());
+                if (baseWorkspace == null) {
+                    throw new IOException(node.getDisplayName() + " may be offline");
+                }
+                dir = baseWorkspace.withSuffix(getFilePathSuffix() + "libs").child(name);
+            } else { // should not happen, but just in case:
+                throw new AbortException("Cannot check out in non-top-level build");
+            }
         }
+
         Computer computer = node.toComputer();
         if (computer == null) {
             throw new IOException(node.getDisplayName() + " may be offline");
         }
+
+        listener.getLogger().println("Loading library non modified path0 "+node.getRootPath());
+        listener.getLogger().println("Loading library non modified path01 "+run.getParent());
+        listener.getLogger().println("Loading library non modified path1 "+dir);
         try (WorkspaceList.Lease lease = computer.getWorkspaceList().allocate(dir)) {
+            listener.getLogger().println("Loading library non modified path2 "+lease.path);
             for (int retryCount = Jenkins.get().getScmCheckoutRetryCount(); retryCount >= 0; retryCount--) {
                 try {
                     delegate.checkout(run, lease.path, listener, node.createLauncher(listener));
@@ -139,7 +162,9 @@ public class SCMSourceRetriever extends LibraryRetriever {
             }
             // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
             // Copy sources with relevant files from the checkout:
-            lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);
+            if (target != null) {
+                lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);
+            }
         }
     }
 
