@@ -29,8 +29,12 @@ import hudson.Extension;
 import hudson.ExtensionList;
 import hudson.FilePath;
 import hudson.model.Queue;
+import jenkins.model.Jenkins;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.model.ItemGroup;
+import hudson.model.Job;
+import hudson.model.TopLevelItem;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,6 +54,7 @@ import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import org.apache.commons.io.IOUtils;
+import com.cloudbees.hudson.plugins.folder.AbstractFolder;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariableSet;
@@ -120,7 +125,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                 }
                 String version = cfg.defaultedVersion(libraryVersions.remove(name));
                 Boolean changelog = cfg.defaultedChangelogs(libraryChangelogs.remove(name));
-                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted, changelog));
+                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted, changelog, cfg.isUsingTagsOnly()));
                 retrievers.put(name, cfg.getRetriever());
             }
         }
@@ -135,7 +140,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         // Now actually try to retrieve the libraries.
         for (LibraryRecord record : librariesAdded.values()) {
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
-            for (URL u : retrieve(record.name, record.version, retrievers.get(record.name), record.trusted, record.changelog, listener, build, execution, record.variables)) {
+            for (URL u : retrieve(record.name, record.version, retrievers.get(record.name), record.trusted, record.changelog, listener, build, execution, record.variables, record.usingTagsOnly)) {
                 additions.add(new Addition(u, record.trusted));
             }
         }
@@ -152,9 +157,36 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
     }
 
     /** Retrieve library files. */
-    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, Boolean changelog, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
-        FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
-        retriever.retrieve(name, version, changelog, libDir, run, listener);
+    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, Boolean changelog, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables, Boolean usingTagsOnly) throws Exception {
+
+        FilePath libDir = new FilePath(execution.getOwner().getRootDir());
+        if (usingTagsOnly) {
+            if (trusted) {
+                libDir = Jenkins.get().getRootPath();
+            } else {
+                for (ItemGroup<?> g = ((Job<?,?>) run.getParent()).getParent(); g instanceof AbstractFolder; g = ((AbstractFolder) g).getParent()) {
+                    FolderLibraries prop = ((AbstractFolder<?>) g).getProperties().get(FolderLibraries.class);
+                    if (prop != null) {
+                        List<LibraryConfiguration> libraries = prop.getLibraries();
+                        for (LibraryConfiguration cfg : libraries) {
+                            if (cfg.getName().equals(name)) {
+                                libDir = Jenkins.get().getWorkspaceFor((TopLevelItem) g);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            libDir = libDir.child("workflow@libs").child(name).child(version);
+        } else {
+            libDir = libDir.child("libs").child(name);
+        }
+        if (!usingTagsOnly || (usingTagsOnly && !libDir.exists())) {
+            retriever.retrieve(name, version, changelog, usingTagsOnly, libDir, run, listener);
+        } else {
+            listener.getLogger().println("Found library tag: "+version);
+        }
+
         // Replace any classes requested for replay:
         if (!trusted) {
             for (String clazz : ReplayAction.replacementsIn(execution)) {

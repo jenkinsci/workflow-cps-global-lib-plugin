@@ -54,6 +54,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     private final LibraryRetriever retriever;
     private String defaultVersion;
     private boolean implicit;
+    private boolean usingTagsOnly = false;
     private boolean allowVersionOverride = true;
     private boolean includeInChangesets = true;
 
@@ -95,6 +96,17 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
 
     @DataBoundSetter public void setImplicit(boolean implicit) {
         this.implicit = implicit;
+    }
+
+    /**
+     * Whether library is using only non modified git tags only or not {@link #isUsingTagsOnly}.
+     */
+    public boolean isUsingTagsOnly() {
+        return usingTagsOnly;
+    }
+
+    @DataBoundSetter public void setUsingTagsOnly(boolean usingTagsOnly) {
+        this.usingTagsOnly = usingTagsOnly;
     }
 
     /**
