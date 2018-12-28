@@ -178,7 +178,6 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                 }
             }
             libDir = libDir.child("workflow@libs").child(name).child(version);
-            listener.getLogger().println("Storing library in:"+libDir);
         } else {
             libDir = libDir.child("libs").child(name);
         }
