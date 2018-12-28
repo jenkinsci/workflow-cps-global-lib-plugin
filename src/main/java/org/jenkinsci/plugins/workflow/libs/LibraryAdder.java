@@ -185,7 +185,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         if (!usingTagsOnly || (usingTagsOnly && !libDir.exists())) {
             retriever.retrieve(name, version, changelog, usingTagsOnly, libDir, run, listener);
         } else {
-            listener.getLogger().println("Found produciton library allready checked out so not loading from remote once again");
+            listener.getLogger().println("Found library tag: "+version);
         }
 
         // Replace any classes requested for replay:
