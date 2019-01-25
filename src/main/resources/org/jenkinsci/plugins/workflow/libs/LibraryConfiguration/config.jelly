@@ -31,14 +31,14 @@ THE SOFTWARE.
     <f:entry field="defaultVersion" title="${%Default version}">
         <f:textbox/>
     </f:entry>
-    <f:entry field="implicit" title="${%Load implicitly}">
-        <f:checkbox/>
+    <f:entry field="implicit">
+        <f:checkbox title="${%Load implicitly}" />
     </f:entry>
-    <f:entry field="allowVersionOverride" title="${%Allow default version to be overridden}">
-        <f:checkbox default="true"/>
+    <f:entry field="allowVersionOverride">
+        <f:checkbox default="true" title="${%Allow default version to be overridden}" />
     </f:entry>
-    <f:entry field="includeInChangesets" title="${%Include @Library changes in job recent changes}">
-        <f:checkbox default="true"/>
+    <f:entry field="includeInChangesets">
+        <f:checkbox default="true" title="${%Include @Library changes in job recent changes}" />
     </f:entry>
     <f:descriptorRadioList varName="retriever" instance="${instance.retriever}" descriptors="${descriptor.retrieverDescriptors}" title="${%Retrieval method}"/>
 </j:jelly>
