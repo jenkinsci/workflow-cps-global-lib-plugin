@@ -134,7 +134,18 @@ public class SCMSourceRetrieverTest {
     }
 
     @Test public void retry() throws Exception {
-        final SCMSource scmSource = new FailingSCMSource();
+        WorkflowRun b = prepareRetryTests(new FailingSCMSource());
+        r.assertLogContains("Failing 'checkout' on purpose!", b);
+        r.assertLogContains("Retrying after 10 seconds", b);
+    }
+
+    @Test public void retryDuringFetch() throws Exception {
+        WorkflowRun b = prepareRetryTests(new FailingSCMSourceDuringFetch());
+        r.assertLogContains("Failing 'fetch' on purpose!", b);
+        r.assertLogContains("Retrying after 10 seconds", b);
+    }
+
+    private WorkflowRun prepareRetryTests(SCMSource scmSource) throws Exception{
         final SCMSourceRetriever retriever = new SCMSourceRetriever(scmSource);
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration("retry", retriever);
         final List<LibraryConfiguration> libraries = Collections.singletonList(libraryConfiguration);
@@ -145,9 +156,7 @@ public class SCMSourceRetrieverTest {
         p.setDefinition(def);
         r.jenkins.setScmCheckoutRetryCount(1);
 
-        WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+        return r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
 
-        r.assertLogContains("Failing 'checkout' on purpose!", b);
-        r.assertLogContains("Retrying after 10 seconds", b);
     }
 }
