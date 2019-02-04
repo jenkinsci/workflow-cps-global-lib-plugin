@@ -130,7 +130,7 @@ public class LibraryStep extends AbstractStepImpl {
 
         @Restricted(DoNotUse.class) // Jelly
         public Collection<LibraryRetrieverDescriptor> getRetrieverDescriptors() {
-            return Jenkins.getActiveInstance().getDescriptorByType(LibraryConfiguration.DescriptorImpl.class).getRetrieverDescriptors();
+            return Jenkins.get().getDescriptorByType(LibraryConfiguration.DescriptorImpl.class).getRetrieverDescriptors();
         }
 
         public AutoCompletionCandidates doAutoCompleteIdentifier(@AncestorInPath ItemGroup<?> group, @QueryParameter String value) {

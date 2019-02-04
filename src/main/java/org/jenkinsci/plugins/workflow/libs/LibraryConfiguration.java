@@ -154,7 +154,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
         public Collection<LibraryRetrieverDescriptor> getRetrieverDescriptors() {
             StaplerRequest req = Stapler.getCurrentRequest();
             Item it = req != null ? req.findAncestorObject(Item.class) : null;
-            return DescriptorVisibilityFilter.apply(it != null ? it : Jenkins.getActiveInstance(), ExtensionList.lookup(LibraryRetrieverDescriptor.class));
+            return DescriptorVisibilityFilter.apply(it != null ? it : Jenkins.get(), ExtensionList.lookup(LibraryRetrieverDescriptor.class));
         }
 
         public FormValidation doCheckName(@QueryParameter String name) {

@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.libs;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.google.common.collect.ImmutableMap;
+import hudson.model.JDK;
 import hudson.model.Result;
 import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
@@ -35,6 +36,8 @@ import hudson.plugins.git.extensions.GitSCMExtension;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import hudson.tools.ToolInstallation;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
@@ -212,4 +215,25 @@ public class LibraryStepTest {
         r.assertLogContains("using initial", r.buildAndAssertSuccess(p));
     }
 
+    @Test public void usingToolsFromLibrary() throws Exception {
+        JDK.DescriptorImpl jdkDescriptor = r.jenkins.getDescriptorByType(JDK.DescriptorImpl.class);
+        jdkDescriptor.setInstallations(new JDK("lib-java", "/lib/java"), new JDK("pipeline-java", "/pipeline/java"));
+
+        sampleRepo.init();
+        sampleRepo.write("vars/x.groovy", "def call() { def path = tool 'lib-java'; echo path }");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        LibraryConfiguration cfg = new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
+        cfg.setDefaultVersion("master");
+        cfg.setImplicit(true);
+
+        Folder f = r.jenkins.createProject(Folder.class, "f");
+        f.addProperty(new FolderLibraries(Collections.singletonList(cfg)));
+
+        WorkflowJob p = f.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("node () { def path = tool 'pipeline-java'; echo path; x() }", true));
+        WorkflowRun b = r.buildAndAssertSuccess(p);
+        r.assertLogContains("/lib/java", b);
+        r.assertLogContains("/pipeline/java", b);
+    }
 }
