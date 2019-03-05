@@ -36,15 +36,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.HashSet;
 import java.util.TreeMap;
+import java.util.LinkedHashMap;
+import java.util.Collection;
+import java.util.Base64;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
@@ -179,14 +180,28 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         FilePath varsDir = libDir.child("vars");
         if (varsDir.isDirectory()) {
             urls.add(varsDir.toURI().toURL());
-            for (FilePath var : varsDir.list("*.groovy")) {
-                variables.add(var.getBaseName());
-            }
+            variables.addAll(findVarsInFolder(varsDir, urls));
         }
         if (urls.isEmpty()) {
             throw new AbortException("Library " + name + " expected to contain at least one of src or vars directories");
         }
         return urls;
+    }
+
+    /**
+     * Find all .groovy in the subfolders of vars/
+     */
+    static public Set<String> findVarsInFolder(FilePath directory, List<URL> urls) throws Exception {
+        Set<String> list = new HashSet<>();
+        for (FilePath var : directory.list()) {
+            if (var.isDirectory()) {
+                urls.add(var.toURI().toURL());
+                list.addAll(findVarsInFolder(var, urls));
+            } else if (var.getName().endsWith(".groovy")) {
+                list.add(var.getBaseName());
+            }
+        }
+        return list;
     }
 
     /**
