@@ -108,7 +108,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
             catch (InterruptedIOException e) {
                 throw e;
             }
-            catch (IOException e) {
+            catch (Exception e) {
                 // checkout error not yet reported
                 Functions.printStackTrace(e, listener.error("Checkout failed"));
             }
