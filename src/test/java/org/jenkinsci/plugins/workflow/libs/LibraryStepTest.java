@@ -37,13 +37,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import hudson.tools.ToolInstallation;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.plugins.git.traits.BranchDiscoveryTrait;
 import jenkins.scm.api.trait.SCMSourceTrait;
-import org.jenkinsci.plugins.structs.describable.DescribableModel;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.Snippetizer;
 import org.jenkinsci.plugins.workflow.cps.SnippetizerTester;
 import org.jenkinsci.plugins.workflow.cps.replay.ReplayAction;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -78,10 +77,8 @@ public class LibraryStepTest {
         s.setRetriever(new SCMSourceRetriever(scmSource));
         s.setChangelog(true);
         r.assertEqualDataBoundBeans(s, stepTester.configRoundTrip(s));
-        /* TODO uninstantiate works but assertRoundTrip fails due to differing SCMSource.id values:
-        snippetizerTester.assertRoundTrip(s, "library identifier: 'foo@master', retriever: modernSCM([$class: 'GitSCMSource', remote: 'https://nowhere.net/', traits: [gitBranchDiscovery()]])");
-        */
-        assertEquals("(identifier=foo@master,retriever=@modernSCM$SCMSourceRetriever(scm=@git$GitSCMSource(credentialsId=,remote=https://nowhere.net/,traits=[@gitBranchDiscovery$BranchDiscoveryTrait()])))", DescribableModel.uninstantiate2_(s).toString());
+        // TODO uninstantiate works but SnippetizerTester.assertRoundTrip fails due to differing SCMSource.id values
+        assertEquals("library identifier: 'foo@master', retriever: modernSCM([$class: 'GitSCMSource', credentialsId: '', remote: 'https://nowhere.net/', traits: [gitBranchDiscovery()]])", Snippetizer.object2Groovy(s));
         s.setRetriever(new SCMRetriever(new GitSCM(Collections.singletonList(new UserRemoteConfig("https://nowhere.net/", null, null, null)),
             Collections.singletonList(new BranchSpec("${library.foo.version}")),
             false, Collections.<SubmoduleConfig>emptyList(), null, null, Collections.<GitSCMExtension>emptyList())));

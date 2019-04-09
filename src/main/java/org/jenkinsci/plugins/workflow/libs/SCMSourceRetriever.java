@@ -46,7 +46,9 @@ import java.io.InterruptedIOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
@@ -66,7 +68,6 @@ import org.kohsuke.stapler.DataBoundConstructor;
 /**
  * Uses {@link SCMSource#fetch(String, TaskListener)} to retrieve a specific revision.
  */
-@CustomDescribableModel.CustomDescription(SCMSourceRetriever.Struct.class)
 public class SCMSourceRetriever extends LibraryRetriever {
 
     private final SCMSource scm;
@@ -179,7 +180,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
     }
 
     @Symbol("modernSCM")
-    @Extension public static class DescriptorImpl extends LibraryRetrieverDescriptor {
+    @Extension public static class DescriptorImpl extends LibraryRetrieverDescriptor implements CustomDescribableModel {
 
         @Override public String getDisplayName() {
             return "Modern SCM";
@@ -199,19 +200,15 @@ public class SCMSourceRetriever extends LibraryRetriever {
             return descriptors;
         }
 
-    }
-
-    public static final class Struct implements CustomDescribableModel<SCMSourceRetriever> {
-
-        @Override public Class<SCMSourceRetriever> getType() {
-            return SCMSourceRetriever.class;
-        }
-
-        @Override public UninstantiatedDescribable uninstantiate(SCMSourceRetriever r, StandardUninstantiator standard) throws UnsupportedOperationException {
-            UninstantiatedDescribable ud = standard.uninstantiate(r);
+        @Override public UninstantiatedDescribable customUninstantiate(UninstantiatedDescribable ud) {
             Object scm = ud.getArguments().get("scm");
             if (scm instanceof UninstantiatedDescribable) {
-                ((UninstantiatedDescribable) scm).getArguments().remove("id");
+                UninstantiatedDescribable scmUd = (UninstantiatedDescribable) scm;
+                Map<String, Object> scmArguments = new HashMap<>(scmUd.getArguments());
+                scmArguments.remove("id");
+                Map<String, Object> retrieverArguments = new HashMap<>(ud.getArguments());
+                retrieverArguments.put("scm", scmUd.withArguments(scmArguments));
+                return ud.withArguments(retrieverArguments);
             }
             return ud;
         }
