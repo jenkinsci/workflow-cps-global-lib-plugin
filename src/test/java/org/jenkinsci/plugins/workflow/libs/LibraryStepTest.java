@@ -40,6 +40,9 @@ import java.util.List;
 import hudson.tools.ToolInstallation;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import jenkins.plugins.git.traits.BranchDiscoveryTrait;
+import jenkins.scm.api.trait.SCMSourceTrait;
+import org.jenkinsci.plugins.structs.describable.DescribableModel;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.SnippetizerTester;
 import org.jenkinsci.plugins.workflow.cps.replay.ReplayAction;
@@ -69,10 +72,16 @@ public class LibraryStepTest {
         r.assertEqualDataBoundBeans(s, stepTester.configRoundTrip(s));
         snippetizerTester.assertRoundTrip(s, "library 'foo'");
         s = new LibraryStep("foo@master");
-        s.setRetriever(new SCMSourceRetriever(new GitSCMSource("id", "https://nowhere.net/", "", "origin", "+refs/heads/*:refs/remotes/origin/*", "*", "", true)));
+        GitSCMSource scmSource = new GitSCMSource("https://nowhere.net/");
+        scmSource.setTraits(Collections.<SCMSourceTrait>singletonList(new BranchDiscoveryTrait()));
+        scmSource.setCredentialsId(""); // TODO the setter ought to use fixEmpty
+        s.setRetriever(new SCMSourceRetriever(scmSource));
         s.setChangelog(true);
         r.assertEqualDataBoundBeans(s, stepTester.configRoundTrip(s));
-        snippetizerTester.assertRoundTrip(s, "library identifier: 'foo@master', retriever: modernSCM([$class: 'GitSCMSource', credentialsId: '', id: 'id', remote: 'https://nowhere.net/', traits: [[$class: 'BranchDiscoveryTrait'], [$class: 'IgnoreOnPushNotificationTrait']]])");
+        /* TODO uninstantiate works but assertRoundTrip fails due to differing SCMSource.id values:
+        snippetizerTester.assertRoundTrip(s, "library identifier: 'foo@master', retriever: modernSCM([$class: 'GitSCMSource', remote: 'https://nowhere.net/', traits: [gitBranchDiscovery()]])");
+        */
+        assertEquals("(identifier=foo@master,retriever=@modernSCM$SCMSourceRetriever(scm=@git$GitSCMSource(credentialsId=,remote=https://nowhere.net/,traits=[@gitBranchDiscovery$BranchDiscoveryTrait()])))", DescribableModel.uninstantiate2_(s).toString());
         s.setRetriever(new SCMRetriever(new GitSCM(Collections.singletonList(new UserRemoteConfig("https://nowhere.net/", null, null, null)),
             Collections.singletonList(new BranchSpec("${library.foo.version}")),
             false, Collections.<SubmoduleConfig>emptyList(), null, null, Collections.<GitSCMExtension>emptyList())));

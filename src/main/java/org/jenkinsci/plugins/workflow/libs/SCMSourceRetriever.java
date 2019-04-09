@@ -54,6 +54,8 @@ import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
 import org.jenkinsci.Symbol;
+import org.jenkinsci.plugins.structs.describable.CustomDescribableModel;
+import org.jenkinsci.plugins.structs.describable.UninstantiatedDescribable;
 import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
 import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
 import org.kohsuke.accmod.Restricted;
@@ -64,6 +66,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 /**
  * Uses {@link SCMSource#fetch(String, TaskListener)} to retrieve a specific revision.
  */
+@CustomDescribableModel.CustomDescription(SCMSourceRetriever.Struct.class)
 public class SCMSourceRetriever extends LibraryRetriever {
 
     private final SCMSource scm;
@@ -194,6 +197,23 @@ public class SCMSourceRetriever extends LibraryRetriever {
                 }
             }
             return descriptors;
+        }
+
+    }
+
+    public static final class Struct implements CustomDescribableModel<SCMSourceRetriever> {
+
+        @Override public Class<SCMSourceRetriever> getType() {
+            return SCMSourceRetriever.class;
+        }
+
+        @Override public UninstantiatedDescribable uninstantiate(SCMSourceRetriever r, StandardUninstantiator standard) throws UnsupportedOperationException {
+            UninstantiatedDescribable ud = standard.uninstantiate(r);
+            Object scm = ud.getArguments().get("scm");
+            if (scm instanceof UninstantiatedDescribable) {
+                ((UninstantiatedDescribable) scm).getArguments().remove("id");
+            }
+            return ud;
         }
 
     }
