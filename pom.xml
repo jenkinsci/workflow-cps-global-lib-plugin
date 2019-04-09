@@ -69,7 +69,7 @@
         <useBeta>true</useBeta>
         <workflow-cps-plugin.version>2.57</workflow-cps-plugin.version>
         <git-plugin.version>4.0.0-rc</git-plugin.version>
-        <scm-api-plugin.version>2.2.7</scm-api-plugin.version>
+        <scm-api-plugin.version>2.3.0</scm-api-plugin.version>
         <workflow-scm-step-plugin.version>2.4</workflow-scm-step-plugin.version>
         <workflow-multibranch-plugin.version>2.10</workflow-multibranch-plugin.version>
     </properties>
@@ -93,7 +93,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>git-client</artifactId>
-            <version>2.6.0</version> <!-- do not pick up an obsolete version from git-server -->
+            <version>3.0.0-rc</version> <!-- do not pick up an obsolete version from git-server -->
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
