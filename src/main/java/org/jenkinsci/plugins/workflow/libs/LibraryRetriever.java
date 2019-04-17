@@ -48,7 +48,7 @@ public abstract class LibraryRetriever extends AbstractDescribableImpl<LibraryRe
      * @param listener a way to report progress
      * @throws Exception if there is any problem (use {@link AbortException} for user errors)
      */
-    public abstract void retrieve(@Nonnull String name, @Nonnull String version, @Nonnull boolean changelog, @Nonnull FilePath target, @Nonnull Run<?,?> run, @Nonnull TaskListener listener) throws Exception;
+    public abstract void retrieve(@Nonnull String name, @Nonnull String version, boolean changelog, @Nonnull FilePath target, @Nonnull Run<?,?> run, @Nonnull TaskListener listener) throws Exception;
 
     /**
      * Obtains library sources.
