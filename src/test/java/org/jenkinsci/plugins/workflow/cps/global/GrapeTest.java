@@ -193,8 +193,7 @@ public class GrapeTest {
                     "new ArrayIntList()", true));
                 // Even assuming signature approvals, we do not want to allow Grape to be used from sandboxed scripts.
                 ScriptApproval.get().approveSignature("new org.apache.commons.collections.primitives.ArrayIntList");
-                // Specifically: java.lang.RuntimeException: No suitable ClassLoader found for grab
-                story.j.assertLogContains("GrapeIvy.chooseClassLoader", story.j.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
+                story.j.assertLogContains("WorkflowScript: 1: unable to resolve class org.apache.commons.collections.primitives.ArrayIntList", story.j.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
             }
         });
     }

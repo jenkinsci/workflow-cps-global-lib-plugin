@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
@@ -112,7 +113,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
             catch (InterruptedIOException e) {
                 throw e;
             }
-            catch (IOException e) {
+            catch (Exception e) {
                 // checkout error not yet reported
                 Functions.printStackTrace(e, listener.error("Checkout failed"));
             }
@@ -126,6 +127,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
         return ret;
     }
 
+    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", justification = "apparently bogus complaint about redundant nullcheck in try-with-resources")
     static void doRetrieve(String name, boolean changelog, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         // Adapted from CpsScmFlowDefinition:
         SCMStep delegate = new GenericSCMStep(scm);

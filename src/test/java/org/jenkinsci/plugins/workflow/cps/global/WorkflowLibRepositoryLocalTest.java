@@ -19,6 +19,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 import java.io.File;
 import java.net.URL;
 import java.util.Collection;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 
 public class WorkflowLibRepositoryLocalTest extends Assert {
     @Rule
@@ -60,8 +61,9 @@ public class WorkflowLibRepositoryLocalTest extends Assert {
         git.push().call();
 
         // test if this script is accessible from form validation
-        assertEquals(cfdd.doCheckScriptCompile("import org.acme.Foo"), CpsFlowDefinitionValidator.CheckStatus.SUCCESS.asJSON());
-        assertNotEquals(cfdd.doCheckScriptCompile("import org.acme.NoSuchThing").toString(), CpsFlowDefinitionValidator.CheckStatus.SUCCESS.asJSON().toString()); // control test
+        WorkflowJob p = j.createProject(WorkflowJob.class);
+        assertEquals(cfdd.doCheckScriptCompile(p, "import org.acme.Foo"), CpsFlowDefinitionValidator.CheckStatus.SUCCESS.asJSON());
+        assertNotEquals(cfdd.doCheckScriptCompile(p, "import org.acme.NoSuchThing").toString(), CpsFlowDefinitionValidator.CheckStatus.SUCCESS.asJSON().toString()); // control test
         // valid from script-security point of view
         assertSame(cfdd.doCheckScript("import org.acme.Foo", true), FormValidation.ok());
         assertSame(cfdd.doCheckScript("import org.acme.NoSuchThing", true), FormValidation.ok());
