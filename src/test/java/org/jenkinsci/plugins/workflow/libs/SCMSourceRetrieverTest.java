@@ -26,6 +26,7 @@ package org.jenkinsci.plugins.workflow.libs;
 
 import hudson.AbortException;
 import hudson.FilePath;
+import hudson.model.Item;
 import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.scm.ChangeLogSet;
@@ -49,7 +50,6 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import static org.junit.Assert.*;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
@@ -145,31 +145,27 @@ public class SCMSourceRetrieverTest {
         }
     }
 
-    @Ignore("TODO does not yet work")
     @Issue("JENKINS-43802")
     @Test public void owner() throws Exception {
         GlobalLibraries.get().setLibraries(Collections.singletonList(
             new LibraryConfiguration("test", new SCMSourceRetriever(new NeedsOwnerSCMSource()))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
-        p.setDefinition(new CpsFlowDefinition("@Library('test@abc123') import libVersion; echo(/loaded lib #${dlibVersion()}/)", true));
+        p.setDefinition(new CpsFlowDefinition("@Library('test@abc123') import libVersion; echo(/loaded lib #${libVersion()}/)", true));
         WorkflowRun b = r.buildAndAssertSuccess(p);
         r.assertLogContains("loaded lib #abc123", b);
         r.assertLogContains("Running in retrieve from p", b);
     }
     public static final class NeedsOwnerSCMSource extends SCMSource {
-        @Override protected SCMRevision retrieve(String version, TaskListener listener) throws IOException, InterruptedException {
-            if (getOwner() == null) {
-                throw new AbortException("No owner in retrieve!");
+        @Override protected SCMRevision retrieve(String version, TaskListener listener, Item context) throws IOException, InterruptedException {
+            if (context == null) {
+                throw new AbortException("No context in retrieve!");
             } else {
-                listener.getLogger().println("Running in retrieve from " + getOwner().getFullName());
+                listener.getLogger().println("Running in retrieve from " + context.getFullName());
             }
             return new DummySCMRevision(version, new SCMHead("trunk"));
         }
         @Override public SCM build(SCMHead head, SCMRevision revision) {
-            if (getOwner() == null) {
-                throw new IllegalStateException("No owner in build!");
-            }
-             String version = ((DummySCMRevision) revision).version;
+            String version = ((DummySCMRevision) revision).version;
             return new SingleFileSCM("vars/libVersion.groovy", ("def call() {'" + version + "'}").getBytes());
         }
         private static final class DummySCMRevision extends SCMRevision {
