@@ -186,13 +186,13 @@ public class SCMSourceRetriever extends LibraryRetriever {
         }
 
         /**
-         * Returns only implementations overriding {@link SCMSource#retrieve(String, TaskListener)}.
+         * Returns only implementations overriding {@link SCMSource#retrieve(String, TaskListener)} or {@link SCMSource#retrieve(String, TaskListener, Item)}.
          */
         @Restricted(NoExternalUse.class) // Jelly, Hider
         public Collection<SCMSourceDescriptor> getSCMDescriptors() {
             List<SCMSourceDescriptor> descriptors = new ArrayList<>();
             for (SCMSourceDescriptor d : ExtensionList.lookup(SCMSourceDescriptor.class)) {
-                if (Util.isOverridden(SCMSource.class, d.clazz, "retrieve", String.class, TaskListener.class)) {
+                if (Util.isOverridden(SCMSource.class, d.clazz, "retrieve", String.class, TaskListener.class) || Util.isOverridden(SCMSource.class, d.clazz, "retrieve", String.class, TaskListener.class, Item.class)) {
                     descriptors.add(d);
                 }
             }
