@@ -40,7 +40,6 @@ import org.jenkinsci.plugins.workflow.support.storage.SimpleXStreamFlowNodeStora
 import static org.junit.Assert.*;
 import org.junit.Test;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
@@ -107,7 +106,6 @@ public class LibraryDecoratorTest {
         }
     }
 
-    @Ignore("TODO <trace>pkg.Lib.fail(file:/…/jobs/p/libs/foo/pkg/Lib.groovy:1)</trace> and deserialized result has empty stack trace")
     @Issue("JENKINS-57085")
     @Test public void stackTraceFilenames() throws Exception {
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
