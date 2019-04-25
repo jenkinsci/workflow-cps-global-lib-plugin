@@ -122,6 +122,11 @@ public class LibraryDecoratorTest {
         String xml = SimpleXStreamFlowNodeStorage.XSTREAM.toXML(t);
         Throwable t2 = (Throwable) SimpleXStreamFlowNodeStorage.XSTREAM.fromXML(xml);
         assertArrayEquals(xml, t.getStackTrace(), t2.getStackTrace());
+        for (StackTraceElement e : t.getStackTrace()) {
+            if (e.getClassName().equals("pkg.Lib")) {
+                assertEquals("Lib.groovy", e.getFileName());
+            }
+        }
     }
 
 }
