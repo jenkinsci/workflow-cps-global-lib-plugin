@@ -25,18 +25,23 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import hudson.AbortException;
+import hudson.Functions;
 import hudson.model.Result;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
 import org.apache.commons.io.FileUtils;
+import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.support.storage.SimpleXStreamFlowNodeStorage;
+import static org.junit.Assert.*;
 import org.junit.Test;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
@@ -102,4 +107,21 @@ public class LibraryDecoratorTest {
             throw new AbortException("failed to load " + libraries);
         }
     }
+
+    @Ignore("TODO <trace>pkg.Lib.fail(file:/…/jobs/p/libs/foo/pkg/Lib.groovy:1)</trace> and deserialized result has empty stack trace")
+    @Issue("JENKINS-57085")
+    @Test public void stackTraceFilenames() throws Exception {
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        FileUtils.write(new File(p.getRootDir(), "libs/foo/pkg/Lib.groovy"), "package pkg; class Lib {static def fail(script) {script.error 'oops'}}");
+        p.setDefinition(new CpsFlowDefinition("@Library('foo') import pkg.Lib; Lib.fail(this)", true));
+        WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+        r.assertLogContains("ERROR: oops", b);
+        ErrorAction errorAction = b.getExecution().getCurrentHeads().get(0).getAction(ErrorAction.class);
+        assertNotNull(errorAction);
+        Throwable t = errorAction.getError();
+        String xml = SimpleXStreamFlowNodeStorage.XSTREAM.toXML(t);
+        Throwable t2 = (Throwable) SimpleXStreamFlowNodeStorage.XSTREAM.fromXML(xml);
+        assertArrayEquals(xml, t.getStackTrace(), t2.getStackTrace());
+    }
+
 }
