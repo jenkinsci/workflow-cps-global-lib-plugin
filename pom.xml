@@ -68,7 +68,7 @@
         <java.level>8</java.level>
         <workflow-cps-plugin.version>2.67</workflow-cps-plugin.version>
         <git-plugin.version>3.6.4</git-plugin.version>
-        <scm-api-plugin.version>2.5.0-SNAPSHOT</scm-api-plugin.version> <!-- TODO https://github.com/jenkinsci/scm-api-plugin/pull/65 -->
+        <scm-api-plugin.version>2.5.0-rc464.915933672136</scm-api-plugin.version> <!-- TODO https://github.com/jenkinsci/scm-api-plugin/pull/65 -->
         <workflow-scm-step-plugin.version>2.4</workflow-scm-step-plugin.version>
         <workflow-multibranch-plugin.version>2.10</workflow-multibranch-plugin.version>
         <workflow-step-api-plugin.version>2.19</workflow-step-api-plugin.version>
