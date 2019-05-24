@@ -31,10 +31,12 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import org.codehaus.groovy.reflection.ClassInfo;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import static org.junit.Assert.assertFalse;
 import org.junit.ClassRule;
@@ -43,6 +45,7 @@ import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.LoggerRule;
 import org.jvnet.hudson.test.MemoryAssert;
 
 public class LibraryMemoryTest {
@@ -50,6 +53,7 @@ public class LibraryMemoryTest {
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
+    @Rule public LoggerRule logging = new LoggerRule().record(CpsFlowExecution.class, Level.FINER);
 
     private static final List<WeakReference<ClassLoader>> LOADERS = new ArrayList<>();
     public static void register(Object o) {
@@ -68,7 +72,7 @@ public class LibraryMemoryTest {
         sampleRepo.git("commit", "--message=init");
         GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("leak", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
-        p.setDefinition(new CpsFlowDefinition("@Library('leak@master') _; " + LibraryMemoryTest.class.getName() + ".register(this); leak()", false));
+        p.setDefinition(new CpsFlowDefinition("@Library('leak@master') _; " + LibraryMemoryTest.class.getName() + ".register(this); leak(); new p.C()", false));
         r.assertBuildStatusSuccess(p.scheduleBuild2(0));
         assertFalse(LOADERS.isEmpty());
         { // cf. CpsFlowExecutionMemoryTest
