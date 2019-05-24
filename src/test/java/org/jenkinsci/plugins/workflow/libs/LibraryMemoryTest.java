@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import groovy.lang.MetaClass;
+import hudson.PluginManager;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -40,6 +41,7 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MemoryAssert;
 
@@ -51,14 +53,18 @@ public class LibraryMemoryTest {
 
     private static final List<WeakReference<ClassLoader>> LOADERS = new ArrayList<>();
     public static void register(Object o) {
-        ClassLoader loader = o.getClass().getClassLoader();
-        System.err.println("registering " + o + " from " + loader);
-        LOADERS.add(new WeakReference<>(loader));
+        System.err.println("registering " + o);
+        for (ClassLoader loader = o.getClass().getClassLoader(); !(loader instanceof PluginManager.UberClassLoader); loader = loader.getParent()) {
+            System.err.println("…from " + loader);
+            LOADERS.add(new WeakReference<>(loader));
+        }
     }
+    @Issue("JENKINS-50223")
     @Test public void loaderReleased() throws Exception {
         sampleRepo.init();
-        sampleRepo.write("vars/leak.groovy", "def call() {" + LibraryMemoryTest.class.getName() + ".register(this)}");
-        sampleRepo.git("add", "vars");
+        sampleRepo.write("src/p/C.groovy", "package p; class C {}");
+        sampleRepo.write("vars/leak.groovy", "def call() {def c = node {new p.C()}; [this, c].each {" + LibraryMemoryTest.class.getName() + ".register(it)}}");
+        sampleRepo.git("add", "src", "vars");
         sampleRepo.git("commit", "--message=init");
         GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("leak", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
