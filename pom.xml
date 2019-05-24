@@ -66,7 +66,7 @@
         <changelist>-SNAPSHOT</changelist>
         <jenkins.version>2.121.1</jenkins.version>
         <java.level>8</java.level>
-        <workflow-cps-plugin.version>2.69-SNAPSHOT</workflow-cps-plugin.version> <!-- TODO https://github.com/jenkinsci/workflow-cps-plugin/pull/289 -->
+        <workflow-cps-plugin.version>2.69-rc2276.b7f7be1476c4</workflow-cps-plugin.version> <!-- TODO https://github.com/jenkinsci/workflow-cps-plugin/pull/289 -->
         <git-plugin.version>3.6.4</git-plugin.version>
         <scm-api-plugin.version>2.2.7</scm-api-plugin.version>
         <workflow-scm-step-plugin.version>2.4</workflow-scm-step-plugin.version>
