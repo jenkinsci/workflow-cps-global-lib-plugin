@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>3.42</version>
+        <version>3.43</version>
         <relativePath />
     </parent>
     <groupId>org.jenkins-ci.plugins.workflow</groupId>
@@ -66,7 +66,7 @@
         <changelist>-SNAPSHOT</changelist>
         <jenkins.version>2.121.1</jenkins.version>
         <java.level>8</java.level>
-        <workflow-cps-plugin.version>2.68</workflow-cps-plugin.version>
+        <workflow-cps-plugin.version>2.69</workflow-cps-plugin.version>
         <git-plugin.version>3.6.4</git-plugin.version>
         <scm-api-plugin.version>2.2.7</scm-api-plugin.version>
         <workflow-scm-step-plugin.version>2.4</workflow-scm-step-plugin.version>
