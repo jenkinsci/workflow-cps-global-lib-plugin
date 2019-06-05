@@ -337,7 +337,7 @@ public class LibraryAdderTest {
         r.assertLogContains("set to loaded null", r.buildAndAssertSuccess(p));
     }
 
-
+    @Ignore
     @Issue("JENKINS-56682")
     @Test public void scriptFieldsWhereInitializerUsesLibrary() throws Exception {
         sampleRepo.init();
@@ -352,7 +352,7 @@ public class LibraryAdderTest {
                 "@Library('lib@master') import pkg.Foo\n" +
                 "import groovy.transform.Field\n" +
                 "@Field f = new Foo()\n" +
-                "@Field static def f = new Foo()\n", true));
+                "@Field static g = new Foo()\n", true));
         r.buildAndAssertSuccess(p);
     }
 
