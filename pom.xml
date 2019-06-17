@@ -66,12 +66,12 @@
         <changelist>-SNAPSHOT</changelist>
         <jenkins.version>2.121.3</jenkins.version>
         <java.level>8</java.level>
-        <workflow-cps-plugin.version>2.69</workflow-cps-plugin.version>
+        <workflow-cps-plugin.version>2.71-rc2336.411e4768703e</workflow-cps-plugin.version>
         <git-plugin.version>3.9.3</git-plugin.version>
         <scm-api-plugin.version>2.4.0</scm-api-plugin.version>
         <workflow-scm-step-plugin.version>2.7</workflow-scm-step-plugin.version>
         <workflow-multibranch-plugin.version>2.21</workflow-multibranch-plugin.version>
-        <workflow-step-api-plugin.version>2.19</workflow-step-api-plugin.version>
+        <workflow-step-api-plugin.version>2.20</workflow-step-api-plugin.version>
         <workflow-support-plugin.version>3.3</workflow-support-plugin.version>
     </properties>
     <dependencies>
@@ -129,7 +129,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>structs</artifactId>
-            <version>1.17</version>
+            <version>1.19</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>

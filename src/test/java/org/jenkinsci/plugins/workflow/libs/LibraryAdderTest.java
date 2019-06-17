@@ -337,7 +337,6 @@ public class LibraryAdderTest {
         r.assertLogContains("set to loaded null", r.buildAndAssertSuccess(p));
     }
 
-    @Ignore
     @Issue("JENKINS-56682")
     @Test public void scriptFieldsWhereInitializerUsesLibrary() throws Exception {
         sampleRepo.init();
