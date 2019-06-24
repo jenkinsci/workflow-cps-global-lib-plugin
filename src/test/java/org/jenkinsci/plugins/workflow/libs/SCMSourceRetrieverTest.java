@@ -24,27 +24,39 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import hudson.AbortException;
 import hudson.FilePath;
+import hudson.model.Item;
 import hudson.model.Result;
+import hudson.model.TaskListener;
+import hudson.scm.ChangeLogSet;
+import hudson.scm.SCM;
 import hudson.slaves.WorkspaceList;
-
-import java.util.List;
-import java.util.Iterator;
+import java.io.IOException;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.SCMHeadEvent;
+import jenkins.scm.api.SCMHeadObserver;
+import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
+import jenkins.scm.api.SCMSourceCriteria;
+import jenkins.scm.api.SCMSourceDescriptor;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import hudson.scm.ChangeLogSet;
-import org.junit.ClassRule;
-import org.junit.Test;
 import static org.junit.Assert.*;
+import org.junit.ClassRule;
 import org.junit.Rule;
+import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.SingleFileSCM;
+import org.jvnet.hudson.test.TestExtension;
 
 public class SCMSourceRetrieverTest {
 
@@ -131,6 +143,48 @@ public class SCMSourceRetrieverTest {
             assertEquals(0, changeSets.size());
             r.assertLogNotContains("Retrying after 10 seconds", b);
         }
+    }
+
+    @Issue("JENKINS-43802")
+    @Test public void owner() throws Exception {
+        GlobalLibraries.get().setLibraries(Collections.singletonList(
+            new LibraryConfiguration("test", new SCMSourceRetriever(new NeedsOwnerSCMSource()))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('test@abc123') import libVersion; echo(/loaded lib #${libVersion()}/)", true));
+        WorkflowRun b = r.buildAndAssertSuccess(p);
+        r.assertLogContains("loaded lib #abc123", b);
+        r.assertLogContains("Running in retrieve from p", b);
+    }
+    public static final class NeedsOwnerSCMSource extends SCMSource {
+        @Override protected SCMRevision retrieve(String version, TaskListener listener) throws IOException, InterruptedException {
+            if (getOwner() == null) {
+                throw new AbortException("No owner in retrieve!");
+            } else {
+                listener.getLogger().println("Running in retrieve from " + getOwner().getFullName());
+            }
+            return new DummySCMRevision(version, new SCMHead("trunk"));
+        }
+        @Override public SCM build(SCMHead head, SCMRevision revision) {
+            String version = ((DummySCMRevision) revision).version;
+            return new SingleFileSCM("vars/libVersion.groovy", ("def call() {'" + version + "'}").getBytes());
+        }
+        private static final class DummySCMRevision extends SCMRevision {
+            private final String version;
+            DummySCMRevision(String version, SCMHead head) {
+                super(head);
+                this.version = version;
+            }
+            @Override public boolean equals(Object obj) {
+                return obj instanceof DummySCMRevision && version.equals(((DummySCMRevision) obj).version);
+            }
+            @Override public int hashCode() {
+                return version.hashCode();
+            }
+        }
+        @Override protected void retrieve(SCMSourceCriteria criteria, SCMHeadObserver observer, SCMHeadEvent<?> event, TaskListener listener) throws IOException, InterruptedException {
+            throw new IOException("not implemented");
+        }
+        @TestExtension("owner") public static final class DescriptorImpl extends SCMSourceDescriptor {}
     }
 
     @Test public void retry() throws Exception {

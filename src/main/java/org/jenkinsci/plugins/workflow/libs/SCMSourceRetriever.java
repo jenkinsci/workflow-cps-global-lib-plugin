@@ -34,6 +34,7 @@ import hudson.Util;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.DescriptorVisibilityFilter;
+import hudson.model.Item;
 import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -47,6 +48,7 @@ import java.io.InterruptedIOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import javax.annotation.Nonnull;
@@ -54,6 +56,7 @@ import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
+import jenkins.scm.api.SCMSourceOwner;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
 import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
@@ -81,11 +84,25 @@ public class SCMSourceRetriever extends LibraryRetriever {
     }
 
     @Override public void retrieve(String name, String version, boolean changelog, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
-        SCMRevision revision = retrySCMOperation(listener, () -> scm.fetch(version, listener));
-        if (revision == null) {
-            throw new AbortException("No version " + version + " found for library " + name);
+        SCM s;
+        synchronized (scm) {
+            scm.setOwner(SCMSourceOwner.proxyFromItem(
+                    run.getParent(),
+                    null,
+                    () -> Collections.singletonList(scm),
+                    null
+            ));
+            try {
+                SCMRevision revision = retrySCMOperation(listener, () -> scm.fetch(version, listener));
+                if (revision == null) {
+                    throw new AbortException("No version " + version + " found for library " + name);
+                }
+                s = this.scm.build(revision.getHead(), revision);
+            } finally {
+                scm.setOwner(null);
+            }
         }
-        doRetrieve(name, changelog, scm.build(revision.getHead(), revision), target, run, listener);
+        doRetrieve(name, changelog, s, target, run, listener);
     }
 
     @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
@@ -160,11 +177,24 @@ public class SCMSourceRetriever extends LibraryRetriever {
         return System.getProperty(WorkspaceList.class.getName(), "@");
     }
 
-    @Override public FormValidation validateVersion(String name, String version) {
+    @Override public FormValidation validateVersion(String name, String version, Item context) {
         StringWriter w = new StringWriter();
         try {
             StreamTaskListener listener = new StreamTaskListener(w);
-            SCMRevision revision = scm.fetch(version, listener);
+            SCMRevision revision;
+            synchronized (scm) {
+                scm.setOwner(SCMSourceOwner.proxyFromItem(
+                        context,
+                        null,
+                        () -> Collections.singletonList(scm),
+                        null
+                ));
+                try {
+                    revision = scm.fetch(version, listener);
+                } finally {
+                    scm.setOwner(null);
+                }
+            }
             if (revision != null) {
                 // TODO validate repository structure using SCMFileSystem when implemented (JENKINS-33273)
                 return FormValidation.ok("Currently maps to revision: " + revision);

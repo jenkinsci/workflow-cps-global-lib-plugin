@@ -27,10 +27,13 @@ package org.jenkinsci.plugins.workflow.libs;
 import hudson.AbortException;
 import hudson.ExtensionPoint;
 import hudson.FilePath;
+import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
+import hudson.model.Item;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 /**
@@ -59,16 +62,26 @@ public abstract class LibraryRetriever extends AbstractDescribableImpl<LibraryRe
      * @param listener a way to report progress
      * @throws Exception if there is any problem (use {@link AbortException} for user errors)
      */
+    // TODO this should have been made nonabstract and deprecated and delegated to the new version
     public abstract void retrieve(@Nonnull String name, @Nonnull String version, @Nonnull FilePath target, @Nonnull Run<?,?> run, @Nonnull TaskListener listener) throws Exception;
+
+    @Deprecated
+    public FormValidation validateVersion(@Nonnull String name, @Nonnull String version) {
+        if (Util.isOverridden(LibraryRetriever.class, getClass(), "validateVersion", String.class, String.class, Item.class)) {
+            return validateVersion(name, version, null);
+        }
+        return FormValidation.ok();
+    }
 
     /**
      * Offer to validate a proposed {@code version} for {@link #retrieve}.
      * @param name the proposed library name
      * @param version a proposed version
+     * @param context optional context in which this runs
      * @return by default, OK
      */
-    public FormValidation validateVersion(@Nonnull String name, @Nonnull String version) {
-        return FormValidation.ok();
+    public FormValidation validateVersion(@Nonnull String name, @Nonnull String version, @CheckForNull Item context) {
+        return validateVersion(name, version);
     }
 
     @Override public LibraryRetrieverDescriptor getDescriptor() {

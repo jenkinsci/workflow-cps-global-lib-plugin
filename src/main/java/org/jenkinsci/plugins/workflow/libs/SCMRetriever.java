@@ -29,6 +29,7 @@ import hudson.FilePath;
 import hudson.Util;
 import hudson.model.Descriptor;
 import hudson.model.DescriptorVisibilityFilter;
+import hudson.model.Item;
 import hudson.model.Items;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -67,7 +68,8 @@ public class SCMRetriever extends LibraryRetriever {
     @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         SCMSourceRetriever.doRetrieve(name, true, scm, target, run, listener);
     }
-    @Override public FormValidation validateVersion(String name, String version) {
+
+    @Override public FormValidation validateVersion(String name, String version, Item context) {
         if (!Items.XSTREAM2.toXML(scm).contains("${library." + name + ".version}")) {
             return FormValidation.warningWithMarkup("When using <b>" + getDescriptor().getDisplayName() + "</b>, you will need to include <code>${library." + Util.escape(name) + ".version}</code> in the SCM configuration somewhere.");
         }
