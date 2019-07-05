@@ -64,10 +64,11 @@
     <properties>
         <revision>2.14</revision>
         <changelist>-SNAPSHOT</changelist>
-        <jenkins.version>2.121.3</jenkins.version>
+        <jenkins.version>2.138.4</jenkins.version>
         <java.level>8</java.level>
+        <useBeta>true</useBeta>
         <workflow-cps-plugin.version>2.71-rc2340.ea3a8e1ac84d</workflow-cps-plugin.version>
-        <git-plugin.version>3.9.3</git-plugin.version>
+        <git-plugin.version>4.0.0-rc</git-plugin.version>
         <scm-api-plugin.version>2.4.0</scm-api-plugin.version>
         <workflow-scm-step-plugin.version>2.7</workflow-scm-step-plugin.version>
         <workflow-multibranch-plugin.version>2.21</workflow-multibranch-plugin.version>
@@ -100,11 +101,6 @@
                     <artifactId>httpclient</artifactId>
                 </exclusion>
             </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins</groupId>
-            <artifactId>git-client</artifactId>
-            <version>2.7.6</version> <!-- do not pick up an obsolete version from git-server -->
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -279,6 +275,11 @@
                 <groupId>org.jenkins-ci.plugins</groupId>
                 <artifactId>apache-httpcomponents-client-4-api</artifactId>
                 <version>4.5.5-3.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jenkins-ci.plugins</groupId>
+                <artifactId>git-client</artifactId>
+                <version>3.0.0-rc</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
