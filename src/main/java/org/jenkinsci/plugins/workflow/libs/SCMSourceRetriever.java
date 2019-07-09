@@ -48,7 +48,9 @@ import java.io.InterruptedIOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
@@ -56,6 +58,8 @@ import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
 import org.jenkinsci.Symbol;
+import org.jenkinsci.plugins.structs.describable.CustomDescribableModel;
+import org.jenkinsci.plugins.structs.describable.UninstantiatedDescribable;
 import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
 import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
 import org.kohsuke.accmod.Restricted;
@@ -179,7 +183,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
     }
 
     @Symbol("modernSCM")
-    @Extension public static class DescriptorImpl extends LibraryRetrieverDescriptor {
+    @Extension public static class DescriptorImpl extends LibraryRetrieverDescriptor implements CustomDescribableModel {
 
         @Override public String getDisplayName() {
             return "Modern SCM";
@@ -197,6 +201,19 @@ public class SCMSourceRetriever extends LibraryRetriever {
                 }
             }
             return descriptors;
+        }
+
+        @Override public UninstantiatedDescribable customUninstantiate(UninstantiatedDescribable ud) {
+            Object scm = ud.getArguments().get("scm");
+            if (scm instanceof UninstantiatedDescribable) {
+                UninstantiatedDescribable scmUd = (UninstantiatedDescribable) scm;
+                Map<String, Object> scmArguments = new HashMap<>(scmUd.getArguments());
+                scmArguments.remove("id");
+                Map<String, Object> retrieverArguments = new HashMap<>(ud.getArguments());
+                retrieverArguments.put("scm", scmUd.withArguments(scmArguments));
+                return ud.withArguments(retrieverArguments);
+            }
+            return ud;
         }
 
     }

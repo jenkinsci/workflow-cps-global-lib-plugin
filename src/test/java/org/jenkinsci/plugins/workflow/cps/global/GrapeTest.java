@@ -81,12 +81,16 @@ public class GrapeTest {
         story.addStep(new Statement() {
             @Override public void evaluate() throws Throwable {
                 FileUtils.write(new File(repo.workspace, "vars/one.groovy"),
-                    "@Grab('org.apache.commons:commons-math3:3.4.1')\n" +
-                    "import org.apache.commons.math3.complex.ComplexField\n" +
-                    "def call() {ComplexField.instance.one}");
+                    "@Grab('commons-primitives:commons-primitives:1.0')\n" +
+                    "import org.apache.commons.collections.primitives.ArrayIntList\n" +
+                    "def call() {\n" +
+                    "  def list = new ArrayIntList()\n" +
+                    "  list.incrModCount()\n" +
+                    "  list.modCount\n" +
+                    "}");
                 WorkflowJob p = story.j.jenkins.createProject(WorkflowJob.class, "p");
-                p.setDefinition(new CpsFlowDefinition("echo(/${one()} + ${one()} = ${one().add(one())}/)", true));
-                story.j.assertLogContains("(1.0, 0.0) + (1.0, 0.0) = (2.0, 0.0)", story.j.buildAndAssertSuccess(p));
+                p.setDefinition(new CpsFlowDefinition("echo(/${one()} + ${one()} = ${one() + one()}/)", true));
+                story.j.assertLogContains("1 + 1 = 2", story.j.buildAndAssertSuccess(p));
             }
         });
     }
