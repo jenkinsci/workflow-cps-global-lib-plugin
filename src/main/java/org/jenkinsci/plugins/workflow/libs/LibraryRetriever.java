@@ -62,7 +62,7 @@ public abstract class LibraryRetriever extends AbstractDescribableImpl<LibraryRe
      * @param listener a way to report progress
      * @throws Exception if there is any problem (use {@link AbortException} for user errors)
      */
-    // TODO this should have been made nonabstract and deprecated and delegated to the new version
+    // TODO this should have been made nonabstract and deprecated and delegated to the new version; may be able to use access-modifier to help
     public abstract void retrieve(@Nonnull String name, @Nonnull String version, @Nonnull FilePath target, @Nonnull Run<?,?> run, @Nonnull TaskListener listener) throws Exception;
 
     @Deprecated
