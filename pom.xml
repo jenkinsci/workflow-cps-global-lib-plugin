@@ -69,7 +69,7 @@
         <useBeta>true</useBeta>
         <workflow-cps-plugin.version>2.71</workflow-cps-plugin.version>
         <git-plugin.version>4.0.0-rc</git-plugin.version>
-        <scm-api-plugin.version>2.4.0</scm-api-plugin.version>
+        <scm-api-plugin.version>2.6.3</scm-api-plugin.version>
         <workflow-scm-step-plugin.version>2.7</workflow-scm-step-plugin.version>
         <workflow-multibranch-plugin.version>2.21</workflow-multibranch-plugin.version>
         <workflow-step-api-plugin.version>2.20</workflow-step-api-plugin.version>

@@ -34,6 +34,7 @@ import hudson.Util;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.DescriptorVisibilityFilter;
+import hudson.model.Item;
 import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -85,7 +86,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
     }
 
     @Override public void retrieve(String name, String version, boolean changelog, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
-        SCMRevision revision = retrySCMOperation(listener, () -> scm.fetch(version, listener));
+        SCMRevision revision = retrySCMOperation(listener, () -> scm.fetch(version, listener, run.getParent()));
         if (revision == null) {
             throw new AbortException("No version " + version + " found for library " + name);
         }
@@ -164,11 +165,11 @@ public class SCMSourceRetriever extends LibraryRetriever {
         return System.getProperty(WorkspaceList.class.getName(), "@");
     }
 
-    @Override public FormValidation validateVersion(String name, String version) {
+    @Override public FormValidation validateVersion(String name, String version, Item context) {
         StringWriter w = new StringWriter();
         try {
             StreamTaskListener listener = new StreamTaskListener(w);
-            SCMRevision revision = scm.fetch(version, listener);
+            SCMRevision revision = scm.fetch(version, listener, context);
             if (revision != null) {
                 // TODO validate repository structure using SCMFileSystem when implemented (JENKINS-33273)
                 return FormValidation.ok("Currently maps to revision: " + revision);
@@ -189,13 +190,13 @@ public class SCMSourceRetriever extends LibraryRetriever {
         }
 
         /**
-         * Returns only implementations overriding {@link SCMSource#retrieve(String, TaskListener)}.
+         * Returns only implementations overriding {@link SCMSource#retrieve(String, TaskListener)} or {@link SCMSource#retrieve(String, TaskListener, Item)}.
          */
         @Restricted(NoExternalUse.class) // Jelly, Hider
         public Collection<SCMSourceDescriptor> getSCMDescriptors() {
             List<SCMSourceDescriptor> descriptors = new ArrayList<>();
             for (SCMSourceDescriptor d : ExtensionList.lookup(SCMSourceDescriptor.class)) {
-                if (Util.isOverridden(SCMSource.class, d.clazz, "retrieve", String.class, TaskListener.class)) {
+                if (Util.isOverridden(SCMSource.class, d.clazz, "retrieve", String.class, TaskListener.class) || Util.isOverridden(SCMSource.class, d.clazz, "retrieve", String.class, TaskListener.class, Item.class)) {
                     descriptors.add(d);
                 }
             }
