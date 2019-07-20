@@ -137,7 +137,7 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
                         if (x instanceof AbortException) {
                             listener.error(x.getMessage());
                         } else {
-                            listener.getLogger().println(Functions.printThrowable(x).trim()); // TODO 2.43+ use Functions.printStackTrace
+                            Functions.printStackTrace(x, listener.getLogger());
                         }
                         throw new CompilationFailedException(Phases.CONVERSION, source);
                     } catch (IOException x2) {
