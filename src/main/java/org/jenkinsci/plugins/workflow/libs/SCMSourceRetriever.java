@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.ExtensionList;
@@ -33,6 +34,7 @@ import hudson.Util;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.DescriptorVisibilityFilter;
+import hudson.model.Item;
 import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -46,7 +48,9 @@ import java.io.InterruptedIOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
@@ -54,6 +58,8 @@ import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
 import org.jenkinsci.Symbol;
+import org.jenkinsci.plugins.structs.describable.CustomDescribableModel;
+import org.jenkinsci.plugins.structs.describable.UninstantiatedDescribable;
 import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
 import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
 import org.kohsuke.accmod.Restricted;
@@ -80,7 +86,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
     }
 
     @Override public void retrieve(String name, String version, boolean changelog, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
-        SCMRevision revision = retrySCMOperation(listener, () -> scm.fetch(version, listener));
+        SCMRevision revision = retrySCMOperation(listener, () -> scm.fetch(version, listener, run.getParent()));
         if (revision == null) {
             throw new AbortException("No version " + version + " found for library " + name);
         }
@@ -108,7 +114,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
             catch (InterruptedIOException e) {
                 throw e;
             }
-            catch (IOException e) {
+            catch (Exception e) {
                 // checkout error not yet reported
                 Functions.printStackTrace(e, listener.error("Checkout failed"));
             }
@@ -122,6 +128,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
         return ret;
     }
 
+    @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", justification = "apparently bogus complaint about redundant nullcheck in try-with-resources")
     static void doRetrieve(String name, boolean changelog, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         // Adapted from CpsScmFlowDefinition:
         SCMStep delegate = new GenericSCMStep(scm);
@@ -158,11 +165,11 @@ public class SCMSourceRetriever extends LibraryRetriever {
         return System.getProperty(WorkspaceList.class.getName(), "@");
     }
 
-    @Override public FormValidation validateVersion(String name, String version) {
+    @Override public FormValidation validateVersion(String name, String version, Item context) {
         StringWriter w = new StringWriter();
         try {
             StreamTaskListener listener = new StreamTaskListener(w);
-            SCMRevision revision = scm.fetch(version, listener);
+            SCMRevision revision = scm.fetch(version, listener, context);
             if (revision != null) {
                 // TODO validate repository structure using SCMFileSystem when implemented (JENKINS-33273)
                 return FormValidation.ok("Currently maps to revision: " + revision);
@@ -176,24 +183,37 @@ public class SCMSourceRetriever extends LibraryRetriever {
     }
 
     @Symbol("modernSCM")
-    @Extension public static class DescriptorImpl extends LibraryRetrieverDescriptor {
+    @Extension public static class DescriptorImpl extends LibraryRetrieverDescriptor implements CustomDescribableModel {
 
         @Override public String getDisplayName() {
             return "Modern SCM";
         }
 
         /**
-         * Returns only implementations overriding {@link SCMSource#retrieve(String, TaskListener)}.
+         * Returns only implementations overriding {@link SCMSource#retrieve(String, TaskListener)} or {@link SCMSource#retrieve(String, TaskListener, Item)}.
          */
         @Restricted(NoExternalUse.class) // Jelly, Hider
         public Collection<SCMSourceDescriptor> getSCMDescriptors() {
             List<SCMSourceDescriptor> descriptors = new ArrayList<>();
             for (SCMSourceDescriptor d : ExtensionList.lookup(SCMSourceDescriptor.class)) {
-                if (Util.isOverridden(SCMSource.class, d.clazz, "retrieve", String.class, TaskListener.class)) {
+                if (Util.isOverridden(SCMSource.class, d.clazz, "retrieve", String.class, TaskListener.class) || Util.isOverridden(SCMSource.class, d.clazz, "retrieve", String.class, TaskListener.class, Item.class)) {
                     descriptors.add(d);
                 }
             }
             return descriptors;
+        }
+
+        @Override public UninstantiatedDescribable customUninstantiate(UninstantiatedDescribable ud) {
+            Object scm = ud.getArguments().get("scm");
+            if (scm instanceof UninstantiatedDescribable) {
+                UninstantiatedDescribable scmUd = (UninstantiatedDescribable) scm;
+                Map<String, Object> scmArguments = new HashMap<>(scmUd.getArguments());
+                scmArguments.remove("id");
+                Map<String, Object> retrieverArguments = new HashMap<>(ud.getArguments());
+                retrieverArguments.put("scm", scmUd.withArguments(scmArguments));
+                return ud.withArguments(retrieverArguments);
+            }
+            return ud;
         }
 
     }

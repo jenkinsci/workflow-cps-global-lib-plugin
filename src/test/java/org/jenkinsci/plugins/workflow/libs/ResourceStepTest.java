@@ -25,6 +25,7 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import hudson.FilePath;
+import hudson.Functions;
 import hudson.model.Result;
 import hudson.model.Run;
 
@@ -41,6 +42,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import static org.junit.Assume.*;
 import org.junit.Test;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -163,6 +165,7 @@ public class ResourceStepTest {
 
     @Issue("JENKINS-52313")
     @Test public void specifyResourceEncoding() throws Exception {
+        assumeFalse("TODO mojibake on windows-11-2.164.1", Functions.isWindows());
         sampleRepo.init();
         sampleRepo.write("src/pkg/Stuff.groovy", "package pkg; class Stuff {" +
                 "static def utf8(script) {script.libraryResource(resource: 'pkg/utf8', encoding: 'ISO-8859-15')}\n" +

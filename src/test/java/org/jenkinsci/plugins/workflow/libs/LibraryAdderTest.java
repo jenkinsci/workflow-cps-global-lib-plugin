@@ -336,4 +336,22 @@ public class LibraryAdderTest {
         r.assertLogContains("set to loaded null", r.buildAndAssertSuccess(p));
     }
 
+    @Issue("JENKINS-56682")
+    @Test public void scriptFieldsWhereInitializerUsesLibrary() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/pkg/Foo.groovy", "package pkg; class Foo { }");
+        sampleRepo.git("add", "src");
+        sampleRepo.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(
+            new LibraryConfiguration("lib",
+                new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition(
+                "@Library('lib@master') import pkg.Foo\n" +
+                "import groovy.transform.Field\n" +
+                "@Field f = new Foo()\n" +
+                "@Field static g = new Foo()\n", true));
+        r.buildAndAssertSuccess(p);
+    }
+
 }

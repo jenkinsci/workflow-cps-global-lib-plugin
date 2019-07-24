@@ -36,7 +36,12 @@ import hudson.util.FormValidation;
 import jenkins.model.Jenkins;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
-import org.kohsuke.stapler.*;
+import org.kohsuke.stapler.AncestorInPath;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.Stapler;
+import org.kohsuke.stapler.StaplerRequest;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -165,7 +170,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
             return FormValidation.ok();
         }
 
-        public FormValidation doCheckDefaultVersion(@QueryParameter String defaultVersion, @QueryParameter boolean implicit, @QueryParameter boolean allowVersionOverride, @QueryParameter String name) {
+        public FormValidation doCheckDefaultVersion(@AncestorInPath Item context, @QueryParameter String defaultVersion, @QueryParameter boolean implicit, @QueryParameter boolean allowVersionOverride, @QueryParameter String name) {
             if (defaultVersion.isEmpty()) {
                 if (implicit) {
                     return FormValidation.error("If you load a library implicitly, you must specify a default version.");
@@ -178,7 +183,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
                 for (LibraryResolver resolver : ExtensionList.lookup(LibraryResolver.class)) {
                     for (LibraryConfiguration config : resolver.fromConfiguration(Stapler.getCurrentRequest())) {
                         if (config.getName().equals(name)) {
-                            return config.getRetriever().validateVersion(name, defaultVersion);
+                            return config.getRetriever().validateVersion(name, defaultVersion, context);
                         }
                     }
                 }
@@ -187,14 +192,14 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
         }
 
         /* TODO currently impossible; autoCompleteField does not support passing neighboring fields:
-        public AutoCompletionCandidates doAutoCompleteDefaultVersion(@QueryParameter String defaultVersion, @QueryParameter String name) {
+        public AutoCompletionCandidates doAutoCompleteDefaultVersion(@AncestorInPath Item context, @QueryParameter String defaultVersion, @QueryParameter String name) {
             AutoCompletionCandidates candidates = new AutoCompletionCandidates();
             for (LibraryResolver resolver : ExtensionList.lookup(LibraryResolver.class)) {
                 for LibraryConfiguration config : resolver.fromConfiguration(Stapler.getCurrentRequest()) {
                     // TODO define LibraryRetriever.completeVersions
                     if (config.getName().equals(name) && config.getRetriever() instanceof SCMSourceRetriever) {
                         try {
-                            for (String revision : ((SCMSourceRetriever) config.getRetriever()).getScm().fetchRevisions(null)) {
+                            for (String revision : ((SCMSourceRetriever) config.getRetriever()).getScm().fetchRevisions(null, context)) {
                                 if (revision.startsWith(defaultVersion)) {
                                     candidates.add(revision);
                                 }

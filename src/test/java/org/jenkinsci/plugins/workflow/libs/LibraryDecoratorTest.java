@@ -31,10 +31,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
 import org.apache.commons.io.FileUtils;
+import org.jenkinsci.plugins.workflow.actions.ErrorAction;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.jenkinsci.plugins.workflow.support.storage.SimpleXStreamFlowNodeStorage;
+import static org.junit.Assert.*;
 import org.junit.Test;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -102,4 +105,23 @@ public class LibraryDecoratorTest {
             throw new AbortException("failed to load " + libraries);
         }
     }
+
+    @Issue("JENKINS-57085")
+    @Test public void stackTraceFilenames() throws Exception {
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        FileUtils.write(new File(p.getRootDir(), "libs/foo/pkg/Lib.groovy"), "package pkg; class Lib {static def fail() {throw new Exception('oops')}}");
+        p.setDefinition(new CpsFlowDefinition("@Library('foo') import pkg.Lib; Lib.fail()", true));
+        WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+        r.assertLogContains("java.lang.Exception: oops", b);
+        r.assertLogContains("\tat pkg.Lib.fail(Lib.groovy:1)", b);
+        ErrorAction errorAction = b.getExecution().getCurrentHeads().get(0).getAction(ErrorAction.class);
+        assertNotNull(errorAction);
+        Throwable t = errorAction.getError();
+        String xml = SimpleXStreamFlowNodeStorage.XSTREAM.toXML(t);
+        Throwable t2 = (Throwable) SimpleXStreamFlowNodeStorage.XSTREAM.fromXML(xml);
+        String xml2 = SimpleXStreamFlowNodeStorage.XSTREAM.toXML(t2);
+        // Comparing the actual StackTraceElement arrays is hopeless: https://github.com/x-stream/xstream/pull/145#discussion_r278613917
+        assertEquals(xml, xml2);
+    }
+
 }
