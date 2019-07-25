@@ -44,6 +44,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 
 /**
  * User configuration for one library.
@@ -159,6 +160,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
             return FormValidation.ok();
         }
 
+        @RequirePOST
         public FormValidation doCheckDefaultVersion(@QueryParameter String defaultVersion, @QueryParameter boolean implicit, @QueryParameter boolean allowVersionOverride, @QueryParameter String name) {
             if (defaultVersion.isEmpty()) {
                 if (implicit) {
