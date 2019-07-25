@@ -25,15 +25,21 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
+import com.gargoylesoftware.htmlunit.HttpMethod;
+import com.gargoylesoftware.htmlunit.WebRequest;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.html.HtmlTextArea;
+import com.gargoylesoftware.htmlunit.util.NameValuePair;
 import com.google.common.collect.ImmutableMap;
+import hudson.model.Item;
 import hudson.model.Result;
 import hudson.plugins.git.GitSCM;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import jenkins.model.Jenkins;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
 import jenkins.scm.impl.subversion.SubversionSCMSource;
@@ -53,6 +59,7 @@ import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.MockAuthorizationStrategy;
 
 public class FolderLibrariesTest {
 
@@ -214,6 +221,40 @@ public class FolderLibrariesTest {
                 r.assertLogContains("loaded pkg.Obj@", r.buildAndAssertSuccess(p));
             }
         }
+    }
+
+    @Issue("SECURITY-1422")
+    @Test public void checkDefaultVersionRestricted() throws Exception {
+        sampleRepo1.init();
+        sampleRepo1.write("vars/myecho.groovy", "def call() {echo 'something special'}");
+        sampleRepo1.git("add", "vars");
+        sampleRepo1.git("commit", "--message=init");
+        r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
+        MockAuthorizationStrategy s = new MockAuthorizationStrategy()
+                .grant(Jenkins.READ).everywhere().toEveryone()
+                .grant(Item.READ).everywhere().toEveryone()
+                .grant(Item.CONFIGURE).everywhere().to("admin");
+        r.jenkins.setAuthorizationStrategy(s);
+        LibraryConfiguration foo = new LibraryConfiguration("foo", new SCMSourceRetriever(new GitSCMSource(sampleRepo1.toString())));
+        Folder f = r.jenkins.createProject(Folder.class, "f");
+        f.getProperties().add(new FolderLibraries(Arrays.asList(foo)));
+        JenkinsRule.WebClient wc = r.createWebClient();
+        wc.setThrowExceptionOnFailingStatusCode(false);
+        WebRequest req = new WebRequest(new URL(wc.getContextPath() + f.getUrl() + "/descriptorByName/" +
+                LibraryConfiguration.class.getName() + "/checkDefaultVersion"), HttpMethod.POST);
+        req.setRequestParameters(Arrays.asList(
+                new NameValuePair("name", "foo"),
+                new NameValuePair("defaultVersion", "master"),
+                new NameValuePair("value", "master"),
+                new NameValuePair("implicit", "false"),
+                new NameValuePair("allowVersionOverride", "true")));
+        wc.addCrumb(req);
+        wc.login("user", "user");
+        assertThat(wc.getPage(req).getWebResponse().getContentAsString(),
+                containsString("Cannot validate default version until after saving and reconfiguring"));
+        wc.login("admin", "admin");
+        assertThat(wc.getPage(req).getWebResponse().getContentAsString(),
+                containsString("Currently maps to revision"));
     }
 
     // TODO test replay of `load`ed scripts as well as libraries

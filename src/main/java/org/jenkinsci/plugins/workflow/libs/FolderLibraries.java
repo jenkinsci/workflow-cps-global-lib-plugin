@@ -28,6 +28,7 @@ import com.cloudbees.hudson.plugins.folder.AbstractFolder;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderProperty;
 import com.cloudbees.hudson.plugins.folder.AbstractFolderPropertyDescriptor;
 import hudson.Extension;
+import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.Job;
 import java.util.ArrayList;
@@ -69,27 +70,30 @@ public class FolderLibraries extends AbstractFolderProperty<AbstractFolder<?>> {
             return false;
         }
 
-        private Collection<LibraryConfiguration> forGroup(@CheckForNull ItemGroup<?> group) {
+        private Collection<LibraryConfiguration> forGroup(@CheckForNull ItemGroup<?> group, boolean checkPermission) {
             List<LibraryConfiguration> libraries = new ArrayList<>();
             for (ItemGroup<?> g = group; g instanceof AbstractFolder; g = ((AbstractFolder) g).getParent()) {
-                FolderLibraries prop = ((AbstractFolder<?>) g).getProperties().get(FolderLibraries.class);
-                if (prop != null) {
-                    libraries.addAll(prop.getLibraries());
+                AbstractFolder<?> f = (AbstractFolder<?>) g;
+                if (!checkPermission || f.hasPermission(Item.CONFIGURE)) {
+                    FolderLibraries prop = f.getProperties().get(FolderLibraries.class);
+                    if (prop != null) {
+                        libraries.addAll(prop.getLibraries());
+                    }
                 }
             }
             return libraries;
         }
 
         @Override public Collection<LibraryConfiguration> forJob(Job<?,?> job, Map<String,String> libraryVersions) {
-            return forGroup(job.getParent());
+            return forGroup(job.getParent(), false);
         }
 
         @Override public Collection<LibraryConfiguration> fromConfiguration(StaplerRequest request) {
-            return forGroup(request.findAncestorObject(AbstractFolder.class));
+            return forGroup(request.findAncestorObject(AbstractFolder.class), true);
         }
 
         @Override public Collection<LibraryConfiguration> suggestedConfigurations(ItemGroup<?> group) {
-            return forGroup(group);
+            return forGroup(group, false);
         }
 
     }
