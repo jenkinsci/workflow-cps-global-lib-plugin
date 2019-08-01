@@ -96,7 +96,8 @@
             <artifactId>git-server</artifactId>
             <version>1.7</version>
             <exclusions>
-                <exclusion>
+                 <exclusion>
+                 <!-- Workaround for packaging bug in maven-hpi-plugin, see discussion in https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/75 -->
                     <groupId>org.jenkins-ci.plugins</groupId>
                     <artifactId>apache-httpcomponents-client-4-api</artifactId>
                 </exclusion>
