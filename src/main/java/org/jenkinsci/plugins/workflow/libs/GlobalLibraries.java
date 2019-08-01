@@ -89,7 +89,10 @@ import org.kohsuke.stapler.StaplerRequest;
         }
 
         @Override public Collection<LibraryConfiguration> fromConfiguration(StaplerRequest request) {
-            return GlobalLibraries.get().getLibraries();
+            if (Jenkins.get().hasPermission(Jenkins.RUN_SCRIPTS)) {
+                return GlobalLibraries.get().getLibraries();
+            }
+            return Collections.emptySet();
         }
 
         @Override public Collection<LibraryConfiguration> suggestedConfigurations(ItemGroup<?> group) {
