@@ -64,7 +64,8 @@ public class WorkflowLibRepositoryTest {
 
                 p.setDefinition(new CpsFlowDefinition(
                         "o=new foo.Foo().answer()\n" +
-                        "println 'o=' + o;"));
+                        "println 'o=' + o;",
+                        true));
 
                 // get the build going
                 WorkflowRun b = p.scheduleBuild2(0).getStartCondition().get();
@@ -163,7 +164,7 @@ public class WorkflowLibRepositoryTest {
                 FileUtils.writeStringToFile(new File(vars, "block.groovy"), "def call(body) {node {body()}}");
                 uvl.rebuild();
                 WorkflowJob p = jenkins.createProject(WorkflowJob.class, "p");
-                p.setDefinition(new CpsFlowDefinition("block {semaphore 'wait'}"));
+                p.setDefinition(new CpsFlowDefinition("block {semaphore 'wait'}", true));
                 WorkflowRun b = p.scheduleBuild2(0).waitForStart();
                 SemaphoreStep.waitForStart("wait/1", b);
             }
