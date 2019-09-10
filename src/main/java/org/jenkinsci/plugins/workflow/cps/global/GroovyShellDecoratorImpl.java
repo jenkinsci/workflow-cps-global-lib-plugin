@@ -29,6 +29,7 @@ public class GroovyShellDecoratorImpl extends GroovyShellDecorator {
                 try {
                     shell.getClassLoader().addURL(new File(repo.workspace,"src").toURI().toURL());
                     shell.getClassLoader().addURL(new File(repo.workspace, UserDefinedGlobalVariable.PREFIX).toURI().toURL());
+                    shell.getClassLoader().addURL(new File(repo.workspace,"src/main/groovy").toURI().toURL());
                 } catch (MalformedURLException e) {
                     throw new AssertionError(e);
                 }

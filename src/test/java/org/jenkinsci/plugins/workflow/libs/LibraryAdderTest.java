@@ -71,19 +71,21 @@ public class LibraryAdderTest {
         sampleRepo.init();
         String lib = "package pkg; class Lib {static String CONST = 'constant'}";
         sampleRepo.write("src/pkg/Lib.groovy", lib);
+        String libBar = "package pkg; class LibBar {static String CONSTBAR = 'constantBar'}";
+        sampleRepo.write("src/main/groovy/pkg/LibBar.groovy", libBar);
         sampleRepo.git("add", "src");
         sampleRepo.git("commit", "--message=init");
         GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
-        String script = "@Library('stuff@master') import static pkg.Lib.*; echo(/using ${CONST}/)";
+        String script = "@Library('stuff@master') import static pkg.Lib.*; import static pkg.LibBar.*; echo(/using ${CONST} ${CONSTBAR}/)";
         p.setDefinition(new CpsFlowDefinition(script, true));
-        r.assertLogContains("using constant", r.buildAndAssertSuccess(p));
+        r.assertLogContains("using constant constantBar", r.buildAndAssertSuccess(p));
         sampleRepo.git("tag", "1.0");
         sampleRepo.write("src/pkg/Lib.groovy", lib.replace("constant", "modified"));
         sampleRepo.git("commit", "--all", "--message=modified");
         r.assertLogContains("using modified", r.buildAndAssertSuccess(p));
         p.setDefinition(new CpsFlowDefinition(script.replace("master", "1.0"), true));
-        r.assertLogContains("using constant", r.buildAndAssertSuccess(p));
+        r.assertLogContains("using constant constantBar", r.buildAndAssertSuccess(p));
     }
 
     @Test public void usingInterpolation() throws Exception {

@@ -55,6 +55,11 @@ public class WorkflowLibRepositoryLocalTest extends Assert {
 
         FileUtils.writeStringToFile(f,"package org.acme; def hello() { echo('answer is 42') }");
 
+        f = new File(dir, "src/main/groovy/org/acme/Bar.groovy");
+        f.getParentFile().mkdirs();
+
+        FileUtils.writeStringToFile(f,"package org.acme; def hello() { echo('answer was 42') }");
+
         // commit & push
         git.add().addFilepattern(".").call();
         git.commit().setMessage("Initial commit").call();
@@ -62,9 +67,11 @@ public class WorkflowLibRepositoryLocalTest extends Assert {
 
         // test if this script is accessible from form validation
         WorkflowJob p = j.createProject(WorkflowJob.class);
+        assertEquals(cfdd.doCheckScriptCompile(p, "import org.acme.Bar"), CpsFlowDefinitionValidator.CheckStatus.SUCCESS.asJSON());
         assertEquals(cfdd.doCheckScriptCompile(p, "import org.acme.Foo"), CpsFlowDefinitionValidator.CheckStatus.SUCCESS.asJSON());
         assertNotEquals(cfdd.doCheckScriptCompile(p, "import org.acme.NoSuchThing").toString(), CpsFlowDefinitionValidator.CheckStatus.SUCCESS.asJSON().toString()); // control test
         // valid from script-security point of view
+        assertSame(cfdd.doCheckScript("import org.acme.Bar", true), FormValidation.ok());
         assertSame(cfdd.doCheckScript("import org.acme.Foo", true), FormValidation.ok());
         assertSame(cfdd.doCheckScript("import org.acme.NoSuchThing", true), FormValidation.ok());
     }
