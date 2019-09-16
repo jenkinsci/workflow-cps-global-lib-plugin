@@ -39,6 +39,9 @@ THE SOFTWARE.
     </f:entry>
     <f:entry field="includeInChangesets" title="${%Include @Library changes in job recent changes}">
         <f:checkbox default="true"/>
+    </f:entry>    
+	<f:entry field="libBasePath" title="${%Library base path}">
+        <f:textbox/>
     </f:entry>
     <f:descriptorRadioList varName="retriever" instance="${instance.retriever}" descriptors="${descriptor.retrieverDescriptors}" title="${%Retrieval method}"/>
 </j:jelly>

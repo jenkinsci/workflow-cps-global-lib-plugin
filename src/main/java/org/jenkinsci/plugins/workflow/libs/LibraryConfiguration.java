@@ -58,10 +58,12 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     private boolean implicit;
     private boolean allowVersionOverride = true;
     private boolean includeInChangesets = true;
+    private String libBasePath;
 
     @DataBoundConstructor public LibraryConfiguration(String name, LibraryRetriever retriever) {
         this.name = name;
         this.retriever = retriever;
+        this.libBasePath = "";
     }
 
     /**
@@ -121,7 +123,20 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
         this.includeInChangesets = includeInChangesets;
     }
 
-    @Nonnull boolean defaultedChangelogs(@CheckForNull Boolean changelog) throws AbortException {
+    /**
+     * Library base path.
+     * 
+     * @return the library base path
+     */
+    public String getLibBasePath() {
+		return libBasePath;
+	}
+        
+    @DataBoundSetter public void setLibBasePath(String libBasePath) {
+		this.libBasePath = libBasePath;
+	}
+
+	@Nonnull boolean defaultedChangelogs(@CheckForNull Boolean changelog) throws AbortException {
       if (changelog == null) {
         return includeInChangesets;
       } else {

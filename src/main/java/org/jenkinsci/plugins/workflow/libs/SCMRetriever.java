@@ -62,11 +62,11 @@ public class SCMRetriever extends LibraryRetriever {
     }
 
     @Override public void retrieve(String name, String version, boolean changelog, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
-        SCMSourceRetriever.doRetrieve(name, changelog, scm, target, run, listener);
+        SCMSourceRetriever.doRetrieve(name, version, changelog, scm, target, run, listener);
     }
 
     @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
-        SCMSourceRetriever.doRetrieve(name, true, scm, target, run, listener);
+        SCMSourceRetriever.doRetrieve(name, version, true, scm, target, run, listener);
     }
     
     @Override public FormValidation validateVersion(String name, String version, Item context) {

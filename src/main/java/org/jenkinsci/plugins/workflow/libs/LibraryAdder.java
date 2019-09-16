@@ -119,8 +119,9 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                     continue;
                 }
                 String version = cfg.defaultedVersion(libraryVersions.remove(name));
+                String libBasePath = cfg.getLibBasePath();
                 Boolean changelog = cfg.defaultedChangelogs(libraryChangelogs.remove(name));
-                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted, changelog));
+                librariesAdded.put(name, new LibraryRecord(name, version, libBasePath, kindTrusted, changelog));
                 retrievers.put(name, cfg.getRetriever());
             }
         }

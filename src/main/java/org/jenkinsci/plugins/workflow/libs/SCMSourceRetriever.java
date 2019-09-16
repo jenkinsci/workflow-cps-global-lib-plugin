@@ -24,6 +24,29 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.logging.Logger;
+
+import javax.annotation.Nonnull;
+
+import org.jenkinsci.Symbol;
+import org.jenkinsci.plugins.structs.describable.CustomDescribableModel;
+import org.jenkinsci.plugins.structs.describable.UninstantiatedDescribable;
+import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
+import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
+import org.kohsuke.stapler.DataBoundConstructor;
+
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.AbortException;
 import hudson.Extension;
@@ -43,35 +66,18 @@ import hudson.scm.SCM;
 import hudson.slaves.WorkspaceList;
 import hudson.util.FormValidation;
 import hudson.util.StreamTaskListener;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
-import org.jenkinsci.Symbol;
-import org.jenkinsci.plugins.structs.describable.CustomDescribableModel;
-import org.jenkinsci.plugins.structs.describable.UninstantiatedDescribable;
-import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
-import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.DoNotUse;
-import org.kohsuke.accmod.restrictions.NoExternalUse;
-import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
  * Uses {@link SCMSource#fetch(String, TaskListener)} to retrieve a specific revision.
  */
 public class SCMSourceRetriever extends LibraryRetriever {
 
+	private static final Logger LOGGER = Logger.getLogger(SCMSourceRetriever.class.getName());
+	
     private final SCMSource scm;
 
     @DataBoundConstructor public SCMSourceRetriever(SCMSource scm) {
@@ -90,7 +96,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
         if (revision == null) {
             throw new AbortException("No version " + version + " found for library " + name);
         }
-        doRetrieve(name, changelog, scm.build(revision.getHead(), revision), target, run, listener);
+        doRetrieve(name, version, changelog, scm.build(revision.getHead(), revision), target, run, listener);
     }
 
     @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
@@ -129,7 +135,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
     }
 
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", justification = "apparently bogus complaint about redundant nullcheck in try-with-resources")
-    static void doRetrieve(String name, boolean changelog, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    static void doRetrieve(String name, String version, boolean changelog, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         // Adapted from CpsScmFlowDefinition:
         SCMStep delegate = new GenericSCMStep(scm);
         delegate.setPoll(false); // TODO we have no API for determining if a given SCMHead is branch-like or tag-like; would we want to turn on polling if the former?
@@ -154,12 +160,39 @@ public class SCMSourceRetriever extends LibraryRetriever {
                 delegate.checkout(run, lease.path, listener, node.createLauncher(listener));
                 return null;
             });
+            
+            String libBasePath = getLibBasePath(name, version, run);
+            
+            LOGGER.info("libBasePath: "+libBasePath);
+            
             // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
-            // Copy sources with relevant files from the checkout:
-            lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);
+            // Copy sources with relevant files from the checkout:            
+            if (libBasePath==null || libBasePath.trim().equals("")) {           
+	            lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);
+            } else {
+            	String trimedLibBasePath = libBasePath.trim();
+            	String libBase = trimedLibBasePath.endsWith("/") ? trimedLibBasePath : trimedLibBasePath + "/";
+            	WorkspaceList.Lease lib = computer.getWorkspaceList().allocate(dir.child(libBase));
+            	lib.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);            	
+            }
         }
     }
 
+    
+    private static String getLibBasePath(String name, String version, Run<?,?> build) {
+    	Map<String,String> libraryVersions = new HashMap<>();
+    	libraryVersions.put(name, version);
+    	for (LibraryResolver kind : ExtensionList.lookup(LibraryResolver.class)) {
+            for (LibraryConfiguration cfg : kind.forJob(build.getParent(), libraryVersions)) {
+                String libName = cfg.getName();
+                if (libName.equals(name)) {
+                	return cfg.getLibBasePath();
+                }
+            }
+        }
+    	return "";
+    }
+    
     // TODO there is WorkspaceList.tempDir but no API to make other variants
     private static String getFilePathSuffix() {
         return System.getProperty(WorkspaceList.class.getName(), "@");

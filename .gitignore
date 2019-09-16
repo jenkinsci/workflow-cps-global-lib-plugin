@@ -1,3 +1,6 @@
 target
 work
 .idea
+.classpath
+.project
+.settings

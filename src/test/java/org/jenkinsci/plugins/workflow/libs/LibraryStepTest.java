@@ -33,6 +33,8 @@ import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.SubmoduleConfig;
 import hudson.plugins.git.UserRemoteConfig;
 import hudson.plugins.git.extensions.GitSCMExtension;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -98,14 +100,18 @@ public class LibraryStepTest {
         WorkflowRun b = r.buildAndAssertSuccess(p);
         r.assertLogContains("ran library", b);
         LibrariesAction action = b.getAction(LibrariesAction.class);
-        assertNotNull(action);
-        assertEquals("[LibraryRecord{name=stuff, version=master, variables=[x], trusted=true, changelog=true}]", action.getLibraries().toString());
+        assertNotNull(action);        
+        List<LibraryRecord> expectedStuff = new ArrayList<LibraryRecord>();
+        expectedStuff.add(new LibraryRecord("stuff", "master", "", true, true));
+        assertEquals(expectedStuff, action.getLibraries());        
         p.setDefinition(new CpsFlowDefinition("library identifier: 'otherstuff@master', retriever: modernSCM([$class: 'GitSCMSource', remote: $/" + sampleRepo + "/$, credentialsId: '']), changelog: false; x()", true));
         b = r.buildAndAssertSuccess(p);
         r.assertLogContains("ran library", b);
         action = b.getAction(LibrariesAction.class);
         assertNotNull(action);
-        assertEquals("[LibraryRecord{name=otherstuff, version=master, variables=[x], trusted=false, changelog=false}]", action.getLibraries().toString());
+        List<LibraryRecord> expectedOtherStuff = new ArrayList<LibraryRecord>();
+        expectedOtherStuff.add(new LibraryRecord("otherstuff", "master", "", false, false));
+        assertEquals(expectedOtherStuff, action.getLibraries());
     }
 
     @Test public void classes() throws Exception {
@@ -122,6 +128,26 @@ public class LibraryStepTest {
         r.assertLogContains("using constant vs. constant", b);
     }
 
+    @Test public void testLibBasePath() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("common/subprojects/sharedlibs/src/some/pkg/Lib.groovy", "package some.pkg; class Lib {static class Inner {static String stuff() {Constants.CONST}}}");
+        sampleRepo.write("common/subprojects/sharedlibs/src/some/pkg/Constants.groovy", "package some.pkg; class Constants {static String CONST = 'constant'}");
+        sampleRepo.write("common/subprojects/sharedlibs/src/some/pkg/App.groovy", "package some.pkg; class App implements Serializable {def run() {Lib.Inner.stuff()}}");
+        sampleRepo.git("add", "common/subprojects/sharedlibs/src");
+        sampleRepo.write("common/subprojects/sharedlibs/vars/x.groovy", "def call() {echo 'ran library'}");
+        sampleRepo.git("add", "common/subprojects/sharedlibs/vars");
+        sampleRepo.git("commit", "--message=init");        
+        LibraryConfiguration libConf = new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
+        libConf.setLibBasePath("common/subprojects/sharedlibs/");        
+        GlobalLibraries.get().setLibraries(Collections.singletonList(libConf));        
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("def lib = library 'stuff@master'; x(); echo(/using ${lib.some.pkg.Lib.Inner.stuff()} vs. ${lib.some.pkg.App.new().run()}/)", true));
+        WorkflowRun b = r.buildAndAssertSuccess(p);
+        r.assertLogContains("using constant vs. constant", b); 
+        r.assertLogContains("ran library", b);
+    }
+    
+    
     @Test public void classesFromWrongPlace() throws Exception {
         sampleRepo.init();
         sampleRepo.write("src/some/pkg/Lib.groovy", "package some.pkg; class Lib {static void m() {}}");

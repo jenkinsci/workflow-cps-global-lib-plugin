@@ -164,6 +164,7 @@ public class LibraryStep extends AbstractStepImpl {
         @Override protected LoadedClasses run() throws Exception {
             String[] parsed = LibraryAdder.parse(step.identifier);
             String name = parsed[0], version = parsed[1];
+            String libBasePath = "";
             boolean trusted = false;
             Boolean changelog = step.getChangelog();
             LibraryRetriever retriever = step.getRetriever();
@@ -174,6 +175,7 @@ public class LibraryStep extends AbstractStepImpl {
                             retriever = cfg.getRetriever();
                             trusted = resolver.isTrusted();
                             version = cfg.defaultedVersion(version);
+                            libBasePath = cfg.getLibBasePath();
                             changelog = cfg.defaultedChangelogs(changelog);
                             break;
                         }
@@ -186,7 +188,7 @@ public class LibraryStep extends AbstractStepImpl {
                 throw new AbortException("Must specify a version for library " + name);
             }
 
-            LibraryRecord record = new LibraryRecord(name, version, trusted, changelog);
+            LibraryRecord record = new LibraryRecord(name, version, libBasePath, trusted, changelog);
             LibrariesAction action = run.getAction(LibrariesAction.class);
             if (action == null) {
                 action = new LibrariesAction(Lists.newArrayList(record));
