@@ -25,6 +25,15 @@ THE SOFTWARE.
 
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-    <f:descriptorRadioList varName="scm" instance="${instance.scm}" descriptors="${descriptor.SCMDescriptors}" title="${%Source Code Management}"/>
-    <f:optionalProperty field="cache" title="${%Cache Configuration}"/>
+    <f:entry field="ttl" title="${%Time-To-Live}">
+        <f:number default="900" />
+    </f:entry>
+    <f:entry field="additionalKey" title="${%Additional Key}">
+        <f:textbox />
+    </f:entry>
+    <f:entry field="excludedVersions" title="${%Excluded Versions RegEx}">
+        <f:textbox />
+    </f:entry>
+    <f:validateButton title="${%Delete Cache}" progress="${%Deleting...}" method="deleteCache" with="name,defaultVersion,additionalKey" />
+    <f:validateButton title="${%Forcibly Delete Cache}" progress="${%Forcibly deleting...}" method="forceDeleteCache" with="name,defaultVersion,additionalKey" />
 </j:jelly>

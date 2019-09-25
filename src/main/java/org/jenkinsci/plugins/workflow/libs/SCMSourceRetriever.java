@@ -88,16 +88,12 @@ public class SCMSourceRetriever extends LibraryRetriever {
         return scm;
     }
 
-    @Override public void retrieve(String name, String version, boolean changelog, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    @Override protected void doRetrieve(String name, String version, boolean changelog, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         SCMRevision revision = retrySCMOperation(listener, () -> scm.fetch(version, listener, run.getParent()));
         if (revision == null) {
             throw new AbortException("No version " + version + " found for library " + name);
         }
         doRetrieve(name, changelog, scm.build(revision.getHead(), revision), target, run, listener);
-    }
-
-    @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
-        retrieve(name, version, true, target, run, listener);
     }
 
     private static <T> T retrySCMOperation(TaskListener listener, Callable<T> task) throws Exception{
