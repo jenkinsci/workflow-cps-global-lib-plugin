@@ -25,6 +25,8 @@
 package org.jenkinsci.plugins.workflow.libs;
 
 import java.util.Collections;
+
+import hudson.plugins.git.GitSCM;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -41,5 +43,43 @@ public class LibraryConfigurationTest {
         assertThat(r.jenkins.getDescriptorByType(LibraryConfiguration.DescriptorImpl.class).getRetrieverDescriptors(),
             Matchers.<LibraryRetrieverDescriptor>containsInAnyOrder(r.jenkins.getDescriptorByType(SCMSourceRetriever.DescriptorImpl.class), r.jenkins.getDescriptorByType(SCMRetriever.DescriptorImpl.class)));
     }
+
+    @Issue("JENKINS-59527")
+    @Test public void validDefaultVersionAndName() {
+        String libraryName = "     valid-name   ";
+        String defaultVersion = "   master    ";
+
+        LibraryConfiguration cfg = new LibraryConfiguration(libraryName, new SCMRetriever(new GitSCM("https://phony.jenkins.io/bar.git")));
+        cfg.setDefaultVersion(defaultVersion);
+
+        assertEquals("valid-name", cfg.getName());
+        assertEquals("master", cfg.getDefaultVersion());
+    }
+
+    @Issue("JENKINS-59527")
+    @Test public void emptyStringDefaultVersionAndName() {
+        String libraryName = "";
+        String defaultVersion = "";
+
+        LibraryConfiguration cfg = new LibraryConfiguration(libraryName, new SCMRetriever(new GitSCM("https://phony.jenkins.io/bar.git")));
+        cfg.setDefaultVersion(defaultVersion);
+
+        assertNull(cfg.getName());
+        assertNull(cfg.getDefaultVersion());
+    }
+
+    @Issue("JENKINS-59527")
+    @Test public void nullDefaultVersionAndName() {
+        String libraryName = null;
+        String defaultVersion = null;
+
+        LibraryConfiguration cfg = new LibraryConfiguration(libraryName, new SCMRetriever(new GitSCM("https://phony.jenkins.io/bar.git")));
+        cfg.setDefaultVersion(defaultVersion);
+
+        assertNull(cfg.getName());
+        assertNull(cfg.getDefaultVersion());
+    }
+
+
 
 }

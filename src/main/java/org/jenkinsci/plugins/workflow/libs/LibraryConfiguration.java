@@ -60,7 +60,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     private boolean includeInChangesets = true;
 
     @DataBoundConstructor public LibraryConfiguration(String name, LibraryRetriever retriever) {
-        this.name = name;
+        this.name = Util.fixEmptyAndTrim(name);
         this.retriever = retriever;
     }
 
@@ -84,7 +84,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     }
 
     @DataBoundSetter public void setDefaultVersion(String defaultVersion) {
-        this.defaultVersion = Util.fixEmpty(defaultVersion);
+        this.defaultVersion = Util.fixEmptyAndTrim(defaultVersion);
     }
 
     /**
