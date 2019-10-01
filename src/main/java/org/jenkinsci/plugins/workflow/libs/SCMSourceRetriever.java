@@ -172,8 +172,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
             } else {
             	String trimedLibBasePath = libBasePath.trim();
             	String libBase = trimedLibBasePath.endsWith("/") ? trimedLibBasePath : trimedLibBasePath + "/";
-            	WorkspaceList.Lease lib = computer.getWorkspaceList().allocate(dir.child(libBase));
-            	lib.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);            	
+		lease.path.child(libBase).copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);
             }
         }
     }
