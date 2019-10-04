@@ -46,6 +46,18 @@ public class LibraryConfigurationTest {
 
     @Issue("JENKINS-59527")
     @Test public void validDefaultVersionAndName() {
+        String libraryName = "valid-name";
+        String defaultVersion = "master";
+
+        LibraryConfiguration cfg = new LibraryConfiguration(libraryName, new SCMRetriever(new GitSCM("https://phony.jenkins.io/bar.git")));
+        cfg.setDefaultVersion(defaultVersion);
+
+        assertEquals("valid-name", cfg.getName());
+        assertEquals("master", cfg.getDefaultVersion());
+    }
+
+    @Issue("JENKINS-59527")
+    @Test public void spacesDefaultVersionAndName() {
         String libraryName = "     valid-name   ";
         String defaultVersion = "   master    ";
 
