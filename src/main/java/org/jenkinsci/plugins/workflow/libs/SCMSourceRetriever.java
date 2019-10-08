@@ -72,6 +72,9 @@ import org.kohsuke.stapler.DataBoundConstructor;
  */
 public class SCMSourceRetriever extends LibraryRetriever {
 
+    @SuppressFBWarnings(value="MS_SHOULD_BE_FINAL", justification="Non-final for write access via the Script Console")
+    public static boolean INCLUDE_SRC_TEST_IN_LIBRARIES = Boolean.getBoolean(SCMSourceRetriever.class.getName() + ".INCLUDE_SRC_TEST_IN_LIBRARIES");
+
     private final SCMSource scm;
 
     @DataBoundConstructor public SCMSourceRetriever(SCMSource scm) {
@@ -156,7 +159,8 @@ public class SCMSourceRetriever extends LibraryRetriever {
             });
             // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
             // Copy sources with relevant files from the checkout:
-            lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);
+            String excludes = INCLUDE_SRC_TEST_IN_LIBRARIES ? null : "src/test/";
+            lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", excludes, target);
         }
     }
 

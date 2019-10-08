@@ -354,4 +354,19 @@ public class LibraryAdderTest {
         r.buildAndAssertSuccess(p);
     }
 
+    @Test public void srcTestNotOnClassPath() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/test/Foo.groovy", "package test; class Foo { }");
+        sampleRepo.write("src/test/foo/Bar.groovy", "package test.foo; class Bar { }");
+        sampleRepo.git("add", "src");
+        sampleRepo.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(
+            new LibraryConfiguration("lib",
+                new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('lib@master') import test.Foo", true));
+        WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+        r.assertLogContains("expected to contain at least one of src or vars directories", b);
+    }
+
 }
