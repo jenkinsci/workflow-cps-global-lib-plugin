@@ -65,7 +65,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
 
     private static final Logger LOGGER = Logger.getLogger(LibraryAdder.class.getName());
 
-    @Override public List<Addition> add(CpsFlowExecution execution, List<String> libraries, HashMap<String, Boolean> changelogs) throws Exception {
+    @Override public List<Addition> add(String scope, CpsFlowExecution execution, List<String> libraries, HashMap<String, Boolean> changelogs) throws Exception {
         Queue.Executable executable = execution.getOwner().getExecutable();
         Run<?,?> build;
         if (executable instanceof Run) {
@@ -85,7 +85,19 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
             librariesUnparsed.put(parsed[0], library);
         }
         List<Addition> additions = new ArrayList<>();
-        LibrariesAction action = build.getAction(LibrariesAction.class);
+        LibrariesAction action = null;
+        
+        for( LibrariesAction laction : build.getActions( LibrariesAction.class ) ) {
+            if( laction.getScope() != null && laction.getScope().equals( scope ) ) {
+                // found the action that's absolutely right for this scope
+                action = laction;
+                break;
+            } else if( laction.getScope() == null ) {
+                // generic LibrariesAction may be overridden later if there's a perfect match.
+                action = laction;
+            }
+        }
+        
         if (action != null) {
             // Resuming a build, so just look up what we loaded before.
             for (LibraryRecord record : action.getLibraries()) {
@@ -131,12 +143,14 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
             }
         }
         // Record libraries we plan to load. We need LibrariesAction there first so variables can be interpolated.
-        build.addAction(new LibrariesAction(new ArrayList<>(librariesAdded.values())));
-        // Now actually try to retrieve the libraries.
-        for (LibraryRecord record : librariesAdded.values()) {
-            listener.getLogger().println("Loading library " + record.name + "@" + record.version);
-            for (URL u : retrieve(record.name, record.version, retrievers.get(record.name), record.trusted, record.changelog, listener, build, execution, record.variables)) {
-                additions.add(new Addition(u, record.trusted));
+        if( librariesAdded.size() > 0 ) {
+            build.addAction(new LibrariesAction(new ArrayList<>(librariesAdded.values())));
+            // Now actually try to retrieve the libraries.
+            for (LibraryRecord record : librariesAdded.values()) {
+                listener.getLogger().println("Loading library " + record.name + "@" + record.version);
+                for (URL u : retrieve(record.name, record.version, retrievers.get(record.name), record.trusted, record.changelog, listener, build, execution, record.variables)) {
+                    additions.add(new Addition(u, record.trusted));
+                }
             }
         }
         return additions;
@@ -200,8 +214,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         Queue.Executable executable = execution.getOwner().getExecutable();
         if (executable instanceof Run) {
             Run<?,?> run = (Run) executable;
-            LibrariesAction action = run.getAction(LibrariesAction.class);
-            if (action != null) {
+            for( LibrariesAction action : run.getActions(LibrariesAction.class)) {
                 FilePath libs = new FilePath(run.getRootDir()).child("libs");
                 for (LibraryRecord library : action.getLibraries()) {
                     FilePath f = libs.child(library.name + "/resources/" + name);
@@ -230,16 +243,17 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
             if (run == null) {
                 return Collections.emptySet();
             }
-            LibrariesAction action = run.getAction(LibrariesAction.class);
-            if (action == null) {
-                return Collections.emptySet();
-            }
+
             List<GlobalVariable> vars = new ArrayList<>();
-            for (LibraryRecord library : action.getLibraries()) {
-                for (String variable : library.variables) {
-                    vars.add(new UserDefinedGlobalVariable(variable, new File(run.getRootDir(), "libs/" + library.name + "/vars/" + variable + ".txt")));
+            
+            for( LibrariesAction action : run.getActions(LibrariesAction.class)) {
+                for (LibraryRecord library : action.getLibraries()) {
+                    for (String variable : library.variables) {
+                        vars.add(new UserDefinedGlobalVariable(variable, new File(run.getRootDir(), "libs/" + library.name + "/vars/" + variable + ".txt")));
+                    }
                 }
             }
+            
             return vars;
         }
 
@@ -255,8 +269,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                 Queue.Executable executable = execution.getOwner().getExecutable();
                 if (executable instanceof Run) {
                     Run<?,?> run = (Run) executable;
-                    LibrariesAction action = run.getAction(LibrariesAction.class);
-                    if (action != null) {
+                    for( LibrariesAction action : run.getActions(LibrariesAction.class)) {
                         FilePath libs = new FilePath(run.getRootDir()).child("libs");
                         for (LibraryRecord library : action.getLibraries()) {
                             if (library.trusted) {
@@ -273,7 +286,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                                 }
                             }
                         }
-                    }
+                    }                    
                 }
             } catch (IOException | InterruptedException x) {
                 LOGGER.log(Level.WARNING, null, x);
@@ -286,8 +299,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
     @Extension public static class Copier extends FlowCopier.ByRun {
 
         @Override public void copy(Run<?,?> original, Run<?,?> copy, TaskListener listener) throws IOException, InterruptedException {
-            LibrariesAction action = original.getAction(LibrariesAction.class);
-            if (action != null) {
+            for( LibrariesAction action : original.getActions(LibrariesAction.class )) {
                 copy.addAction(new LibrariesAction(action.getLibraries()));
                 FilePath libs = new FilePath(original.getRootDir()).child("libs");
                 if (libs.isDirectory()) {

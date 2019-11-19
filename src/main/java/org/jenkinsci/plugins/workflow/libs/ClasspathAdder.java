@@ -27,9 +27,10 @@ package org.jenkinsci.plugins.workflow.libs;
 import groovy.lang.GroovyShell;
 import hudson.ExtensionPoint;
 import java.net.URL;
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 
 /**
@@ -58,12 +59,20 @@ public abstract class ClasspathAdder implements ExtensionPoint {
     }
 
     /**
+     * @see #add(String, CpsFlowExecution, List, HashMap)
+     */
+    public @Nonnull List<Addition> add(@Nonnull CpsFlowExecution execution, @Nonnull List<String> libraries, @Nonnull HashMap<String, Boolean> changelogs) throws Exception {
+        return add( null, execution, libraries, changelogs );
+    }
+    
+    /**
      * May add to the classpath.
+     * @param scope identifier for the source file that the addition came from
      * @param execution a running build (possibly newly started, possibly resumed)
      * @param libraries aggregated entries from all encountered {@link Library#value} (will be empty if {@link Library} is never used at all); an implementation should remove entries it “claims”
      * @return a possibly empty list of additions
      * @throws Exception for whatever reason (will fail compilation)
      */
-    public abstract @Nonnull List<Addition> add(@Nonnull CpsFlowExecution execution, @Nonnull List<String> libraries, @Nonnull HashMap<String, Boolean> changelogs) throws Exception;
+    public abstract @Nonnull List<Addition> add(@Nullable String scope, @Nonnull CpsFlowExecution execution, @Nonnull List<String> libraries, @Nonnull HashMap<String, Boolean> changelogs) throws Exception;
 
 }

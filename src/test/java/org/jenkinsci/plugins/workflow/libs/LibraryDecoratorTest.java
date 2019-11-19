@@ -68,7 +68,7 @@ public class LibraryDecoratorTest {
     }
 
     @TestExtension public static class TestAdder extends ClasspathAdder {
-        @Override public List<Addition> add(CpsFlowExecution execution, List<String> libraries, HashMap<String, Boolean> changelogs) throws Exception {
+        @Override public List<Addition> add(String scope, CpsFlowExecution execution, List<String> libraries, HashMap<String, Boolean> changelogs) throws Exception {
             List<Addition> additions = new ArrayList<>();
             for (String library : libraries) {
                 additions.add(new Addition(new File(((WorkflowRun) execution.getOwner().getExecutable()).getParent().getRootDir(), "libs/" + library).toURI().toURL(), false));
@@ -101,7 +101,7 @@ public class LibraryDecoratorTest {
         r.assertLogContains("failed to load [stuff]", r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0)));
     }
     @TestExtension("adderError") public static class ErroneousAdder extends ClasspathAdder {
-        @Override public List<Addition> add(CpsFlowExecution execution, List<String> libraries, HashMap<String, Boolean> changelogs) throws Exception {
+        @Override public List<Addition> add(String scope, CpsFlowExecution execution, List<String> libraries, HashMap<String, Boolean> changelogs) throws Exception {
             throw new AbortException("failed to load " + libraries);
         }
     }
