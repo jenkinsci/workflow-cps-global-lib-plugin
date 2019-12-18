@@ -70,6 +70,7 @@
         <workflow-cps-plugin.version>2.71</workflow-cps-plugin.version>
         <git-plugin.version>4.0.0-rc</git-plugin.version>
         <scm-api-plugin.version>2.6.3</scm-api-plugin.version>
+        <subversion-plugin.version>2.13.0</subversion-plugin.version>
         <workflow-scm-step-plugin.version>2.7</workflow-scm-step-plugin.version>
         <workflow-multibranch-plugin.version>2.21</workflow-multibranch-plugin.version>
         <workflow-step-api-plugin.version>2.20</workflow-step-api-plugin.version>
@@ -228,20 +229,20 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>subversion</artifactId>
-            <version>2.7.1</version>
+            <version>${subversion-plugin.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>subversion</artifactId>
-            <version>2.7.1</version>
+            <version>${subversion-plugin.version}</version>
             <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.tmatesoft.svnkit</groupId>
             <artifactId>svnkit-cli</artifactId>
-            <version>1.8.14</version>
+            <version>1.10.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
