@@ -9,17 +9,7 @@ It can be used in two modes:
 a legacy mode in which there is a single Git repository hosted by Jenkins itself, to which you may push changes;
 and a more general mode in which you may define libraries hosted by any SCM in a location of your choice.
 
-Older versions of this plugin may not be safe to use. Please review the
-following warnings before using an older version:
-
--   [Missing permission
-    check](https://jenkins.io/security/advisory/2019-07-31/#SECURITY-1422)
-
 Provides capability to extend pipeline scripts using shared libraries.
-
-When you have multiple Pipeline jobs, you often want to share common
-parts of the Pipeline scripts to keep them DRY. A typical use case is
-that you have many projects that are built in the similar way.
 
 This plugin adds that functionality by allowing you to create “shared
 library script” SCM repositories. It can be used in two modes:
@@ -47,7 +37,7 @@ through [Jenkins script
 console](https://wiki.jenkins.io/display/JENKINS/Jenkins+Script+Console),
 example:
 
-``` syntaxhighlighter-pre
+``` groovy
 #!groovy
 
 // imports
