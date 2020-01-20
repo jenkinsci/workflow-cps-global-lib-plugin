@@ -4,13 +4,6 @@ When you have multiple Pipeline jobs, you often want to share some parts of the 
 scripts between them to keep Pipeline scripts [DRY](http://en.wikipedia.org/wiki/Don't_repeat_yourself).
 A very common use case is that you have many projects that are built in the similar way.
 
-This plugin adds that functionality by allowing you to create “shared library script” SCM repositories.
-It can be used in two modes:
-a legacy mode in which there is a single Git repository hosted by Jenkins itself, to which you may push changes;
-and a more general mode in which you may define libraries hosted by any SCM in a location of your choice.
-
-Provides capability to extend pipeline scripts using shared libraries.
-
 This plugin adds that functionality by allowing you to create “shared
 library script” SCM repositories. It can be used in two modes:
 
@@ -25,9 +18,6 @@ Handbook](https://jenkins.io/doc/book/pipeline/shared-libraries/).
 
 A component of [Pipeline
 Plugin](https://plugins.jenkins.io/workflow-aggregator).
-
-[Source code
-README.md](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/blob/master/README.md)
 
 ### **Configure plugin via Groovy script**
 
