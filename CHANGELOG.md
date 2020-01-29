@@ -1,7 +1,8 @@
 # Changelog
 
-## 2.14 (Jul 11, 2019)
+## 2.14
 
+Release date: 2019-07-11
 -   [JENKINS-43802](https://issues.jenkins-ci.org/browse/JENKINS-43802) -
     Make folder-scoped credentials work correctly with shared libraries.
 -   [JENKINS-44892](https://issues.jenkins-ci.org/browse/JENKINS-44892) -
@@ -21,8 +22,9 @@
     - Dependency and test updates, new integration tests for issues
     fixed in upstream plugins.
 
-## 2.13 (Feb 1, 2019)
+## 2.13
 
+Release date: 2019-02-01
 -   Fix: ([PR
     59](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/59)) -
     Support for SCM retry count added in 2.12 did not apply to some SCM
@@ -36,22 +38,25 @@
     56](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/56)) -
     Add additional tests and update tests to run correctly on Windows
 
-## 2.12 (Oct 2, 2018)
+## 2.12
 
+Release date: 2018-10-02
 -   Fix: [JENKINS-40109](https://issues.jenkins-ci.org/browse/JENKINS-40109) -
     Make compilation errors in shared libraries serializable so that the
     actual compilation error is reported instead of
     a `NotSerializableException` in some cases.
 -   Improvement: Implement support for SCM retry count.
 
-## 2.11 (Sep 8, 2018)
+## 2.11 
 
+Release date: 2018-09-08
 -   [JENKINS-53485](https://issues.jenkins-ci.org/browse/JENKINS-53485) -
     Fix a file leak introduced in version 2.10 of this plugin affecting
     all uses of the `libraryResource` step.
 
-## 2.10 (Aug 21, 2018)
+## 2.10
 
+Release date: 2018-08-21
 -   **Important: As of this release, the plugin requires Java 8 and
     Jenkins 2.60.3 or newer.**
 -   [JENKINS-52313](https://issues.jenkins-ci.org/browse/JENKINS-52313) -
@@ -61,15 +66,17 @@
     binary resources such as images when combined with Pipeline: Basic
     Steps 2.8.1 or higher.
 
-## 2.9 (Sept 13, 2017)
+## 2.9 
 
+Release date: 2017-09-13
 -   [JENKINS-41497](https://issues.jenkins-ci.org/browse/JENKINS-41497) -
     allow excluding shared libraries from changelogs (and therefore from
     SCM polling as well) via global configuration option
     and/or `@Library(value="some-lib@master", changelog=false)`.
 
-## 2.8 (Apr 24, 2017)
+## 2.8 
 
+Release date: 2017-04-24
 -   Fixing some bugs affecting Windows-based masters (agent platform
     irrelevant):
     -   improper handling of CRNL in `*.txt` global variable help files
@@ -78,27 +85,31 @@
     -   failure of class library access from `library` step depending on
         filesystem canonicalization
 
-## 2.7 (Mar 03, 2017)
+## 2.7 
 
+Release date: 2017-03-03
 -   [JENKINS-39450](https://issues.jenkins-ci.org/browse/JENKINS-39450)
     Added a `library` step as a dynamic alternative to `@Library` used
     since 2.3.
 
-## 2.6 (Feb 10, 2016)
+## 2.6 
 
+Release date: 2016-02-10
 -   [JENKINS-40408](https://issues.jenkins-ci.org/browse/JENKINS-40408)
     Race condition introduced in 2.5.
 
-## 2.5 (Nov 21, 2016)
+## 2.5 
 
+Release date: 2016-11-21
 -   Related to
     [JENKINS-38517](https://issues.jenkins-ci.org/browse/JENKINS-38517),
     checking out distinct libraries each into their own local
     workspaces, and improving parallelism in the case of concurrent
     builds.
 
-## 2.4 (Oct 05, 2016)
+## 2.4 
 
+Release date: 2016-10-05
 -   [JENKINS-38550](https://issues.jenkins-ci.org/browse/JENKINS-38550)
     The **Modern SCM** option should not be shown unless some matching
     plugin is actually installed.
@@ -107,16 +118,18 @@
 -   [JENKINS-38048](https://issues.jenkins-ci.org/browse/JENKINS-38048)
     Obsolete query parameter caused a warning in the JavaScript console.
 
-## 2.3 (Sep 07, 2016)
+## 2.3 
 
+Release date: 2016-09-07
 -   [JENKINS-31155](https://issues.jenkins-ci.org/browse/JENKINS-31155)
     New system of external shared libraries.
 -   [JENKINS-26192](https://issues.jenkins-ci.org/browse/JENKINS-26192)
     Supporting Grape (the `@Grab` annotation) from global shared
     libraries (internal or external).
 
-## 2.2 (Aug 09, 2016)
+## 2.2 
 
+Release date: 2016-08-09
 -   [JENKINS-34650](https://issues.jenkins-ci.org/browse/JENKINS-34650)
     Global library code now runs without the Groovy sandbox, so may
     provide safe encapsulations of privileged operations such as Jenkins
@@ -125,14 +138,16 @@
 -   [JENKINS-34008](https://issues.jenkins-ci.org/browse/JENKINS-34008)
     API allowing plugins to be notified of changes to the library.
 
-## 2.1 (Jun 30, 2016)
+## 2.1 
 
+Release date: 2016-06-30
 -   [JENKINS-34517](https://issues.jenkins-ci.org/browse/JENKINS-34517)
     Use of global variables from the shared library would result in
     errors when resuming a build.
 
-## 2.0 (Apr 05, 2016)
+## 2.0 
 
+Release date: 2016-04-058
 -   First release under per-plugin versioning scheme. See [1.x
     changelog](https://github.com/jenkinsci/workflow-plugin/blob/82e7defa37c05c5f004f1ba01c93df61ea7868a5/CHANGES.md)
     for earlier releases.
