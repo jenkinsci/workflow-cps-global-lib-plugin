@@ -60,6 +60,17 @@ public class WorkflowLibRepositoryTest {
                         "  return 42;\n" +
                         "}");
 
+                dir = new File(repo.workspace,"src/main/groovy/bar");
+                dir.mkdirs();
+
+                FileUtils.write(new File(dir, "Bar.groovy"),
+                        "package bar;\n" +
+                        "def answer() {\n" +
+                        "  echo 'running the bar answer method'\n" +
+                        "  semaphore 'watchBar'\n" +
+                        "  return 0;\n" +
+                        "}");
+
                 WorkflowJob p = jenkins.createProject(WorkflowJob.class, "p");
 
                 p.setDefinition(new CpsFlowDefinition(
@@ -74,9 +85,23 @@ public class WorkflowLibRepositoryTest {
                 // wait until the executor gets assigned and the execution pauses
                 SemaphoreStep.waitForStart("watch/1", b);
                 e.waitForSuspension();
-
                 assertTrue(JenkinsRule.getLog(b), b.isBuilding());
                 story.j.assertLogContains("running the answer method", b);
+
+                p = jenkins.createProject(WorkflowJob.class, "pBar");
+                p.setDefinition(new CpsFlowDefinition(
+                        "another=new bar.Bar().answer()\n" +
+                        "println 'another=' + another;",
+                        true));
+
+                // get the build going
+                b = p.scheduleBuild2(0).getStartCondition().get();
+                e = (CpsFlowExecution) b.getExecutionPromise().get();
+                // wait until the executor gets assigned and the execution pauses
+                SemaphoreStep.waitForStart("watchBar/1", b);
+                e.waitForSuspension();
+                assertTrue(JenkinsRule.getLog(b), b.isBuilding());
+                story.j.assertLogContains("running the bar answer method", b);
             }
         });
         story.addStep(new Statement() {
@@ -93,8 +118,19 @@ public class WorkflowLibRepositoryTest {
                     e.waitForSuspension();
 
                 story.j.assertBuildStatusSuccess(b);
-
                 story.j.assertLogContains("o=42", b);
+
+                p = jenkins.getItemByFullName("pBar", WorkflowJob.class);
+                b = p.getBuildByNumber(1);
+                e = (CpsFlowExecution) b.getExecutionPromise().get();
+
+                SemaphoreStep.success("watchBar/1", null);
+                // wait until the completion
+                while (b.isBuilding())
+                    e.waitForSuspension();
+
+                story.j.assertBuildStatusSuccess(b);
+                story.j.assertLogContains("another=0", b);
             }
         });
     }

@@ -90,7 +90,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
             // Resuming a build, so just look up what we loaded before.
             for (LibraryRecord record : action.getLibraries()) {
                 FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + record.name);
-                for (String root : new String[] {"src", "vars"}) {
+                for (String root : new String[] {"src", "src/main/groovy", "vars"}) {
                     FilePath dir = libDir.child(root);
                     if (dir.isDirectory()) {
                         additions.add(new Addition(dir.toURI().toURL(), record.trusted));
@@ -158,7 +158,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         // Replace any classes requested for replay:
         if (!trusted) {
             for (String clazz : ReplayAction.replacementsIn(execution)) {
-                for (String root : new String[] {"src", "vars"}) {
+                for (String root : new String[] {"src", "src/main/groovy", "vars"}) {
                     String rel = root + "/" + clazz.replace('.', '/') + ".groovy";
                     FilePath f = libDir.child(rel);
                     if (f.exists()) {
@@ -175,6 +175,10 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         FilePath srcDir = libDir.child("src");
         if (srcDir.isDirectory()) {
             urls.add(srcDir.toURI().toURL());
+        }
+        FilePath srcMavenDir = libDir.child("src/main/groovy");
+        if (srcMavenDir.isDirectory()) {
+            urls.add(srcMavenDir.toURI().toURL());
         }
         FilePath varsDir = libDir.child("vars");
         if (varsDir.isDirectory()) {
@@ -262,7 +266,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                             if (library.trusted) {
                                 continue; // TODO JENKINS-41157 allow replay of trusted libraries if you have RUN_SCRIPTS
                             }
-                            for (String rootName : new String[] {"src", "vars"}) {
+                            for (String rootName : new String[] {"src", "src/main/groovy", "vars"}) {
                                 FilePath root = libs.child(library.name + "/" + rootName);
                                 if (!root.isDirectory()) {
                                     continue;

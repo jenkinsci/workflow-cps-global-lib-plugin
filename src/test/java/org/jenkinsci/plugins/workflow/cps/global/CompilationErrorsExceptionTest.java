@@ -29,13 +29,15 @@ public class CompilationErrorsExceptionTest {
     @Test public void errorInSrcStaticLibrary() throws Exception {
         sampleRepo.init();
         sampleRepo.write("src/test/Test.groovy", "package test; public class Test { bad syntax } ");
+        sampleRepo.write("src/main/groovy/test/TestMainGroovy.groovy", "package test; public class TestMainGroovy { bad syntax } ");
         sampleRepo.git("add", "src");
         sampleRepo.git("commit", "--message=init");
         GlobalLibraries.get().setLibraries(Collections.singletonList(
                 new LibraryConfiguration("badlib", new SCMSourceRetriever(new GitSCMSource(sampleRepo.toString())))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("@Library('badlib@master')\n" +
-                "import test.Test;", true));
+                "import test.Test;\n" +
+                "import test.TestMainGroovy;", true));
         WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
         r.assertLogNotContains(NotSerializableException.class.getName(), b);
         // We don't care about the type of exception thrown here because it happens outside of CPS execution.
@@ -46,6 +48,7 @@ public class CompilationErrorsExceptionTest {
     @Test public void errorInSrcDynamicLibrary() throws Exception {
         sampleRepo.init();
         sampleRepo.write("src/test/Test.groovy", "package test; public class Test { bad syntax } ");
+        sampleRepo.write("src/main/groovy/test/TestMainGroovy.groovy", "package test; public class TestMainGroovy { bad syntax } ");
         sampleRepo.git("add", "src");
         sampleRepo.git("commit", "--message=init");
         GlobalLibraries.get().setLibraries(Collections.singletonList(
@@ -54,6 +57,7 @@ public class CompilationErrorsExceptionTest {
         p.setDefinition(new CpsFlowDefinition("def lib = library('badlib@master')\n" +
                 "try {\n" +
                 "  lib.test.Test.new()\n" +
+                "  lib.test.TestMainGroovy.new()\n" +
                 "} catch(err) {\n" +
                 "  sleep(time: 1, unit: 'MILLISECONDS')\n" + // Force the exception to be persisted.
                 "  throw err\n" +

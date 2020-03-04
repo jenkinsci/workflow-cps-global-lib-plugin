@@ -122,6 +122,20 @@ public class LibraryStepTest {
         r.assertLogContains("using constant vs. constant", b);
     }
 
+    @Test public void classesFromMainGroovy() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/main/groovy/some/pkg/Lib.groovy", "package some.pkg; class Lib {static class Inner {static String stuff() {Constants.CONST}}}");
+        sampleRepo.write("src/main/groovy/some/pkg/Constants.groovy", "package some.pkg; class Constants {static String CONST = 'constant'}");
+        sampleRepo.write("src/main/groovy/some/pkg/App.groovy", "package some.pkg; class App implements Serializable {def run() {Lib.Inner.stuff()}}");
+        sampleRepo.git("add", "src");
+        sampleRepo.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("stuff", new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("def lib = library 'stuff@master'; echo(/using ${lib.some.pkg.Lib.Inner.stuff()} vs. ${lib.some.pkg.App.new().run()}/)", true));
+        WorkflowRun b = r.buildAndAssertSuccess(p);
+        r.assertLogContains("using constant vs. constant", b);
+    }
+
     @Test public void classesFromWrongPlace() throws Exception {
         sampleRepo.init();
         sampleRepo.write("src/some/pkg/Lib.groovy", "package some.pkg; class Lib {static void m() {}}");
