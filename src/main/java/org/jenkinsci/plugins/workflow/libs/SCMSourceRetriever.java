@@ -72,6 +72,9 @@ import org.kohsuke.stapler.DataBoundConstructor;
  */
 public class SCMSourceRetriever extends LibraryRetriever {
 
+    @SuppressFBWarnings(value="MS_SHOULD_BE_FINAL", justification="Non-final for write access via the Script Console")
+    public static boolean INCLUDE_SRC_TEST_IN_LIBRARIES = Boolean.getBoolean(SCMSourceRetriever.class.getName() + ".INCLUDE_SRC_TEST_IN_LIBRARIES");
+
     private final SCMSource scm;
 
     @DataBoundConstructor public SCMSourceRetriever(SCMSource scm) {
@@ -156,7 +159,12 @@ public class SCMSourceRetriever extends LibraryRetriever {
             });
             // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
             // Copy sources with relevant files from the checkout:
-            lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", null, target);
+            String excludes = INCLUDE_SRC_TEST_IN_LIBRARIES ? null : "src/test/";
+            if (lease.path.child("src/test").exists()) {
+                listener.getLogger().println("Excluding src/test/ from checkout of " + scm.getKey() + " so that shared library test code cannot be accessed by Pipelines.");
+                listener.getLogger().println("To remove this log message, move the test code outside of src/. To restore the previous behavior that allowed access to files in src/test/, pass -D" + SCMSourceRetriever.class.getName() + ".INCLUDE_SRC_TEST_IN_LIBRARIES=true to the java command used to start Jenkins.");
+            }
+            lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", excludes, target);
         }
     }
 
