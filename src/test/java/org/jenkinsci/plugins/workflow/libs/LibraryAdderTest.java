@@ -366,6 +366,7 @@ public class LibraryAdderTest {
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("@Library('lib@master') import test.Foo", true));
         WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+        r.assertLogContains("Excluding src/test/ from checkout", b);
         r.assertLogContains("expected to contain at least one of src or vars directories", b);
     }
 
