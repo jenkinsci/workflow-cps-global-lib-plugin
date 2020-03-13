@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.16
+
+Release date: 2020-03-13
+
+- Fix: Exclude the contents of `src/test/` in shared libraries from being used by Pipelines, as these files were likely only intended to be used in tests for the libraries rather than by Pipelines, and depending on the contents of `src/test/`, it may be unsafe for those files to be exposed to Pipelines. To restore the previous behavior that allowed access to files in src/test/, pass `-Dorg.jenkinsci.plugins.workflow.libs.SCMSourceRetriever.INCLUDE_SRC_TEST_IN_LIBRARIES=true` to the java command used to start Jenkins. ([PR 91](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/91))
+- Fix: Do not bundle JARs from Jenkins Apache HttpComponents Client 4.x API Plugin in this plugin ([PR 75](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/75))
+- Fix: Trim leading and trailing whitespace when configuration the name or version of a shared library ([JENKINS-59527](https://issues.jenkins-ci.org/browse/JENKINS-59527))
+- Improvement: Clarify that if the "Include @Library changes in job recent changes" option is checked, changes to the library will trigger builds of Pipelines that use the library ([PR 61](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/61))
+- Internal: Migrate wiki content to GitHub ([PR 89](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/89))
+- Internal: Add tests related to the criteria used to decide if an SCM is modern or legacy ([JENKINS-58964](https://issues.jenkins-ci.org/browse/JENKINS-58964))
+- Internal: Update tests to handle behavior changes caused by SECURITY-1713 ([PR 90](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/90))
+- Internal: Update parent POM ([PR 88](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/88))
+- Internal: Enable the sandbox consistently in tests ([PR 79](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/79))
+- Internal: Remove duplicated code ([PR 74](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/74))
+
+## 2.15
+
+Release date: 2019-07-31
+
+- [Fix security issue](https://jenkins.io/security/advisory/2019-07-31/#SECURITY-1422)
+
 ## 2.14
 
 Release date: 2019-07-11
