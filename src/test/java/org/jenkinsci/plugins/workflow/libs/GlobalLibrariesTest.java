@@ -63,17 +63,13 @@ public class GlobalLibrariesTest {
         gl.setLibraries(Arrays.asList(foo, bar));
         r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
         r.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy().
-            grant(Jenkins.ADMINISTER).everywhere().to("alice"). // includes RUN_SCRIPTS and all else
-            grantWithoutImplication(Jenkins.ADMINISTER).everywhere().to("bob"). // but not RUN_SCRIPTS
-            grant(Jenkins.READ, Item.READ, View.READ).everywhere().to("bob"));
+            grant(Jenkins.ADMINISTER).everywhere().to("alice") // includes RUN_SCRIPTS and all else
+        );
         HtmlPage configurePage = r.createWebClient().login("alice").goTo("configure");
         assertThat(configurePage.getWebResponse().getContentAsString(), containsString("https://phony.jenkins.io/bar.git"));
         r.submit(configurePage.getFormByName("config")); // JenkinsRule.configRoundtrip expanded to include login
         List<LibraryConfiguration> libs = gl.getLibraries();
         r.assertEqualDataBoundBeans(Arrays.asList(foo, bar), libs);
-        configurePage = r.createWebClient().login("bob").goTo("configure");
-        assertThat(configurePage.getWebResponse().getContentAsString(), not(containsString("https://phony.jenkins.io/bar.git")));
-        r.submit(configurePage.getFormByName("config"));
         libs = gl.getLibraries();
         r.assertEqualDataBoundBeans(Arrays.asList(foo, bar), libs);
     }
