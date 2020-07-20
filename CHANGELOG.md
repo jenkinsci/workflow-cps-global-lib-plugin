@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.17
+
+Release date: 2020-07-20
+
+- Internal: Remove dependency on `commons-lang3` to avoid version conflicts with `jenkins-test-harness` in downstream projects. ([PR 94](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/94))
+- Internal: Update minimum required Jenkins version and plugin dependencies. ([PR 95](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/95))
+- Internal: Fix tests affected by [JENKINS-60406](https://issues.jenkins-ci.org/browse/JENKINS-60406) when running against Jenkins 2.222.x or newer. ([PR 96](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/96))
+
 ## 2.16
 
 Release date: 2020-03-13
