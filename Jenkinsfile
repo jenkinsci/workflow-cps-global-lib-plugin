@@ -3,4 +3,4 @@ def configurations = [
         [ platform: "windows", jdk: "8", jenkins: null, javaLevel: "8" ],
 ]
 
-buildPlugin(configurations: configurations, useAci: true)
+buildPlugin(configurations: configurations)
