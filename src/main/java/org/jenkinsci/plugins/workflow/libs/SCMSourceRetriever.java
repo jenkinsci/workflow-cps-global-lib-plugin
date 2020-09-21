@@ -24,6 +24,33 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.logging.Logger;
+
+import javax.annotation.Nonnull;
+import javax.annotation.CheckForNull;
+
+import org.jenkinsci.Symbol;
+import org.jenkinsci.plugins.structs.describable.CustomDescribableModel;
+import org.jenkinsci.plugins.structs.describable.UninstantiatedDescribable;
+import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
+import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.verb.POST;
+
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.AbortException;
 import hudson.Extension;
@@ -43,29 +70,11 @@ import hudson.scm.SCM;
 import hudson.slaves.WorkspaceList;
 import hudson.util.FormValidation;
 import hudson.util.StreamTaskListener;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.io.StringWriter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
-import org.jenkinsci.Symbol;
-import org.jenkinsci.plugins.structs.describable.CustomDescribableModel;
-import org.jenkinsci.plugins.structs.describable.UninstantiatedDescribable;
-import org.jenkinsci.plugins.workflow.steps.scm.GenericSCMStep;
-import org.jenkinsci.plugins.workflow.steps.scm.SCMStep;
-import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.DoNotUse;
-import org.kohsuke.accmod.restrictions.NoExternalUse;
-import org.kohsuke.stapler.DataBoundConstructor;
+import java.util.regex.Pattern;
 
 /**
  * Uses {@link SCMSource#fetch(String, TaskListener)} to retrieve a specific revision.
@@ -75,7 +84,21 @@ public class SCMSourceRetriever extends LibraryRetriever {
     @SuppressFBWarnings(value="MS_SHOULD_BE_FINAL", justification="Non-final for write access via the Script Console")
     public static boolean INCLUDE_SRC_TEST_IN_LIBRARIES = Boolean.getBoolean(SCMSourceRetriever.class.getName() + ".INCLUDE_SRC_TEST_IN_LIBRARIES");
 
+    private static final Logger LOGGER = Logger.getLogger(SCMSourceRetriever.class.getName());
+
     private final SCMSource scm;
+
+    private static final Pattern PROHIBITED_DOUBLE_DOT = Pattern.compile(".*[\\\\/]\\.\\.[\\\\/].*");
+    private @CheckForNull String libBasePath;
+
+    @DataBoundSetter public void setLibBasePath(String libBasePath) {
+        this.libBasePath = hudson.Util.fixEmptyAndTrim(libBasePath);
+    }
+
+    public String getLibBasePath() {
+        return libBasePath;
+    }
+
 
     @DataBoundConstructor public SCMSourceRetriever(SCMSource scm) {
         this.scm = scm;
@@ -93,7 +116,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
         if (revision == null) {
             throw new AbortException("No version " + version + " found for library " + name);
         }
-        doRetrieve(name, changelog, scm.build(revision.getHead(), revision), target, run, listener);
+        doRetrieve(name, changelog, scm.build(revision.getHead(), revision), libBasePath, target, run, listener);
     }
 
     @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
@@ -132,7 +155,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
     }
 
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", justification = "apparently bogus complaint about redundant nullcheck in try-with-resources")
-    static void doRetrieve(String name, boolean changelog, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    static void doRetrieve(String name, boolean changelog, @Nonnull SCM scm, String libBasePath, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         // Adapted from CpsScmFlowDefinition:
         SCMStep delegate = new GenericSCMStep(scm);
         delegate.setPoll(false); // TODO we have no API for determining if a given SCMHead is branch-like or tag-like; would we want to turn on polling if the former?
@@ -157,14 +180,23 @@ public class SCMSourceRetriever extends LibraryRetriever {
                 delegate.checkout(run, lease.path, listener, node.createLauncher(listener));
                 return null;
             });
-            // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
-            // Copy sources with relevant files from the checkout:
+
             String excludes = INCLUDE_SRC_TEST_IN_LIBRARIES ? null : "src/test/";
-            if (lease.path.child("src/test").exists()) {
+            String libBase = ".";
+            if (libBasePath != null) {
+                libBase = libBasePath.endsWith("/") ? libBasePath : libBasePath + "/";
+            }
+            if (PROHIBITED_DOUBLE_DOT.matcher(libBase).matches()) {
+                throw new AbortException("Double dots in library base path are forbidden for security reasons");
+            }
+
+            if (lease.path.child(libBase).child("src/test").exists()) {
                 listener.getLogger().println("Excluding src/test/ from checkout of " + scm.getKey() + " so that shared library test code cannot be accessed by Pipelines.");
                 listener.getLogger().println("To remove this log message, move the test code outside of src/. To restore the previous behavior that allowed access to files in src/test/, pass -D" + SCMSourceRetriever.class.getName() + ".INCLUDE_SRC_TEST_IN_LIBRARIES=true to the java command used to start Jenkins.");
             }
-            lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", excludes, target);
+            // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
+            // Copy sources with relevant files from the checkout:
+            lease.path.child(libBase).copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", excludes, target);
         }
     }
 
@@ -192,6 +224,14 @@ public class SCMSourceRetriever extends LibraryRetriever {
 
     @Symbol("modernSCM")
     @Extension public static class DescriptorImpl extends LibraryRetrieverDescriptor implements CustomDescribableModel {
+
+        @POST
+        public FormValidation doCheckLibBasePath(@QueryParameter String libBasePath) {
+            if (PROHIBITED_DOUBLE_DOT.matcher(libBasePath).matches()) {
+                return FormValidation.error("Double dots in library base path are forbidden for security reasons");
+            }
+            return FormValidation.ok();
+        }
 
         @Override public String getDisplayName() {
             return "Modern SCM";

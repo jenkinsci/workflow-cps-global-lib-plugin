@@ -45,6 +45,11 @@ import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.verb.POST;
+import javax.annotation.CheckForNull;
+import org.kohsuke.stapler.QueryParameter;
+import java.util.regex.Pattern;
 
 /**
  * Uses legacy {@link SCM} to check out sources based on variable interpolation.
@@ -52,6 +57,20 @@ import org.kohsuke.stapler.DataBoundConstructor;
 public class SCMRetriever extends LibraryRetriever {
 
     private final SCM scm;
+
+    private @CheckForNull String libBasePath;
+    private static final Pattern PROHIBITED_DOUBLE_DOT = Pattern.compile(".*[\\\\/]\\.\\.[\\\\/].*");
+
+    @DataBoundSetter
+    public void setLibBasePath(String libBasePath) {
+        this.libBasePath = hudson.Util.fixEmptyAndTrim(libBasePath);
+    }
+
+    public String getLibBasePath() {
+        return libBasePath;
+    }
+
+
 
     @DataBoundConstructor public SCMRetriever(SCM scm) {
         this.scm = scm;
@@ -62,11 +81,11 @@ public class SCMRetriever extends LibraryRetriever {
     }
 
     @Override public void retrieve(String name, String version, boolean changelog, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
-        SCMSourceRetriever.doRetrieve(name, changelog, scm, target, run, listener);
+        SCMSourceRetriever.doRetrieve(name, changelog, scm, libBasePath, target, run, listener);
     }
 
     @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
-        SCMSourceRetriever.doRetrieve(name, true, scm, target, run, listener);
+        SCMSourceRetriever.doRetrieve(name, true, scm, libBasePath, target, run, listener);
     }
     
     @Override public FormValidation validateVersion(String name, String version, Item context) {
@@ -79,6 +98,14 @@ public class SCMRetriever extends LibraryRetriever {
 
     @Symbol("legacySCM")
     @Extension(ordinal=-100) public static class DescriptorImpl extends LibraryRetrieverDescriptor {
+
+        @POST
+        public FormValidation doCheckLibBasePath(@QueryParameter String libBasePath) {
+            if (PROHIBITED_DOUBLE_DOT.matcher(libBasePath).matches()) {
+                return FormValidation.error("Double dots in library base path are forbidden for security reasons");
+            }
+            return FormValidation.ok();
+        }
         
         @Override public String getDisplayName() {
             return "Legacy SCM";
