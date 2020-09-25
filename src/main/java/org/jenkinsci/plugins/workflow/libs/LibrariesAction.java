@@ -31,6 +31,7 @@ import hudson.model.InvisibleAction;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -48,7 +49,7 @@ class LibrariesAction extends InvisibleAction {
      * A list of libraries in use.
      */
     public List<LibraryRecord> getLibraries() {
-        return libraries;
+        return Collections.unmodifiableList(libraries);
     }
 
     @Extension public static class LibraryEnvironment extends EnvironmentContributor {
