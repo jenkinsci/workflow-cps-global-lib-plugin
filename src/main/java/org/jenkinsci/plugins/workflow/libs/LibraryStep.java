@@ -41,7 +41,6 @@ import hudson.security.AccessControlled;
 import java.io.File;
 import java.io.IOException;
 import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URI;
@@ -60,9 +59,8 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import jenkins.model.Jenkins;
-import org.apache.commons.lang3.reflect.ConstructorUtils;
-import org.apache.commons.lang3.reflect.MethodUtils;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
+import org.codehaus.groovy.runtime.InvokerHelper;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.AbstractWhitelist;
 import org.jenkinsci.plugins.workflow.cps.CpsCompilationErrorsException;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
@@ -267,16 +265,10 @@ public class LibraryStep extends AbstractStepImpl {
         @Override public Object invokeMethod(String name, Object _args) {
             Class<?> c = loadClass(prefix + clazz);
             Object[] args = _args instanceof Object[] ? (Object[]) _args : new Object[] {_args}; // TODO why does Groovy not just pass an Object[] to begin with?!
-            try {
-                if (name.equals("new")) {
-                    return ConstructorUtils.invokeConstructor(c, args);
-                } else {
-                    return MethodUtils.invokeStaticMethod(c, name, args);
-                }
-            } catch (InvocationTargetException x) {
-                throw new GroovyRuntimeException(x.getCause());
-            } catch (NoSuchMethodException | InstantiationException | IllegalAccessException x) {
-                throw new GroovyRuntimeException(x);
+            if (name.equals("new")) {
+                return InvokerHelper.invokeConstructorOf(c, args);
+            } else {
+                return InvokerHelper.invokeStaticMethod(c, name, args);
             }
         }
 

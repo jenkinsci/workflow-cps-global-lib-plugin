@@ -65,6 +65,8 @@ public abstract class LibraryResolver implements ExtensionPoint {
 
     /**
      * A list of libraries that may have already been configured in this context.
+     * Implementations should only return libraries that the current user has
+     * permission to configure in this context.
      * @param request a web request
      * @return known libraries, if any (empty by default)
      */

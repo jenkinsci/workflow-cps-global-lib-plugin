@@ -29,7 +29,7 @@ THE SOFTWARE.
         <f:textbox/>
     </f:entry>
     <f:entry field="defaultVersion" title="${%Default version}">
-        <f:textbox/>
+        <f:textbox checkMethod="post"/>
     </f:entry>
     <f:entry field="implicit" title="${%Load implicitly}">
         <f:checkbox/>

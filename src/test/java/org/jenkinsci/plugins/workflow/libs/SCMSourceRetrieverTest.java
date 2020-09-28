@@ -24,7 +24,9 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.AbortException;
+import hudson.ExtensionList;
 import hudson.FilePath;
 import hudson.model.Item;
 import hudson.model.Result;
@@ -48,6 +50,12 @@ import jenkins.scm.api.SCMSourceDescriptor;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+
+import static hudson.ExtensionList.lookupSingleton;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.*;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -211,6 +219,42 @@ public class SCMSourceRetrieverTest {
         r.jenkins.setScmCheckoutRetryCount(1);
 
         return r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+    }
 
+    @Test
+    public void modernAndLegacyImpls() {
+        SCMSourceRetriever.DescriptorImpl modern = lookupSingleton(SCMSourceRetriever.DescriptorImpl.class);
+
+        containsInAnyOrder(modern.getSCMDescriptors(), contains(instanceOf(FakeModernSCM.DescriptorImpl.class)));
+        containsInAnyOrder(modern.getSCMDescriptors(), contains(instanceOf(FakeAlsoModernSCM.DescriptorImpl.class)));
+        containsInAnyOrder(modern.getSCMDescriptors(), not(contains(instanceOf(BasicSCMSource.DescriptorImpl.class))));
+    }
+    // Implementation of latest and greatest API
+    public static final class FakeModernSCM extends SCMSource {
+        @Override protected void retrieve(SCMSourceCriteria c, @NonNull SCMHeadObserver o, SCMHeadEvent<?> e, @NonNull TaskListener l) {}
+        @Override public @NonNull SCM build(@NonNull SCMHead head, SCMRevision revision) { return null; }
+        @TestExtension("modernAndLegacyImpls") public static final class DescriptorImpl extends SCMSourceDescriptor {}
+
+        @Override
+        protected SCMRevision retrieve(@NonNull String thingName, @NonNull TaskListener listener, Item context) throws IOException, InterruptedException {
+            return super.retrieve(thingName, listener, context);
+        }
+    }
+    // Implementation of second latest and second greatest API
+    public static final class FakeAlsoModernSCM extends SCMSource {
+        @Override protected void retrieve(SCMSourceCriteria c, @NonNull SCMHeadObserver o, SCMHeadEvent<?> e, @NonNull TaskListener l) {}
+        @Override public @NonNull SCM build(@NonNull SCMHead head, SCMRevision revision) { return null; }
+        @TestExtension("modernAndLegacyImpls") public static final class DescriptorImpl extends SCMSourceDescriptor {}
+
+        @Override
+        protected SCMRevision retrieve(@NonNull String thingName, @NonNull TaskListener listener) throws IOException, InterruptedException {
+            return super.retrieve(thingName, listener);
+        }
+    }
+    // No modern stuff
+    public static class BasicSCMSource extends SCMSource {
+        @Override protected void retrieve(SCMSourceCriteria c, @NonNull SCMHeadObserver o, SCMHeadEvent<?> e, @NonNull TaskListener l) {}
+        @Override public @NonNull SCM build(@NonNull SCMHead head, SCMRevision revision) { return null; }
+        @TestExtension("modernAndLegacyImpls") public static final class DescriptorImpl extends SCMSourceDescriptor {}
     }
 }

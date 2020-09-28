@@ -42,6 +42,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.interceptor.RequirePOST;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -61,7 +62,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     private LibraryCachingConfiguration cachingConfiguration = null;
 
     @DataBoundConstructor public LibraryConfiguration(String name, LibraryRetriever retriever) {
-        this.name = name;
+        this.name = Util.fixEmptyAndTrim(name);
         this.retriever = retriever;
     }
 
@@ -85,7 +86,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     }
 
     @DataBoundSetter public void setDefaultVersion(String defaultVersion) {
-        this.defaultVersion = Util.fixEmpty(defaultVersion);
+        this.defaultVersion = Util.fixEmptyAndTrim(defaultVersion);
     }
 
     /**
@@ -170,6 +171,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
             return FormValidation.ok();
         }
 
+        @RequirePOST
         public FormValidation doCheckDefaultVersion(@AncestorInPath Item context, @QueryParameter String defaultVersion, @QueryParameter boolean implicit, @QueryParameter boolean allowVersionOverride, @QueryParameter String name) {
             if (defaultVersion.isEmpty()) {
                 if (implicit) {
