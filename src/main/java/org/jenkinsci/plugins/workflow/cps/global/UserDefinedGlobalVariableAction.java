@@ -137,7 +137,7 @@ public class UserDefinedGlobalVariableAction implements RunAction2 {
 
     public Api getApi() { return new Api(this); }
 
-    private class UserDefinedGlobalVariableData {
+    public class UserDefinedGlobalVariableData {
         private String name;
         private String library;
         private String version;
