@@ -55,13 +55,13 @@ import java.util.logging.Logger;
 public class UserDefinedGlobalVariableAction implements RunAction2 {
 
     private transient Run run;
-    public List<UserDefinedGlobalVariable> userGlobalVars = new ArrayList<>();
+    public List<UserDefinedGlobalVariableData> userGlobalVars = new ArrayList<>();
 
     public UserDefinedGlobalVariableAction() {
     }
 
-    public UserDefinedGlobalVariableAction(List<UserDefinedGlobalVariable> globalVars) {
-        for(UserDefinedGlobalVariable v : globalVars) {
+    public UserDefinedGlobalVariableAction(List<UserDefinedGlobalVariableData> globalVars) {
+        for(UserDefinedGlobalVariableData v : globalVars) {
             userGlobalVars.add(v);
         }
     }
@@ -79,13 +79,13 @@ public class UserDefinedGlobalVariableAction implements RunAction2 {
     }
 
     public void addUserDefinedGlobalVariable(UserDefinedGlobalVariable userVar) {
-        userGlobalVars.add(userVar);
+        userGlobalVars.add(new UserDefinedGlobalVariableData(userVar));
     }
 
     @Exported
-    public  List<Map<String,String>> apiUserGlobalVars() {
+    public List<Map<String,String>> apiUserGlobalVars() {
         ArrayList<Map<String,String>> apiData = new ArrayList<>();
-        for(UserDefinedGlobalVariable v : userGlobalVars) {
+        for(UserDefinedGlobalVariableData v : userGlobalVars) {
             Map<String,String> data = new HashMap<>();
             data.put("name", v.getName());
             data.put("library", v.getLibraryName());
@@ -95,7 +95,7 @@ public class UserDefinedGlobalVariableAction implements RunAction2 {
         return apiData;
     }
 
-    public  List<UserDefinedGlobalVariable> getUserGlobalVars() {
+    public List<UserDefinedGlobalVariableData> getUserGlobalVars() {
         return userGlobalVars;
     }
 
@@ -136,4 +136,20 @@ public class UserDefinedGlobalVariableAction implements RunAction2 {
     }
 
     public Api getApi() { return new Api(this); }
+
+    private class UserDefinedGlobalVariableData {
+        private String name;
+        private String library;
+        private String version;
+
+        public UserDefinedGlobalVariableData(UserDefinedGlobalVariable userVar) {
+            this.name = userVar.getName();
+            this.library = userVar.getLibraryName();
+            this.version = userVar.getLibraryVersion();
+        }
+
+        public String getName() { return this.name; }
+        public String getLibraryName() { return this.library; }
+        public String getLibraryVersion() { return this.version; }
+    }
 }

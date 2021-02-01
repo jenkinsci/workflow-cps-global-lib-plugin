@@ -31,22 +31,20 @@ public class UserDefinedGlobalVariable extends GlobalVariable {
     private final String name;
     private final String libraryName;
     private final String libraryVersion;
-    private final Run<?,?> run;
 
     /*package*/ UserDefinedGlobalVariable(WorkflowLibRepository repo, String name) {
         this(name, new File(repo.workspace, PREFIX + "/" + name + ".txt"));
     }
 
     public UserDefinedGlobalVariable(String name, File help) {
-        this(name, help, "missing", "missing", null);
+        this(name, help, "missing", "missing");
     }
 
-    public UserDefinedGlobalVariable(String name, File help, String libraryName, String libraryVersion, Run<?,?> run) {
+    public UserDefinedGlobalVariable(String name, File help, String libraryName, String libraryVersion) {
         this.name = name;
         this.help = help;
         this.libraryName = libraryName;
         this.libraryVersion = libraryVersion;
-        this.run = run;
     }
 
     @Nonnull
@@ -93,14 +91,15 @@ public class UserDefinedGlobalVariable extends GlobalVariable {
             */
             binding.setVariable(getName(), instance);
 
-            if (this.run != null) {
-                UserDefinedGlobalVariableAction varsAction = this.run.getAction(UserDefinedGlobalVariableAction.class);
+            Run<?,?> run = script.$buildNoException();
+            if (run != null) {
+                UserDefinedGlobalVariableAction varsAction = run.getAction(UserDefinedGlobalVariableAction.class);
                 if (varsAction == null) {
                     varsAction = new UserDefinedGlobalVariableAction();
-                    this.run.addAction(varsAction);
+                    run.addAction(varsAction);
                 }
                 varsAction.addUserDefinedGlobalVariable(this);
-                this.run.save();
+                run.save();
             }
         }
         return instance;

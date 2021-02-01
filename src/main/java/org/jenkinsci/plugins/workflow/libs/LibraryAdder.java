@@ -237,7 +237,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
             List<GlobalVariable> vars = new ArrayList<>();
             for (LibraryRecord library : action.getLibraries()) {
                 for (String variable : library.variables) {
-                    vars.add(new UserDefinedGlobalVariable(variable, new File(run.getRootDir(), "libs/" + library.name + "/vars/" + variable + ".txt"), library.name, library.version, run));
+                    vars.add(new UserDefinedGlobalVariable(variable, new File(run.getRootDir(), "libs/" + library.name + "/vars/" + variable + ".txt"), library.name, library.version));
                 }
             }
             return vars;
