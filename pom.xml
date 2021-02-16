@@ -188,6 +188,7 @@
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>git</artifactId>
             <scope>test</scope>
+            <version>4.6.0</version> <!-- Temporary version number until it is included in the Jenkins bom -->
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
