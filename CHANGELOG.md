@@ -4,9 +4,8 @@
 
 Release date: 2021-02-19
 
-- Fix: Unable to serialize lists because of ConcurrentModificationException
-Export ([JENKINS-41037](https://issues.jenkins.io/browse/JENKINS-41037))
-- Internal: Fix Git snippet test ([PR 104](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/104)) 
+- Fix: Prevent `ConcurrentModificationException` from being thrown when serializing `LibrariesAction.libraries` ([JENKINS-41037](https://issues.jenkins.io/browse/JENKINS-41037))
+- Internal: Fix PCT failures related to Git plugin 4.6.0 ([PR 104](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/104)) 
 
 ## 2.17
 
