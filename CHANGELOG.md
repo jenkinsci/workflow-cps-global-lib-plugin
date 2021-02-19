@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.18
+
+Release date: 2021-02-19
+
+- Fix: Unable to serialize lists because of ConcurrentModificationException
+Export ([JENKINS-41037](https://issues.jenkins.io/browse/JENKINS-41037))
+- Internal: Fix Git snippet test ([PR 104](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/104)) 
+
 ## 2.17
 
 Release date: 2020-07-20
