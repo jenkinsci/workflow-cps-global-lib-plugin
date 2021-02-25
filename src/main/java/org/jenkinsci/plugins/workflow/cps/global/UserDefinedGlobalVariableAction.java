@@ -118,6 +118,11 @@ public class UserDefinedGlobalVariableAction implements RunAction2 {
         return Objects.equals(userGlobalVars, that.userGlobalVars);
     }
 
+    @Override
+    public int hashCode() {
+        return userGlobalVars.hashCode();
+    }
+
     /* Package protected for easier testing */
     static final Logger LOGGER = Logger.getLogger(UserDefinedGlobalVariableAction.class.getName());
 
@@ -137,7 +142,7 @@ public class UserDefinedGlobalVariableAction implements RunAction2 {
 
     public Api getApi() { return new Api(this); }
 
-    public class UserDefinedGlobalVariableData {
+    public static class UserDefinedGlobalVariableData {
         private String name;
         private String library;
         private String version;
