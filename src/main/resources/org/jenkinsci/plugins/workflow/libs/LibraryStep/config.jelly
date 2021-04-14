@@ -31,5 +31,5 @@ THE SOFTWARE.
     <f:entry field="changelog" title="${%Include recent changes in jobs}">
         <f:checkbox default="true"/>
     </f:entry>
-    <f:descriptorRadioList varName="retriever" instance="${instance.retriever}" descriptors="${descriptor.retrieverDescriptors}" title="${%Retrieval method}"/>
+    <f:dropdownDescriptorSelector field="retriever" descriptors="${descriptor.retrieverDescriptors}" title="${%Retrieval method}"/>
 </j:jelly>
