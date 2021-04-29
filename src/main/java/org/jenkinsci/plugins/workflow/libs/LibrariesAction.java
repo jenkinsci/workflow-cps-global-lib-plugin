@@ -33,11 +33,14 @@ import hudson.model.TaskListener;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import org.kohsuke.stapler.export.Exported;
+import org.kohsuke.stapler.export.ExportedBean;
 
 /**
  * A run action recording libraries used in a given build.
  */
-class LibrariesAction extends InvisibleAction {
+@ExportedBean
+public class LibrariesAction extends InvisibleAction {
 
     private final List<LibraryRecord> libraries;
 
@@ -48,6 +51,7 @@ class LibrariesAction extends InvisibleAction {
     /**
      * A list of libraries in use.
      */
+    @Exported
     public List<LibraryRecord> getLibraries() {
         return Collections.unmodifiableList(libraries);
     }
