@@ -1,9 +1,5 @@
 # Pipeline Shared Libraries
 
-[![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/workflow-cps-global-lib)](https://plugins.jenkins.io/workflow-cps-global-lib)
-[![GitHub Release](https://img.shields.io/github/v/tag/jenkinsci/workflow-cps-global-lib-plugin?label=changelog)](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/releases/latest)
-[![Jenkins Plugin Installs](https://img.shields.io/jenkins/plugin/i/workflow-cps-global-lib?color=blue)](https://plugins.jenkins.io/workflow-cps-global-lib)
-
 When you have multiple Pipeline jobs, you often want to share some parts of the Pipeline scripts between them to keep Pipeline scripts [DRY](http://en.wikipedia.org/wiki/Don't_repeat_yourself).
 A very common use case is that you have many projects that are built in the similar way.
 
