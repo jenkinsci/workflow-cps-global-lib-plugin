@@ -66,6 +66,7 @@ import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 /**
  * Uses {@link SCMSource#fetch(String, TaskListener)} to retrieve a specific revision.
@@ -76,9 +77,19 @@ public class SCMSourceRetriever extends LibraryRetriever {
     public static boolean INCLUDE_SRC_TEST_IN_LIBRARIES = Boolean.getBoolean(SCMSourceRetriever.class.getName() + ".INCLUDE_SRC_TEST_IN_LIBRARIES");
 
     private final SCMSource scm;
+    private boolean cleanWorkspace;
 
     @DataBoundConstructor public SCMSourceRetriever(SCMSource scm) {
         this.scm = scm;
+    }
+
+    public boolean getCleanWorkspace() {
+        return cleanWorkspace;
+    }
+
+    @DataBoundSetter
+    public void setCleanWorkspace(boolean cleanWorkspace) {
+        this.cleanWorkspace = cleanWorkspace;
     }
 
     /**
@@ -93,7 +104,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
         if (revision == null) {
             throw new AbortException("No version " + version + " found for library " + name);
         }
-        doRetrieve(name, changelog, scm.build(revision.getHead(), revision), target, run, listener);
+        doRetrieve(name, changelog, cleanWorkspace, scm.build(revision.getHead(), revision), target, run, listener);
     }
 
     @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
@@ -132,7 +143,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
     }
 
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", justification = "apparently bogus complaint about redundant nullcheck in try-with-resources")
-    static void doRetrieve(String name, boolean changelog, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    static void doRetrieve(String name, boolean changelog, boolean cleanWorkspace, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         // Adapted from CpsScmFlowDefinition:
         SCMStep delegate = new GenericSCMStep(scm);
         delegate.setPoll(false); // TODO we have no API for determining if a given SCMHead is branch-like or tag-like; would we want to turn on polling if the former?
@@ -165,6 +176,9 @@ public class SCMSourceRetriever extends LibraryRetriever {
                 listener.getLogger().println("To remove this log message, move the test code outside of src/. To restore the previous behavior that allowed access to files in src/test/, pass -D" + SCMSourceRetriever.class.getName() + ".INCLUDE_SRC_TEST_IN_LIBRARIES=true to the java command used to start Jenkins.");
             }
             lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", excludes, target);
+            if (cleanWorkspace) {
+                lease.path.deleteContents();
+            }
         }
     }
 
