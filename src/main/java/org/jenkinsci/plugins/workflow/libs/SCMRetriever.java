@@ -45,6 +45,7 @@ import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 /**
  * Uses legacy {@link SCM} to check out sources based on variable interpolation.
@@ -52,6 +53,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 public class SCMRetriever extends LibraryRetriever {
 
     private final SCM scm;
+    private boolean cleanWorkspace;
 
     @DataBoundConstructor public SCMRetriever(SCM scm) {
         this.scm = scm;
@@ -61,12 +63,21 @@ public class SCMRetriever extends LibraryRetriever {
         return scm;
     }
 
+    public boolean getCleanWorkspace() {
+        return cleanWorkspace;
+    }
+
+    @DataBoundSetter
+    public void setCleanWorkspace(boolean cleanWorkspace) {
+        this.cleanWorkspace = cleanWorkspace;
+    }
+
     @Override public void retrieve(String name, String version, boolean changelog, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
-        SCMSourceRetriever.doRetrieve(name, changelog, scm, target, run, listener);
+        SCMSourceRetriever.doRetrieve(name, changelog, cleanWorkspace, scm, target, run, listener);
     }
 
     @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
-        SCMSourceRetriever.doRetrieve(name, true, scm, target, run, listener);
+        SCMSourceRetriever.doRetrieve(name, true, cleanWorkspace, scm, target, run, listener);
     }
     
     @Override public FormValidation validateVersion(String name, String version, Item context) {

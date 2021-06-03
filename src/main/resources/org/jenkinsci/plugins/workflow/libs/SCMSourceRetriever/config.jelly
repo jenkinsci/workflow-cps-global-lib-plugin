@@ -26,4 +26,7 @@ THE SOFTWARE.
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
     <f:descriptorRadioList varName="scm" instance="${instance.scm}" descriptors="${descriptor.SCMDescriptors}" title="${%Source Code Management}"/>
+    <f:entry field="cleanWorkspace" title="${%Clean workspace after retrieval}">
+        <f:checkbox/>
+    </f:entry>
 </j:jelly>

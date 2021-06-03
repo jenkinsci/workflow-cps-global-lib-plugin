@@ -93,6 +93,23 @@ public class SCMSourceRetrieverTest {
         }
     }
 
+    @Issue("JENKINS-65612")
+    @Test public void cleanWorkspace() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("vars/myecho.groovy", "def call() {echo 'something special'}");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        SCMSourceRetriever sourceRetriever = new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true));
+        sourceRetriever.setCleanWorkspace(true);
+        GlobalLibraries.get().setLibraries(Collections.singletonList(new LibraryConfiguration("clean_workspace", sourceRetriever)));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('clean_workspace@master') import myecho; myecho()", true));
+        FilePath base = r.jenkins.getWorkspaceFor(p).withSuffix("@libs").child("clean_workspace");
+        WorkflowRun b = r.buildAndAssertSuccess(p);
+        r.assertLogContains("something special", b);
+        assertFalse(base.child("vars").exists());
+    }
+
     @Issue("JENKINS-41497")
     @Test public void includeChanges() throws Exception {
         sampleRepo.init();
