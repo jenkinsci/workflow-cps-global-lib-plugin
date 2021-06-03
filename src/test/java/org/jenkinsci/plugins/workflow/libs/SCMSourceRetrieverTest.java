@@ -153,6 +153,51 @@ public class SCMSourceRetrieverTest {
         }
     }
 
+    @Issue("JENKINS-38609")
+    @Test public void rootSubPath() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("sub/path/vars/myecho.groovy", "def call() {echo 'something special'}");
+        sampleRepo.git("add", "sub");
+        sampleRepo.git("commit", "--message=init");
+        SCMSourceRetriever scm = new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true));
+        LibraryConfiguration lc = new LibraryConfiguration("root_sub_path", scm);
+        lc.setIncludeInChangesets(false);
+        scm.setLibBasePath("sub/path/");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(lc));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('root_sub_path@master') import myecho; myecho()", true));
+        FilePath base = r.jenkins.getWorkspaceFor(p).withSuffix("@libs").child("root_sub_path");
+        try (WorkspaceList.Lease lease = r.jenkins.toComputer().getWorkspaceList().acquire(base)) {
+            WorkflowRun a = r.buildAndAssertSuccess(p);
+            r.assertLogContains("something special", a);
+        }
+        sampleRepo.write("sub/path/vars/myecho.groovy", "def call() {echo 'something even more special'}");
+        sampleRepo.git("add", "sub");
+        sampleRepo.git("commit", "--message=shared_library_commit");
+        try (WorkspaceList.Lease lease = r.jenkins.toComputer().getWorkspaceList().acquire(base)) {
+            WorkflowRun b = r.buildAndAssertSuccess(p);
+            r.assertLogContains("something even more special", b);
+        }
+    }
+
+    @Issue("JENKINS-38609")
+    @Test public void rootSubPathSecurity() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("sub/path/vars/myecho.groovy", "def call() {echo 'something special'}");
+        sampleRepo.git("add", "sub");
+        sampleRepo.git("commit", "--message=init");
+        SCMSourceRetriever scm = new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true));
+        LibraryConfiguration lc = new LibraryConfiguration("root_sub_path", scm);
+        lc.setIncludeInChangesets(false);
+        scm.setLibBasePath("sub/path/../path/");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(lc));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('root_sub_path@master') import myecho; myecho()", true));
+        FilePath base = r.jenkins.getWorkspaceFor(p).withSuffix("@libs").child("root_sub_path");
+        WorkflowRun a = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+        r.assertLogContains("Double dots in library base path are forbidden", a);
+    }
+
     @Issue("JENKINS-43802")
     @Test public void owner() throws Exception {
         GlobalLibraries.get().setLibraries(Collections.singletonList(
