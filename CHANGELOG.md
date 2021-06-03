@@ -1,5 +1,7 @@
 # Changelog
 
+* For newer versions, see [GitHub Releases](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/releases)
+
 ## 2.19
 
 Release date: 2021-04-30
