@@ -1,5 +1,13 @@
 # Changelog
 
+* For newer versions, see [GitHub Releases](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/releases)
+
+## 2.19
+
+Release date: 2021-04-30
+
+- Developer: Expose LibrariesAction and LibraryRecord to Jenkins' REST API ([PR 107](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/107))
+
 ## 2.18
 
 Release date: 2021-02-19
