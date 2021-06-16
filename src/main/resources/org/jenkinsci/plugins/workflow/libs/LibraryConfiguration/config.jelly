@@ -40,5 +40,5 @@ THE SOFTWARE.
     <f:entry field="includeInChangesets" title="${%Include @Library changes in job recent changes}">
         <f:checkbox default="true"/>
     </f:entry>
-    <f:descriptorRadioList varName="retriever" instance="${instance.retriever}" descriptors="${descriptor.retrieverDescriptors}" title="${%Retrieval method}"/>
+    <f:dropdownDescriptorSelector field="retriever" descriptors="${descriptor.retrieverDescriptors}" title="${%Retrieval method}"/>
 </j:jelly>
