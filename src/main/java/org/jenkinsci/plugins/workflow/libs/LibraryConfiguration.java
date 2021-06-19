@@ -58,6 +58,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     private boolean implicit;
     private boolean allowVersionOverride = true;
     private boolean includeInChangesets = true;
+    private boolean existingLibrariesUsed = true;
 
     @DataBoundConstructor public LibraryConfiguration(String name, LibraryRetriever retriever) {
         this.name = Util.fixEmptyAndTrim(name);
@@ -108,6 +109,17 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
 
     @DataBoundSetter public void setAllowVersionOverride(boolean allowVersionOverride) {
         this.allowVersionOverride = allowVersionOverride;
+    }
+
+    /**
+     * Whether @Library references override existing global libraries.
+     */
+    public boolean isExistingLibrariesUsed() {
+        return existingLibrariesUsed;
+    }
+
+    @DataBoundSetter public void setExistingLibrariesUsed(boolean existingLibrariesUsed) {
+        this.existingLibrariesUsed = existingLibrariesUsed;
     }
 
     /**

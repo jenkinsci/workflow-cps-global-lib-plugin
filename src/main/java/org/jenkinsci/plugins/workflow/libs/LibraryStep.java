@@ -88,6 +88,7 @@ public class LibraryStep extends AbstractStepImpl {
     private final String identifier;
     private Boolean changelog = true;
     private LibraryRetriever retriever;
+    private Boolean existingLibrariesUsed = true;
 
     @DataBoundConstructor public LibraryStep(String identifier) {
         this.identifier = identifier;
@@ -104,6 +105,15 @@ public class LibraryStep extends AbstractStepImpl {
     public Boolean getChangelog() {
         return changelog;
     }
+
+    public Boolean getExistingLibrariesUsed() {
+        return existingLibrariesUsed;
+    }
+
+    @DataBoundSetter public void setExistingLibrariesUsed(Boolean existingLibrariesUsed) {
+        this.existingLibrariesUsed = existingLibrariesUsed;
+    }
+
     @DataBoundSetter public void setRetriever(LibraryRetriever retriever) {
         this.retriever = retriever;
     }
@@ -164,6 +174,7 @@ public class LibraryStep extends AbstractStepImpl {
             String[] parsed = LibraryAdder.parse(step.identifier);
             String name = parsed[0], version = parsed[1];
             boolean trusted = false;
+            Boolean existingLibrariesUsed = step.getExistingLibrariesUsed();
             Boolean changelog = step.getChangelog();
             LibraryRetriever retriever = step.getRetriever();
             if (retriever == null) {
@@ -172,6 +183,7 @@ public class LibraryStep extends AbstractStepImpl {
                         if (cfg.getName().equals(name)) {
                             retriever = cfg.getRetriever();
                             trusted = resolver.isTrusted();
+                            existingLibrariesUsed = cfg.isExistingLibrariesUsed();
                             version = cfg.defaultedVersion(version);
                             changelog = cfg.defaultedChangelogs(changelog);
                             break;
@@ -193,9 +205,11 @@ public class LibraryStep extends AbstractStepImpl {
             } else {
                 List<LibraryRecord> libraries = action.getLibraries();
                 for (LibraryRecord existing : libraries) {
-                    if (existing.name.equals(name)) {
+                    if (existingLibrariesUsed && existing.name.equals(name)) {
                         listener.getLogger().println("Only using first definition of library " + name);
                         return new LoadedClasses(name, trusted, changelog, run);
+                    }else if(!existingLibrariesUsed && existing.name.equals(name)){
+                        listener.getLogger().println("Overriding the global library " + existing.name);
                     }
                 }
                 List<LibraryRecord> newLibraries = new ArrayList<>(libraries);
