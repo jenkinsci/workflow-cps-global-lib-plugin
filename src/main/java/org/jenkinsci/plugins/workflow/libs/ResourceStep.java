@@ -44,6 +44,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 public class ResourceStep extends AbstractStepImpl {
 
     private final String resource;
+    private String libraryName;
     private String encoding;
 
     @DataBoundConstructor public ResourceStep(String resource) {
@@ -52,6 +53,15 @@ public class ResourceStep extends AbstractStepImpl {
 
     public String getResource() {
         return resource;
+    }
+
+    public String getLibraryName() {
+        return libraryName;
+    }
+
+    @DataBoundSetter
+    public void setLibraryName(String libraryName) {
+        this.libraryName = Util.fixEmptyAndTrim(libraryName);
     }
 
     public @CheckForNull String getEncoding() {
@@ -91,10 +101,15 @@ public class ResourceStep extends AbstractStepImpl {
 
         @Override protected String run() throws Exception {
             String resource = step.resource;
+            String libraryName = step.libraryName;
             Map<String,String> contents = LibraryAdder.findResources((CpsFlowExecution) getContext().get(FlowExecution.class), resource, step.encoding);
-            if (contents.isEmpty()) {
+            if (libraryName != null && contents.containsKey(libraryName)) {
+                return contents.get(libraryName);
+            } else if (contents.isEmpty()) {
                 throw new AbortException(Messages.ResourceStep_no_such_library_resource_could_be_found_(resource));
-            } else if (contents.size() == 1) {
+            } else if (libraryName != null && !contents.containsKey(libraryName)) {
+               throw new AbortException(Messages.ResourceStep_no_matching_resource_found_in_library(resource, libraryName));
+            }  else if (libraryName == null && contents.size() == 1) {
                 return contents.values().iterator().next();
             } else {
                 throw new AbortException(Messages.ResourceStep_library_resource_ambiguous_among_librari(resource, contents.keySet()));
