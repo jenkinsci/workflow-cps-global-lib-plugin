@@ -43,8 +43,15 @@ import org.kohsuke.stapler.export.ExportedBean;
 public class LibrariesAction extends InvisibleAction {
 
     private final List<LibraryRecord> libraries;
-
+    
+    private final String scope;
+    
     LibrariesAction(List<LibraryRecord> libraries) {
+        this(null, libraries);
+    }
+
+    LibrariesAction(String scope, List<LibraryRecord> libraries) {
+        this.scope = scope;
         this.libraries = libraries;
     }
 
@@ -54,6 +61,13 @@ public class LibrariesAction extends InvisibleAction {
     @Exported
     public List<LibraryRecord> getLibraries() {
         return Collections.unmodifiableList(libraries);
+    }
+    
+    /**
+     * @return An identifier of the source file that these library definitions are for
+     */
+    public String getScope() {
+        return scope;
     }
 
     @Extension public static class LibraryEnvironment extends EnvironmentContributor {

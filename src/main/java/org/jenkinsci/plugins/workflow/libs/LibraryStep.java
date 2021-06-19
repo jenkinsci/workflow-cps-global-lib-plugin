@@ -186,7 +186,15 @@ public class LibraryStep extends AbstractStepImpl {
             }
 
             LibraryRecord record = new LibraryRecord(name, version, trusted, changelog);
-            LibrariesAction action = run.getAction(LibrariesAction.class);
+            LibrariesAction action = null;
+            
+            for( LibrariesAction laction : run.getActions(LibrariesAction.class)) {
+                if( null == laction.getScope() ) {
+                    action = laction;
+                    break;
+                }
+            }
+            
             if (action == null) {
                 action = new LibrariesAction(Lists.newArrayList(record));
                 run.addAction(action);

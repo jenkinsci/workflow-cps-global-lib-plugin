@@ -122,7 +122,7 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
                 }.visitClass(classNode);
                 try {
                     for (ClasspathAdder adder : ExtensionList.lookup(ClasspathAdder.class)) {
-                        for (ClasspathAdder.Addition addition : adder.add(execution, libraries, changelogs)) {
+                        for (ClasspathAdder.Addition addition : adder.add(source.getName(), execution, libraries, changelogs)) {  
                             addition.addTo(execution);
                         }
                     }
