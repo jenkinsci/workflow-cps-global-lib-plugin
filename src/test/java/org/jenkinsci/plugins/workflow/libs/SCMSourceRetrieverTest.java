@@ -65,6 +65,11 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.SingleFileSCM;
 import org.jvnet.hudson.test.TestExtension;
+import org.jvnet.hudson.test.WithoutJenkins;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.matchesPattern;
+import static org.jenkinsci.plugins.workflow.libs.SCMSourceRetriever.PROHIBITED_DOUBLE_DOT;
 
 public class SCMSourceRetrieverTest {
 
@@ -151,6 +156,51 @@ public class SCMSourceRetrieverTest {
             assertEquals(0, changeSets.size());
             r.assertLogNotContains("Retrying after 10 seconds", b);
         }
+    }
+
+    @Issue("JENKINS-38609")
+    @Test public void libraryPath() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("sub/path/vars/myecho.groovy", "def call() {echo 'something special'}");
+        sampleRepo.git("add", "sub");
+        sampleRepo.git("commit", "--message=init");
+        SCMSourceRetriever scm = new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true));
+        LibraryConfiguration lc = new LibraryConfiguration("root_sub_path", scm);
+        lc.setIncludeInChangesets(false);
+        scm.setLibraryPath("sub/path/");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(lc));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('root_sub_path@master') import myecho; myecho()", true));
+        WorkflowRun b = r.buildAndAssertSuccess(p);
+        r.assertLogContains("something special", b);
+    }
+
+    @Issue("JENKINS-38609")
+    @Test public void libraryPathSecurity() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("sub/path/vars/myecho.groovy", "def call() {echo 'something special'}");
+        sampleRepo.git("add", "sub");
+        sampleRepo.git("commit", "--message=init");
+        SCMSourceRetriever scm = new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true));
+        LibraryConfiguration lc = new LibraryConfiguration("root_sub_path", scm);
+        lc.setIncludeInChangesets(false);
+        scm.setLibraryPath("sub/path/../../../jenkins_home/foo");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(lc));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('root_sub_path@master') import myecho; myecho()", true));
+        WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
+        r.assertLogContains("Library path may not contain '..'", b);
+    }
+
+    @WithoutJenkins
+    @Test public void libraryPathMatcher() {
+        assertThat("..", matchesPattern(PROHIBITED_DOUBLE_DOT));
+        assertThat("./..", matchesPattern(PROHIBITED_DOUBLE_DOT));
+        assertThat("../foo", matchesPattern(PROHIBITED_DOUBLE_DOT));
+        assertThat("foo/../bar", matchesPattern(PROHIBITED_DOUBLE_DOT));
+        assertThat(".\\..", matchesPattern(PROHIBITED_DOUBLE_DOT));
+        assertThat("..\\foo", matchesPattern(PROHIBITED_DOUBLE_DOT));
+        assertThat("foo\\..\\bar", matchesPattern(PROHIBITED_DOUBLE_DOT));
     }
 
     @Issue("JENKINS-43802")

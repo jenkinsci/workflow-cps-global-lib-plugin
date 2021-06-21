@@ -53,10 +53,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import javax.annotation.Nonnull;
+import javax.annotation.CheckForNull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceDescriptor;
+import java.util.regex.Pattern;
 import org.jenkinsci.Symbol;
 import org.jenkinsci.plugins.structs.describable.CustomDescribableModel;
 import org.jenkinsci.plugins.structs.describable.UninstantiatedDescribable;
@@ -66,6 +68,9 @@ import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.verb.POST;
 
 /**
  * Uses {@link SCMSource#fetch(String, TaskListener)} to retrieve a specific revision.
@@ -74,8 +79,24 @@ public class SCMSourceRetriever extends LibraryRetriever {
 
     @SuppressFBWarnings(value="MS_SHOULD_BE_FINAL", justification="Non-final for write access via the Script Console")
     public static boolean INCLUDE_SRC_TEST_IN_LIBRARIES = Boolean.getBoolean(SCMSourceRetriever.class.getName() + ".INCLUDE_SRC_TEST_IN_LIBRARIES");
+    /**
+     * Matches ".." in positions where it would be treated as the parent directory.
+     *
+     * <p>Used to prevent {@link #libraryPath} from being used for directory traversal.
+     */
+    static final Pattern PROHIBITED_DOUBLE_DOT = Pattern.compile("(^|.*[\\\\/])\\.\\.($|[\\\\/].*)");
 
     private final SCMSource scm;
+
+    /**
+     * The path to the library inside of the SCM.
+     *
+     * {@code null} is the default and means that the library is in the root of the repository. Otherwise, the value is
+     * considered to be a relative path inside of the repository and always ends in a forward slash
+     *
+     * @see #setLibraryPath
+     */
+    private @CheckForNull String libraryPath;
 
     @DataBoundConstructor public SCMSourceRetriever(SCMSource scm) {
         this.scm = scm;
@@ -88,12 +109,24 @@ public class SCMSourceRetriever extends LibraryRetriever {
         return scm;
     }
 
+    public String getLibraryPath() {
+        return libraryPath;
+    }
+
+    @DataBoundSetter public void setLibraryPath(String libraryPath) {
+        libraryPath = Util.fixEmptyAndTrim(libraryPath);
+        if (libraryPath != null && !libraryPath.endsWith("/")) {
+            libraryPath += '/';
+        }
+        this.libraryPath = libraryPath;
+    }
+
     @Override public void retrieve(String name, String version, boolean changelog, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         SCMRevision revision = retrySCMOperation(listener, () -> scm.fetch(version, listener, run.getParent()));
         if (revision == null) {
             throw new AbortException("No version " + version + " found for library " + name);
         }
-        doRetrieve(name, changelog, scm.build(revision.getHead(), revision), target, run, listener);
+        doRetrieve(name, changelog, scm.build(revision.getHead(), revision), libraryPath, target, run, listener);
     }
 
     @Override public void retrieve(String name, String version, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
@@ -132,7 +165,7 @@ public class SCMSourceRetriever extends LibraryRetriever {
     }
 
     @SuppressFBWarnings(value = "RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE", justification = "apparently bogus complaint about redundant nullcheck in try-with-resources")
-    static void doRetrieve(String name, boolean changelog, @Nonnull SCM scm, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
+    static void doRetrieve(String name, boolean changelog, @Nonnull SCM scm, String libraryPath, FilePath target, Run<?, ?> run, TaskListener listener) throws Exception {
         // Adapted from CpsScmFlowDefinition:
         SCMStep delegate = new GenericSCMStep(scm);
         delegate.setPoll(false); // TODO we have no API for determining if a given SCMHead is branch-like or tag-like; would we want to turn on polling if the former?
@@ -157,14 +190,19 @@ public class SCMSourceRetriever extends LibraryRetriever {
                 delegate.checkout(run, lease.path, listener, node.createLauncher(listener));
                 return null;
             });
-            // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
-            // Copy sources with relevant files from the checkout:
+            if (libraryPath == null) {
+                libraryPath = ".";
+            } else if (PROHIBITED_DOUBLE_DOT.matcher(libraryPath).matches()) {
+                throw new AbortException("Library path may not contain '..'");
+            }
             String excludes = INCLUDE_SRC_TEST_IN_LIBRARIES ? null : "src/test/";
-            if (lease.path.child("src/test").exists()) {
+            if (lease.path.child(libraryPath).child("src/test").exists()) {
                 listener.getLogger().println("Excluding src/test/ from checkout of " + scm.getKey() + " so that shared library test code cannot be accessed by Pipelines.");
                 listener.getLogger().println("To remove this log message, move the test code outside of src/. To restore the previous behavior that allowed access to files in src/test/, pass -D" + SCMSourceRetriever.class.getName() + ".INCLUDE_SRC_TEST_IN_LIBRARIES=true to the java command used to start Jenkins.");
             }
-            lease.path.copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", excludes, target);
+            // Cannot add WorkspaceActionImpl to private CpsFlowExecution.flowStartNodeActions; do we care?
+            // Copy sources with relevant files from the checkout:
+            lease.path.child(libraryPath).copyRecursiveTo("src/**/*.groovy,vars/*.groovy,vars/*.txt,resources/", excludes, target);
         }
     }
 
@@ -192,6 +230,21 @@ public class SCMSourceRetriever extends LibraryRetriever {
 
     @Symbol("modernSCM")
     @Extension public static class DescriptorImpl extends LibraryRetrieverDescriptor implements CustomDescribableModel {
+
+        static FormValidation checkLibraryPath(@QueryParameter String libraryPath) {
+            libraryPath = Util.fixEmptyAndTrim(libraryPath);
+            if (libraryPath == null) {
+                return FormValidation.ok();
+            } else if (PROHIBITED_DOUBLE_DOT.matcher(libraryPath).matches()) {
+                return FormValidation.error(Messages.SCMSourceRetriever_library_path_no_double_dot());
+            }
+            return FormValidation.ok();
+        }
+
+        @POST
+        public FormValidation doCheckLibraryPath(@QueryParameter String libraryPath) {
+            return checkLibraryPath(libraryPath);
+        }
 
         @Override public String getDisplayName() {
             return "Modern SCM";
