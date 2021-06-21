@@ -48,6 +48,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.security.CodeSource;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -199,7 +200,9 @@ public class LibraryStep extends AbstractStepImpl {
                         return new LoadedClasses(name, trusted, changelog, run);
                     }
                 }
-                libraries.add(record);
+                List<LibraryRecord> newLibraries = new ArrayList<>(libraries);
+                newLibraries.add(record);
+                run.replaceAction(new LibrariesAction(newLibraries));
             }
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
             CpsFlowExecution exec = (CpsFlowExecution) getContext().get(FlowExecution.class);

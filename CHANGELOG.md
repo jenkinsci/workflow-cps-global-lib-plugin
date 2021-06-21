@@ -1,5 +1,20 @@
 # Changelog
 
+* For newer versions, see [GitHub Releases](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/releases)
+
+## 2.19
+
+Release date: 2021-04-30
+
+- Developer: Expose LibrariesAction and LibraryRecord to Jenkins' REST API ([PR 107](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/107))
+
+## 2.18
+
+Release date: 2021-02-19
+
+- Fix: Prevent `ConcurrentModificationException` from being thrown when serializing `LibrariesAction.libraries` ([JENKINS-41037](https://issues.jenkins.io/browse/JENKINS-41037))
+- Internal: Fix PCT failures related to Git plugin 4.6.0 ([PR 104](https://github.com/jenkinsci/workflow-cps-global-lib-plugin/pull/104)) 
+
 ## 2.17
 
 Release date: 2020-07-20

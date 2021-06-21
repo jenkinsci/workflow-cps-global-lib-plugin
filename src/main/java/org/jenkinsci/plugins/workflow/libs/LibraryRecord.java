@@ -24,13 +24,17 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
+import org.kohsuke.stapler.export.Exported;
+import org.kohsuke.stapler.export.ExportedBean;
 
 /**
  * Record of a library being used in a particular build.
  */
-final class LibraryRecord {
+@ExportedBean
+public final class LibraryRecord {
 
     final String name;
     final String version;
@@ -45,6 +49,31 @@ final class LibraryRecord {
         this.trusted = trusted;
         this.changelog = changelog;
         this.cachingConfiguration = cachingConfiguration;
+    }
+
+    @Exported
+    public String getName() {
+        return name;
+    }
+
+    @Exported
+    public String getVersion() {
+        return version;
+    }
+
+    @Exported
+    public Set<String> getVariables() {
+        return Collections.unmodifiableSet(variables);
+    }
+
+    @Exported
+    public boolean isTrusted() {
+        return trusted;
+    }
+
+    @Exported
+    public boolean isChangelog() {
+        return changelog;
     }
 
     @Override public String toString() {

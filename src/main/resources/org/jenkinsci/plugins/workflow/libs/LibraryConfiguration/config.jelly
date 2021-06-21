@@ -41,5 +41,5 @@ THE SOFTWARE.
         <f:checkbox default="true"/>
     </f:entry>
     <f:optionalProperty field="cachingConfiguration" title="${%Cache fetched versions on master for quick retrieval}"/>
-    <f:descriptorRadioList varName="retriever" instance="${instance.retriever}" descriptors="${descriptor.retrieverDescriptors}" title="${%Retrieval method}"/>
+    <f:dropdownDescriptorSelector field="retriever" descriptors="${descriptor.retrieverDescriptors}" title="${%Retrieval method}"/>
 </j:jelly>
