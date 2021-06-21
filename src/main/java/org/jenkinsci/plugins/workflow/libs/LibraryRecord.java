@@ -41,12 +41,14 @@ public final class LibraryRecord {
     final Set<String> variables = new TreeSet<>();
     final boolean trusted;
     final boolean changelog;
+    final LibraryCachingConfiguration cachingConfiguration;
 
-    LibraryRecord(String name, String version, boolean trusted, boolean changelog) {
+    LibraryRecord(String name, String version, boolean trusted, boolean changelog, LibraryCachingConfiguration cachingConfiguration) {
         this.name = name;
         this.version = version;
         this.trusted = trusted;
         this.changelog = changelog;
+        this.cachingConfiguration = cachingConfiguration;
     }
 
     @Exported
@@ -75,7 +77,8 @@ public final class LibraryRecord {
     }
 
     @Override public String toString() {
-        return "LibraryRecord{name=" + name + ", version=" + version + ", variables=" + variables + ", trusted=" + trusted + ", changelog=" + changelog + '}';
+        String cachingConfigurationStr = cachingConfiguration != null ? cachingConfiguration.toString() : "null";
+        return "LibraryRecord{name=" + name + ", version=" + version + ", variables=" + variables + ", trusted=" + trusted + ", changelog=" + changelog + ", cachingConfiguration=" + cachingConfigurationStr + '}';
     }
 
 }

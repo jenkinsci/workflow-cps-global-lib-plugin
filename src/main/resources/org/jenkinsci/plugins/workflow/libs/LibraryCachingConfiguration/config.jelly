@@ -25,21 +25,11 @@ THE SOFTWARE.
 
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-    <f:entry field="name" title="${%Name}">
-        <f:textbox/>
+    <f:entry title="${%Refresh time in minutes}" field="refreshTimeMinutes">
+        <f:number default="0" />
     </f:entry>
-    <f:entry field="defaultVersion" title="${%Default version}">
-        <f:textbox checkMethod="post"/>
+    <f:entry title="${%Versions to exclude}" field="excludedVersionsStr">
+        <f:textbox />
     </f:entry>
-    <f:entry field="implicit" title="${%Load implicitly}">
-        <f:checkbox/>
-    </f:entry>
-    <f:entry field="allowVersionOverride" title="${%Allow default version to be overridden}">
-        <f:checkbox default="true"/>
-    </f:entry>
-    <f:entry field="includeInChangesets" title="${%Include @Library changes in job recent changes}">
-        <f:checkbox default="true"/>
-    </f:entry>
-    <f:optionalProperty field="cachingConfiguration" title="${%Cache fetched versions on master for quick retrieval}"/>
-    <f:dropdownDescriptorSelector field="retriever" descriptors="${descriptor.retrieverDescriptors}" title="${%Retrieval method}"/>
+    <f:validateButton title="${%Clear cache}" progress="${%Clearing...}" method="clearCache" with="name" />
 </j:jelly>
