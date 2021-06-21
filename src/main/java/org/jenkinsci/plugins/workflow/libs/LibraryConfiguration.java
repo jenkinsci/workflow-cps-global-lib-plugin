@@ -33,9 +33,6 @@ import hudson.model.Descriptor;
 import hudson.model.DescriptorVisibilityFilter;
 import hudson.model.Item;
 import hudson.util.FormValidation;
-import java.util.Collection;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -46,6 +43,10 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.interceptor.RequirePOST;
+
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+import java.util.Collection;
 
 /**
  * User configuration for one library.
@@ -58,6 +59,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     private boolean implicit;
     private boolean allowVersionOverride = true;
     private boolean includeInChangesets = true;
+    private LibraryCachingConfiguration cachingConfiguration = null;
 
     @DataBoundConstructor public LibraryConfiguration(String name, LibraryRetriever retriever) {
         this.name = Util.fixEmptyAndTrim(name);
@@ -119,6 +121,14 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
 
     @DataBoundSetter public void setIncludeInChangesets(boolean includeInChangesets) {
         this.includeInChangesets = includeInChangesets;
+    }
+
+    public LibraryCachingConfiguration getCachingConfiguration() {
+        return cachingConfiguration;
+    }
+
+    @DataBoundSetter public void setCachingConfiguration(LibraryCachingConfiguration cachingConfiguration) {
+        this.cachingConfiguration = cachingConfiguration;
     }
 
     @Nonnull boolean defaultedChangelogs(@CheckForNull Boolean changelog) throws AbortException {
