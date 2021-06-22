@@ -1,6 +1,9 @@
 package org.jenkinsci.plugins.workflow.cps.global;
 
 import groovy.lang.Binding;
+import hudson.model.Queue.Executable;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
@@ -8,6 +11,7 @@ import org.jenkinsci.plugins.workflow.cps.CpsCompilationErrorsException;
 import org.jenkinsci.plugins.workflow.cps.CpsScript;
 import org.jenkinsci.plugins.workflow.cps.CpsThread;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
+import org.jenkinsci.plugins.workflow.cps.global.UserDefinedGlobalVariableAction;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -25,20 +29,38 @@ import jenkins.model.Jenkins;
 public class UserDefinedGlobalVariable extends GlobalVariable {
     private final File help;
     private final String name;
+    private final String libraryName;
+    private final String libraryVersion;
 
     /*package*/ UserDefinedGlobalVariable(WorkflowLibRepository repo, String name) {
         this(name, new File(repo.workspace, PREFIX + "/" + name + ".txt"));
     }
 
     public UserDefinedGlobalVariable(String name, File help) {
+        this(name, help, "missing", "missing");
+    }
+
+    public UserDefinedGlobalVariable(String name, File help, String libraryName, String libraryVersion) {
         this.name = name;
         this.help = help;
+        this.libraryName = libraryName;
+        this.libraryVersion = libraryVersion;
     }
 
     @Nonnull
     @Override
     public String getName() {
         return name;
+    }
+
+    @Nonnull
+    public String getLibraryName() {
+        return libraryName;
+    }
+
+    @Nonnull
+    public String getLibraryVersion() {
+        return libraryVersion;
     }
 
     @Nonnull
@@ -54,6 +76,8 @@ public class UserDefinedGlobalVariable extends GlobalVariable {
                 throw new IllegalStateException("Expected to be called from CpsThread");
 
             try {
+                TaskListener listener = c.getExecution().getOwner().getListener();
+                listener.getLogger().println("Loading Global Variable: " + getName() + " library: " + getLibraryName() + " version: " + getLibraryVersion());
                 instance = c.getExecution().getShell().getClassLoader().loadClass(getName()).newInstance();
             } catch(MultipleCompilationErrorsException ex) {
                 // Convert to a serializable exception, see JENKINS-40109.
@@ -66,6 +90,17 @@ public class UserDefinedGlobalVariable extends GlobalVariable {
                we would also need to start calling LoadStepExecution.Replacer.
             */
             binding.setVariable(getName(), instance);
+
+            Run<?,?> run = script.$buildNoException();
+            if (run != null) {
+                UserDefinedGlobalVariableAction varsAction = run.getAction(UserDefinedGlobalVariableAction.class);
+                if (varsAction == null) {
+                    varsAction = new UserDefinedGlobalVariableAction();
+                    run.addAction(varsAction);
+                }
+                varsAction.addUserDefinedGlobalVariable(this);
+                run.save();
+            }
         }
         return instance;
     }
