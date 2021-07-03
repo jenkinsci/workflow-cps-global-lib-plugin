@@ -12,6 +12,7 @@ import org.kohsuke.stapler.QueryParameter;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public final class LibraryCachingConfiguration extends AbstractDescribableImpl<LibraryCachingConfiguration> {
@@ -45,6 +46,9 @@ public final class LibraryCachingConfiguration extends AbstractDescribableImpl<L
     }
 
     private List<String> getExcludedVersions() {
+        if (excludedVersionsStr == null) {
+            return Collections.emptyList();
+        }
         return Arrays.asList(excludedVersionsStr.split(VERSIONS_SEPARATOR));
     }
 
