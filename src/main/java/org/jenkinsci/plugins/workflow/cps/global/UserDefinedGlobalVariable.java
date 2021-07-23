@@ -1,7 +1,7 @@
 package org.jenkinsci.plugins.workflow.cps.global;
 
 import groovy.lang.Binding;
-import org.apache.commons.io.Charsets;
+import java.nio.charset.StandardCharsets;
 import org.apache.commons.io.FileUtils;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.jenkinsci.plugins.workflow.cps.CpsCompilationErrorsException;
@@ -77,7 +77,7 @@ public class UserDefinedGlobalVariable extends GlobalVariable {
         if (!help.exists())     return null;
 
         return Jenkins.get().getMarkupFormatter().translate(
-            FileUtils.readFileToString(help, Charsets.UTF_8).
+            FileUtils.readFileToString(help, StandardCharsets.UTF_8).
             // Util.escape translates \n but not \r, and we do not know what platform the library will be checked out on:
             replace("\r\n", "\n"));
     }
