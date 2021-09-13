@@ -326,22 +326,20 @@ public class SCMSourceRetriever extends LibraryRetriever {
                                     Jenkins.get().getRawWorkspaceDir(),
                                     itemFullName,
                                     item.getRootDir().getPath());
-                    FilePath baseWorkspace = new FilePath(new File(base));
-                    if (baseWorkspace != null) {
-                        FilePath dir = baseWorkspace.withSuffix(getFilePathSuffix() + "libs");
-                        try {
-                            if (dir.isDirectory()) {
-                                LOGGER.log(
-                                        Level.INFO,
-                                        () -> "Deleting obsolete shared library workspace " + dir);
-                                dir.deleteRecursive();
-                            }
-                        } catch (IOException | InterruptedException e) {
+                    FilePath dir =
+                            new FilePath(new File(base)).withSuffix(getFilePathSuffix() + "libs");
+                    try {
+                        if (dir.isDirectory()) {
                             LOGGER.log(
-                                    Level.WARNING,
-                                    e,
-                                    () -> "Could not delete obsolete shared library workspace " + dir);
+                                    Level.INFO,
+                                    () -> "Deleting obsolete shared library workspace " + dir);
+                            dir.deleteRecursive();
                         }
+                    } catch (IOException | InterruptedException e) {
+                        LOGGER.log(
+                                Level.WARNING,
+                                e,
+                                () -> "Could not delete obsolete shared library workspace " + dir);
                     }
                 }
             }

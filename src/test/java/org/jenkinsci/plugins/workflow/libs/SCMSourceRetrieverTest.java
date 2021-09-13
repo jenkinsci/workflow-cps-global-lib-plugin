@@ -326,6 +326,7 @@ public class SCMSourceRetrieverTest {
         p.renameTo("p2");
         FilePath newWs = r.jenkins.getWorkspaceFor(p).withSuffix("@libs");
         assertFalse(oldWs.exists());
+        assertFalse(newWs.exists());
         r.buildAndAssertSuccess(p);
         assertFalse(oldWs.exists());
         assertTrue(newWs.exists());
