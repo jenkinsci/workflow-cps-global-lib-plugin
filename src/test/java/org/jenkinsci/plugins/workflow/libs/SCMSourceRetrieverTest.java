@@ -307,4 +307,46 @@ public class SCMSourceRetrieverTest {
         @Override public @NonNull SCM build(@NonNull SCMHead head, SCMRevision revision) { return null; }
         @TestExtension("modernAndLegacyImpls") public static final class DescriptorImpl extends SCMSourceDescriptor {}
     }
+
+    @Issue("JENKINS-66629")
+    @Test public void renameDeletesOldLibsWorkspace() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("vars/myecho.groovy", "def call() {echo 'something special'}");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(
+                new LibraryConfiguration("delete_removes_libs_workspace",
+                        new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('delete_removes_libs_workspace@master') import myecho; myecho()", true));
+        FilePath oldWs = r.jenkins.getWorkspaceFor(p).withSuffix("@libs");
+        WorkflowRun b = r.buildAndAssertSuccess(p);
+        r.assertLogContains("something special", b);
+        assertTrue(oldWs.exists());
+        p.renameTo("p2");
+        FilePath newWs = r.jenkins.getWorkspaceFor(p).withSuffix("@libs");
+        assertFalse(oldWs.exists());
+        r.buildAndAssertSuccess(p);
+        assertFalse(oldWs.exists());
+        assertTrue(newWs.exists());
+    }
+
+    @Issue("JENKINS-66629")
+    @Test public void deleteRemovesLibsWorkspace() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("vars/myecho.groovy", "def call() {echo 'something special'}");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(
+                new LibraryConfiguration("delete_removes_libs_workspace",
+                        new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('delete_removes_libs_workspace@master') import myecho; myecho()", true));
+        FilePath ws = r.jenkins.getWorkspaceFor(p).withSuffix("@libs");
+        WorkflowRun b = r.buildAndAssertSuccess(p);
+        r.assertLogContains("something special", b);
+        assertTrue(ws.exists());
+        p.delete();
+        assertFalse(ws.exists());
+    }
 }
