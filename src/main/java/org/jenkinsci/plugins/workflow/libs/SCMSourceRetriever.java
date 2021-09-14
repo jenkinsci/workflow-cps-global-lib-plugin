@@ -347,7 +347,9 @@ public class SCMSourceRetriever extends LibraryRetriever {
 
         private static String expandVariablesForDirectory(
                 String base, String itemFullName, String itemRootDir) {
-            // cf. jenkins.model.Jenkins.expandVariablesForDirectory(String, String, String)
+            // If the item is moved, it is too late to look up its original workspace location by
+            // the time we get the notification. See:
+            // https://github.com/jenkinsci/jenkins/blob/f03183ab09ce5fb8f9f4cc9ccee42a3c3e6b2d3e/core/src/main/java/jenkins/model/Jenkins.java#L2567-L2576
             Map<String, String> properties = new HashMap<>();
             properties.put("JENKINS_HOME", Jenkins.get().getRootDir().getPath());
             properties.put("ITEM_ROOTDIR", itemRootDir);
