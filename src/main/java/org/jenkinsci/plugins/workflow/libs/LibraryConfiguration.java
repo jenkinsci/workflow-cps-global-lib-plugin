@@ -140,7 +140,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     }
 
     @Nonnull String defaultedVersion(@CheckForNull String version) throws AbortException {
-        if (version == null) {
+        if ( (version == null) || (version.equals(defaultVersion)) ) {
             if (defaultVersion == null) {
                 throw new AbortException("No version specified for library " + name);
             } else {
