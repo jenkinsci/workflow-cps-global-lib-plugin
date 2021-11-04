@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.19</version>
+        <version>4.30</version>
         <relativePath />
     </parent>
     <groupId>org.jenkins-ci.plugins.workflow</groupId>
@@ -64,7 +64,7 @@
     <properties>
         <revision>2.22</revision>
         <changelist>-SNAPSHOT</changelist>
-        <jenkins.version>2.277.1</jenkins.version>
+        <jenkins.version>2.303.1</jenkins.version>
         <java.level>8</java.level>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
     </properties>
@@ -72,8 +72,8 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.277.x</artifactId>
-                <version>876.vc43b4c6423b6</version>
+                <artifactId>bom-2.303.x</artifactId>
+                <version>987.v4ade2e49fe70</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
