@@ -35,10 +35,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
-import org.apache.commons.codec.binary.Base64;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -184,7 +184,7 @@ public class ResourceStepTest {
         p.setDefinition(new CpsFlowDefinition("@Library('stuff@master') import pkg.Stuff; echo(Stuff.utf8(this)); echo(Stuff.binary(this))", true));
         Run run = r.buildAndAssertSuccess(p);
         r.assertLogContains("€", run);
-        r.assertLogContains(Base64.encodeBase64String(binaryData), run);
+        r.assertLogContains(Base64.getEncoder().encodeToString(binaryData), run);
     }
 
     public void initFixedContentLibrary() throws Exception {
