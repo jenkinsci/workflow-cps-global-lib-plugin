@@ -58,13 +58,13 @@ public final class LibraryCachingConfiguration extends AbstractDescribableImpl<L
     }
 
     public static FilePath getGlobalLibrariesCacheDir() {
-        Jenkins jenkins = Jenkins.getInstance();
+        Jenkins jenkins = Jenkins.get();
         return new FilePath(jenkins.getRootPath(), LibraryCachingConfiguration.GLOBAL_LIBRARIES_DIR);
     }
 
     @Extension public static class DescriptorImpl extends Descriptor<LibraryCachingConfiguration> {
         public FormValidation doClearCache(@QueryParameter String name) throws InterruptedException {
-            Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
 
             FilePath cacheDir = new FilePath(LibraryCachingConfiguration.getGlobalLibrariesCacheDir(), name);
             try {
