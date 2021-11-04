@@ -35,23 +35,29 @@ import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.DescriptorVisibilityFilter;
 import hudson.model.Item;
+import hudson.model.Job;
 import hudson.model.Node;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.TopLevelItem;
+import hudson.model.listeners.ItemListener;
 import hudson.scm.SCM;
 import hudson.slaves.WorkspaceList;
 import hudson.util.FormValidation;
 import hudson.util.StreamTaskListener;
+import java.io.File;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.annotation.CheckForNull;
 import jenkins.model.Jenkins;
@@ -76,6 +82,8 @@ import org.kohsuke.stapler.verb.POST;
  * Uses {@link SCMSource#fetch(String, TaskListener)} to retrieve a specific revision.
  */
 public class SCMSourceRetriever extends LibraryRetriever {
+
+    private static final Logger LOGGER = Logger.getLogger(SCMSourceRetriever.class.getName());
 
     @SuppressFBWarnings(value="MS_SHOULD_BE_FINAL", justification="Non-final for write access via the Script Console")
     public static boolean INCLUDE_SRC_TEST_IN_LIBRARIES = Boolean.getBoolean(SCMSourceRetriever.class.getName() + ".INCLUDE_SRC_TEST_IN_LIBRARIES");
@@ -293,4 +301,62 @@ public class SCMSourceRetriever extends LibraryRetriever {
 
     }
 
+    @Restricted(DoNotUse.class)
+    @Extension
+    public static class WorkspaceListener extends ItemListener {
+
+        @Override
+        public void onDeleted(Item item) {
+            deleteLibsDir(item, item.getFullName());
+        }
+
+        @Override
+        public void onLocationChanged(Item item, String oldFullName, String newFullName) {
+            deleteLibsDir(item, oldFullName);
+        }
+
+        private static void deleteLibsDir(Item item, String itemFullName) {
+            if (item instanceof Job
+                    && item.getClass()
+                            .getName()
+                            .equals("org.jenkinsci.plugins.workflow.job.WorkflowJob")) {
+                synchronized (item) {
+                    String base =
+                            expandVariablesForDirectory(
+                                    Jenkins.get().getRawWorkspaceDir(),
+                                    itemFullName,
+                                    item.getRootDir().getPath());
+                    FilePath dir =
+                            new FilePath(new File(base)).withSuffix(getFilePathSuffix() + "libs");
+                    try {
+                        if (dir.isDirectory()) {
+                            LOGGER.log(
+                                    Level.INFO,
+                                    () -> "Deleting obsolete shared library workspace " + dir);
+                            dir.deleteRecursive();
+                        }
+                    } catch (IOException | InterruptedException e) {
+                        LOGGER.log(
+                                Level.WARNING,
+                                e,
+                                () -> "Could not delete obsolete shared library workspace " + dir);
+                    }
+                }
+            }
+        }
+
+        private static String expandVariablesForDirectory(
+                String base, String itemFullName, String itemRootDir) {
+            // If the item is moved, it is too late to look up its original workspace location by
+            // the time we get the notification. See:
+            // https://github.com/jenkinsci/jenkins/blob/f03183ab09ce5fb8f9f4cc9ccee42a3c3e6b2d3e/core/src/main/java/jenkins/model/Jenkins.java#L2567-L2576
+            Map<String, String> properties = new HashMap<>();
+            properties.put("JENKINS_HOME", Jenkins.get().getRootDir().getPath());
+            properties.put("ITEM_ROOTDIR", itemRootDir);
+            properties.put("ITEM_FULLNAME", itemFullName); // legacy, deprecated
+            properties.put(
+                    "ITEM_FULL_NAME", itemFullName.replace(':', '$')); // safe, see JENKINS-12251
+            return Util.replaceMacro(base, Collections.unmodifiableMap(properties));
+        }
+    }
 }
