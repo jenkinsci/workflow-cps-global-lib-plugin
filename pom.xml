@@ -33,7 +33,7 @@
     </parent>
     <groupId>org.jenkins-ci.plugins.workflow</groupId>
     <artifactId>workflow-cps-global-lib</artifactId>
-    <version>${revision}${changelist}</version>
+    <version>${changelist}</version>
     <packaging>hpi</packaging>
     <name>Pipeline: Shared Groovy Libraries</name>
     <url>https://github.com/jenkinsci/workflow-cps-global-lib-plugin</url>
@@ -62,8 +62,7 @@
         </pluginRepository>
     </pluginRepositories>
     <properties>
-        <revision>2.22</revision>
-        <changelist>-SNAPSHOT</changelist>
+        <changelist>999999-SNAPSHOT</changelist>
         <jenkins.version>2.303.1</jenkins.version>
         <java.level>8</java.level>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
