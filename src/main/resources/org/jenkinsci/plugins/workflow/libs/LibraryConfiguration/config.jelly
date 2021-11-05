@@ -40,6 +40,6 @@ THE SOFTWARE.
     <f:entry field="includeInChangesets" title="${%Include @Library changes in job recent changes}">
         <f:checkbox default="true"/>
     </f:entry>
-    <f:optionalProperty field="cachingConfiguration" title="${%Cache fetched versions on master for quick retrieval}"/>
+    <f:optionalProperty field="cachingConfiguration" title="${%Cache fetched versions on controller for quick retrieval}"/>
     <f:dropdownDescriptorSelector field="retriever" descriptors="${descriptor.retrieverDescriptors}" title="${%Retrieval method}"/>
 </j:jelly>
