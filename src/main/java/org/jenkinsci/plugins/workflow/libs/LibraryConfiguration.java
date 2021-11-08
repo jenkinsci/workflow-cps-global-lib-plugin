@@ -32,6 +32,7 @@ import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.model.DescriptorVisibilityFilter;
 import hudson.model.Item;
+import hudson.model.TaskListener;
 import hudson.util.FormValidation;
 import jenkins.model.Jenkins;
 import org.kohsuke.accmod.Restricted;
@@ -60,6 +61,8 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
     private boolean allowVersionOverride = true;
     private boolean includeInChangesets = true;
     private LibraryCachingConfiguration cachingConfiguration = null;
+    
+    @StepContextParameter private transient TaskListener listener;
 
     @DataBoundConstructor public LibraryConfiguration(String name, LibraryRetriever retriever) {
         this.name = Util.fixEmptyAndTrim(name);
@@ -144,6 +147,9 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
             if (defaultVersion == null) {
                 throw new AbortException("No version specified for library " + name);
             } else {
+                if (allowVersionOverride == false) {
+                    listener.getLogger().println("You should not specify a version of the library when 'version override' is disabled for JenkinsFiles. However, " + version + " matches " + defaultVersion + " so we'll allow it.");
+                }
                 return defaultVersion;
             }
         } else if (allowVersionOverride) {
