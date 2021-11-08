@@ -35,6 +35,7 @@ import hudson.model.Item;
 import hudson.model.TaskListener;
 import hudson.util.FormValidation;
 import jenkins.model.Jenkins;
+import org.jenkinsci.plugins.workflow.steps.StepContextParameter;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.AncestorInPath;
