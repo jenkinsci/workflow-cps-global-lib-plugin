@@ -67,13 +67,12 @@ import org.kohsuke.stapler.StaplerRequest;
     }
 
     @Override public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
-        if (Jenkins.get().hasPermission(Jenkins.RUN_SCRIPTS)) {
+        if (Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
             setLibraries(Collections.<LibraryConfiguration>emptyList()); // allow last library to be deleted
             // TODO 2.19+ super.configure(req, json)
             req.bindJSON(this, json);
             return true;
         } else {
-            // For anyone with ADMINISTER but not RUN_SCRIPTS, we do not display the configuration section and we do not allow it to be modified.
             return true;
         }
     }
@@ -89,7 +88,7 @@ import org.kohsuke.stapler.StaplerRequest;
         }
 
         @Override public Collection<LibraryConfiguration> fromConfiguration(StaplerRequest request) {
-            if (Jenkins.get().hasPermission(Jenkins.RUN_SCRIPTS)) {
+            if (Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
                 return GlobalLibraries.get().getLibraries();
             }
             return Collections.emptySet();

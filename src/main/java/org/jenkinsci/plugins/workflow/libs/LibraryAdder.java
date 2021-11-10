@@ -301,7 +301,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                         FilePath libs = new FilePath(run.getRootDir()).child("libs");
                         for (LibraryRecord library : action.getLibraries()) {
                             if (library.trusted) {
-                                continue; // TODO JENKINS-41157 allow replay of trusted libraries if you have RUN_SCRIPTS
+                                continue; // TODO JENKINS-41157 allow replay of trusted libraries if you have ADMINISTER
                             }
                             for (String rootName : new String[] {"src", "vars"}) {
                                 FilePath root = libs.child(library.name + "/" + rootName);

@@ -63,7 +63,7 @@ public class GlobalLibrariesTest {
         gl.setLibraries(Arrays.asList(foo, bar));
         r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
         r.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy().
-            grant(Jenkins.ADMINISTER).everywhere().to("alice") // includes RUN_SCRIPTS and all else
+            grant(Jenkins.ADMINISTER).everywhere().to("alice")
         );
         HtmlPage configurePage = r.createWebClient().login("alice").goTo("configure");
         assertThat(configurePage.getWebResponse().getContentAsString(), containsString("https://phony.jenkins.io/bar.git"));
@@ -83,7 +83,7 @@ public class GlobalLibrariesTest {
         r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
         MockAuthorizationStrategy s = new MockAuthorizationStrategy()
             .grant(Jenkins.READ).everywhere().toEveryone()
-            .grant(Jenkins.RUN_SCRIPTS).everywhere().to("admin");
+            .grant(Jenkins.ADMINISTER).everywhere().to("admin");
         r.jenkins.setAuthorizationStrategy(s);
         LibraryConfiguration foo = new LibraryConfiguration("foo", new SCMSourceRetriever(new GitSCMSource(sampleRepo.toString())));
         GlobalLibraries.get().setLibraries(Arrays.asList(foo));
