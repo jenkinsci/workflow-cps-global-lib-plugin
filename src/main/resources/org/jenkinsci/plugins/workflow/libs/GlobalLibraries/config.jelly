@@ -25,7 +25,7 @@ THE SOFTWARE.
 
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
-    <j:if test="${h.hasPermission(app.RUN_SCRIPTS)}">
+    <j:if test="${h.hasPermission(app.ADMINISTER)}">
         <f:section title="${%Global Pipeline Libraries}">
             <f:block>
                 <j:out value="${%blurb}"/>
