@@ -9,8 +9,8 @@ import org.jenkinsci.plugins.workflow.cps.CpsScript;
 import org.jenkinsci.plugins.workflow.cps.CpsThread;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.File;
 import java.io.IOException;
 import jenkins.model.Jenkins;
@@ -35,15 +35,15 @@ public class UserDefinedGlobalVariable extends GlobalVariable {
         this.help = help;
     }
 
-    @Nonnull
+    @NonNull
     @Override
     public String getName() {
         return name;
     }
 
-    @Nonnull
+    @NonNull
     @Override
-    public Object getValue(@Nonnull CpsScript script) throws Exception {
+    public Object getValue(@NonNull CpsScript script) throws Exception {
         Binding binding = script.getBinding();
         Object instance;
         if (binding.hasVariable(getName())) {

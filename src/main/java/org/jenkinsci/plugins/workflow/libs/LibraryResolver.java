@@ -30,7 +30,7 @@ import hudson.model.Job;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.kohsuke.stapler.StaplerRequest;
 
 /**
@@ -61,7 +61,7 @@ public abstract class LibraryResolver implements ExtensionPoint {
      * @param libraryVersions libraries explicitly requested in the job, as a map from {@link LibraryConfiguration#getName} to version or null; may be empty
      * @return a possibly empty collection of associated libraries
      */
-    public abstract @Nonnull Collection<LibraryConfiguration> forJob(@Nonnull Job<?,?> job, @Nonnull Map<String,String> libraryVersions);
+    public abstract @NonNull Collection<LibraryConfiguration> forJob(@NonNull Job<?,?> job, @NonNull Map<String,String> libraryVersions);
 
     /**
      * A list of libraries that may have already been configured in this context.
@@ -70,7 +70,7 @@ public abstract class LibraryResolver implements ExtensionPoint {
      * @param request a web request
      * @return known libraries, if any (empty by default)
      */
-    public @Nonnull Collection<LibraryConfiguration> fromConfiguration(@Nonnull StaplerRequest request) {
+    public @NonNull Collection<LibraryConfiguration> fromConfiguration(@NonNull StaplerRequest request) {
         return Collections.emptySet();
     }
 
@@ -81,7 +81,7 @@ public abstract class LibraryResolver implements ExtensionPoint {
      * @param group Jenkins root or some folder
      * @return any suggested libraries (empty by default)
      */
-    public @Nonnull Collection<LibraryConfiguration> suggestedConfigurations(@Nonnull ItemGroup<?> group) {
+    public @NonNull Collection<LibraryConfiguration> suggestedConfigurations(@NonNull ItemGroup<?> group) {
         return Collections.emptySet();
     }
 

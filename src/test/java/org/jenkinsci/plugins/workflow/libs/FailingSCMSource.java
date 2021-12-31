@@ -17,8 +17,8 @@ import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.impl.mock.MockSCMRevision;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.File;
 import java.io.IOException;
 
@@ -45,7 +45,7 @@ public class FailingSCMSource extends SCMSource {
             }
 
             @Override
-            public void checkout(@Nonnull final Run<?, ?> build, @Nonnull final Launcher launcher, @Nonnull final FilePath workspace, @Nonnull final TaskListener listener, @CheckForNull final File changelogFile, @CheckForNull final SCMRevisionState baseline) throws IOException, InterruptedException {
+            public void checkout(@NonNull final Run<?, ?> build, @NonNull final Launcher launcher, @NonNull final FilePath workspace, @NonNull final TaskListener listener, @CheckForNull final File changelogFile, @CheckForNull final SCMRevisionState baseline) throws IOException, InterruptedException {
                 throw new AbortException("Failing 'checkout' on purpose!");
             }
         };
