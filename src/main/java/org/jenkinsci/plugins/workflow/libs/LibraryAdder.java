@@ -47,8 +47,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
@@ -142,7 +142,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         return additions;
     }
 
-    static @Nonnull String[] parse(@Nonnull String identifier) {
+    static @NonNull String[] parse(@NonNull String identifier) {
        int at = identifier.indexOf('@');
         if (at == -1) {
             return new String[] {identifier, null}; // pick up defaultVersion
@@ -152,7 +152,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
     }
 
     /** Retrieve library files. */
-    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, Boolean changelog, LibraryCachingConfiguration cachingConfiguration, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
+    static List<URL> retrieve(@NonNull String name, @NonNull String version, @NonNull LibraryRetriever retriever, boolean trusted, Boolean changelog, LibraryCachingConfiguration cachingConfiguration, @NonNull TaskListener listener, @NonNull Run<?,?> run, @NonNull CpsFlowExecution execution, @NonNull Set<String> variables) throws Exception {
         FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
         Boolean shouldCache = cachingConfiguration != null;
         final FilePath libraryCacheDir = new FilePath(LibraryCachingConfiguration.getGlobalLibrariesCacheDir(), name);
@@ -236,7 +236,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
      * @param name a resource name, à la {@link Class#getResource(String)} but with no leading {@code /} allowed
      * @return a map from {@link LibraryRecord#name} to file contents
      */
-    static @Nonnull Map<String,String> findResources(@Nonnull CpsFlowExecution execution, @Nonnull String name, @CheckForNull String encoding) throws IOException, InterruptedException {
+    static @NonNull Map<String,String> findResources(@NonNull CpsFlowExecution execution, @NonNull String name, @CheckForNull String encoding) throws IOException, InterruptedException {
         Map<String,String> resources = new TreeMap<>();
         Queue.Executable executable = execution.getOwner().getExecutable();
         if (executable instanceof Run) {

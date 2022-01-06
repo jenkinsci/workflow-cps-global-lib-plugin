@@ -56,8 +56,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import javax.inject.Inject;
 import jenkins.model.Jenkins;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
@@ -218,15 +218,15 @@ public class LibraryStep extends AbstractStepImpl {
 
     public static final class LoadedClasses extends GroovyObjectSupport implements Serializable {
 
-        private final @Nonnull String library;
+        private final @NonNull String library;
         private final boolean trusted;
         private final Boolean changelog;
         /** package prefix, like {@code } or {@code some.pkg.} */
-        private final @Nonnull String prefix;
+        private final @NonNull String prefix;
         /** {@link Class#getName} minus package prefix */
         private final @CheckForNull String clazz;
         /** {@code file:/…/libs/NAME/src/} */
-        private final @Nonnull String srcUrl;
+        private final @NonNull String srcUrl;
 
         LoadedClasses(String library, boolean trusted, Boolean changelog, Run<?,?> run) {
             this(library, trusted, changelog, "", null, /* cf. LibraryAdder.retrieve */ new File(run.getRootDir(), "libs/" + library + "/src").toURI().toString());

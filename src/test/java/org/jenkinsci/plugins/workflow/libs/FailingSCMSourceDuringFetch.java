@@ -12,8 +12,8 @@ import hudson.scm.SCMRevisionState;
 import jenkins.scm.api.*;
 import jenkins.scm.impl.mock.MockSCMRevision;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.File;
 import java.io.IOException;
 

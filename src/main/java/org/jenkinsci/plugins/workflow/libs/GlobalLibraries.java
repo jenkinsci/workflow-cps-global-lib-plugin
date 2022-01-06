@@ -32,7 +32,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
@@ -43,7 +43,7 @@ import org.kohsuke.stapler.StaplerRequest;
  */
 @Extension public class GlobalLibraries extends GlobalConfiguration {
 
-    public static @Nonnull GlobalLibraries get() {
+    public static @NonNull GlobalLibraries get() {
         GlobalLibraries instance = GlobalConfiguration.all().get(GlobalLibraries.class);
         if (instance == null) { // TODO would be useful to have an ExtensionList.getOrFail
             throw new IllegalStateException();

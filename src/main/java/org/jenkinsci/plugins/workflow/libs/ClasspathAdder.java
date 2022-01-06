@@ -29,7 +29,7 @@ import hudson.ExtensionPoint;
 import java.net.URL;
 import java.util.List;
 import java.util.HashMap;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 
 /**
@@ -40,17 +40,17 @@ public abstract class ClasspathAdder implements ExtensionPoint {
     public static final class Addition {
 
         /** URL to add to the classpath. */
-        @Nonnull public final URL url;
+        @NonNull public final URL url;
 
         /** Whether this should be loaded in the trusted class loader, or untrusted alongside the main script. */
         public final boolean trusted;
 
-        public Addition(@Nonnull URL url, boolean trusted) {
+        public Addition(@NonNull URL url, boolean trusted) {
             this.url = url;
             this.trusted = trusted;
         }
 
-        void addTo(@Nonnull CpsFlowExecution execution) {
+        void addTo(@NonNull CpsFlowExecution execution) {
             GroovyShell shell = trusted ? execution.getTrustedShell() : execution.getShell();
             shell.getClassLoader().addURL(url);
         }
@@ -64,6 +64,6 @@ public abstract class ClasspathAdder implements ExtensionPoint {
      * @return a possibly empty list of additions
      * @throws Exception for whatever reason (will fail compilation)
      */
-    public abstract @Nonnull List<Addition> add(@Nonnull CpsFlowExecution execution, @Nonnull List<String> libraries, @Nonnull HashMap<String, Boolean> changelogs) throws Exception;
+    public abstract @NonNull List<Addition> add(@NonNull CpsFlowExecution execution, @NonNull List<String> libraries, @NonNull HashMap<String, Boolean> changelogs) throws Exception;
 
 }

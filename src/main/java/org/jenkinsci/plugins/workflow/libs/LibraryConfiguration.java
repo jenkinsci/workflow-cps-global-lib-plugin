@@ -44,8 +44,8 @@ import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.Collection;
 
 /**
@@ -131,7 +131,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
         this.cachingConfiguration = cachingConfiguration;
     }
 
-    @Nonnull boolean defaultedChangelogs(@CheckForNull Boolean changelog) throws AbortException {
+    @NonNull boolean defaultedChangelogs(@CheckForNull Boolean changelog) throws AbortException {
       if (changelog == null) {
         return includeInChangesets;
       } else {
@@ -139,7 +139,7 @@ public class LibraryConfiguration extends AbstractDescribableImpl<LibraryConfigu
       }
     }
 
-    @Nonnull String defaultedVersion(@CheckForNull String version) throws AbortException {
+    @NonNull String defaultedVersion(@CheckForNull String version) throws AbortException {
         if (version == null) {
             if (defaultVersion == null) {
                 throw new AbortException("No version specified for library " + name);
