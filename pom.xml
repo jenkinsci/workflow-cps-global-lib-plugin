@@ -200,7 +200,7 @@
         <dependency>
             <groupId>org.tmatesoft.svnkit</groupId>
             <artifactId>svnkit-cli</artifactId>
-            <version>1.10.1</version>
+            <version>1.10.4</version>
             <scope>test</scope>
         </dependency>
         <dependency>
