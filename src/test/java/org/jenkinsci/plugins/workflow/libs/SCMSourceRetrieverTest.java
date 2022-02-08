@@ -24,17 +24,21 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import com.cloudbees.hudson.plugins.folder.Folder;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.AbortException;
-import hudson.ExtensionList;
 import hudson.FilePath;
+import hudson.Functions;
 import hudson.model.Item;
 import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.SCM;
 import hudson.slaves.WorkspaceList;
+import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -47,6 +51,9 @@ import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.api.SCMSourceDescriptor;
+import jenkins.scm.impl.subversion.SubversionSCMSource;
+import jenkins.scm.impl.subversion.SubversionSampleRepoRule;
+import org.apache.commons.io.FileUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -68,14 +75,18 @@ import org.jvnet.hudson.test.TestExtension;
 import org.jvnet.hudson.test.WithoutJenkins;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.matchesPattern;
+import static org.hamcrest.Matchers.nullValue;
 import static org.jenkinsci.plugins.workflow.libs.SCMSourceRetriever.PROHIBITED_DOUBLE_DOT;
+import static org.junit.Assume.assumeFalse;
 
 public class SCMSourceRetrieverTest {
 
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
+    @Rule public SubversionSampleRepoRule sampleRepoSvn = new SubversionSampleRepoRule();
 
     @Issue("JENKINS-40408")
     @Test public void lease() throws Exception {
@@ -88,13 +99,16 @@ public class SCMSourceRetrieverTest {
                 new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
         p.setDefinition(new CpsFlowDefinition("@Library('echoing@master') import myecho; myecho()", true));
-        FilePath base = r.jenkins.getWorkspaceFor(p).withSuffix("@libs").child("echoing");
+        String checkoutDir = LibraryRecord.directoryNameFor("git " + sampleRepo.toString());
+        FilePath base = r.jenkins.getWorkspaceFor(p).withSuffix("@libs").child(checkoutDir);
         try (WorkspaceList.Lease lease = r.jenkins.toComputer().getWorkspaceList().acquire(base)) {
             WorkflowRun b = r.buildAndAssertSuccess(p);
             r.assertLogContains("something special", b);
             r.assertLogNotContains("Retrying after 10 seconds", b);
             assertFalse(base.child("vars").exists());
+            assertFalse(base.withSuffix("-scm-key.txt").exists());
             assertTrue(base.withSuffix("@2").child("vars").exists());
+            assertThat(base.withSuffix("@2-scm-key.txt").readToString(), equalTo("git " + sampleRepo.toString()));
         }
     }
 
@@ -306,5 +320,86 @@ public class SCMSourceRetrieverTest {
         @Override protected void retrieve(SCMSourceCriteria c, @NonNull SCMHeadObserver o, SCMHeadEvent<?> e, @NonNull TaskListener l) {}
         @Override public @NonNull SCM build(@NonNull SCMHead head, SCMRevision revision) { return null; }
         @TestExtension("modernAndLegacyImpls") public static final class DescriptorImpl extends SCMSourceDescriptor {}
+    }
+
+    @Issue("SECURITY-2441")
+    @Test public void libraryNamesAreNotUsedAsCheckoutDirectories() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("vars/globalLibVar.groovy", "def call() { echo('global library') }");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        LibraryConfiguration globalLib = new LibraryConfiguration("library",
+                new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
+        globalLib.setDefaultVersion("master");
+        globalLib.setImplicit(true);
+        GlobalLibraries.get().setLibraries(Collections.singletonList(globalLib));
+        // Create a folder library with the same name as the global library so it takes precedence.
+        sampleRepoSvn.init();
+        sampleRepoSvn.write("vars/folderLibVar.groovy", "def call() { jenkins.model.Jenkins.get().setSystemMessage('folder library') }");
+        // Copy .git folder from the Git repo for the global library into the SVN repo for the folder library as data.
+        FileUtils.copyDirectory(new File(sampleRepo.getRoot(), ".git"), new File(sampleRepoSvn.wc(), ".git"));
+        sampleRepoSvn.svnkit("add", sampleRepoSvn.wc() + "/vars");
+        sampleRepoSvn.svnkit("add", sampleRepoSvn.wc() + "/.git");
+        sampleRepoSvn.svnkit("commit", "--message=init", sampleRepoSvn.wc());
+        LibraryConfiguration folderLib = new LibraryConfiguration("library",
+                new SCMSourceRetriever(new SubversionSCMSource(null, sampleRepoSvn.prjUrl())));
+        folderLib.setDefaultVersion("trunk");
+        folderLib.setImplicit(true);
+        Folder f = r.jenkins.createProject(Folder.class, "folder1");
+        f.getProperties().add(new FolderLibraries(Collections.singletonList(folderLib)));
+        // Create a job that uses the folder library, which will take precedence over the global library, since they have the same name.
+        WorkflowJob p = f.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("folderLibVar()", true));
+        // First build fails as expected since it is not trusted. The folder library is checked out.
+        WorkflowRun b1 = r.buildAndAssertStatus(Result.FAILURE, p);
+        r.assertLogContains("Only using first definition of library library", b1);
+        r.assertLogContains("Scripts not permitted to use staticMethod jenkins.model.Jenkins get", b1);
+        // Attacker deletes the folder library, then reruns the build.
+        // The existing checkout of the SVN repo should not be reused as the Git repo for the global library.
+        f.getProperties().clear();
+        WorkflowRun b2 = r.buildAndAssertStatus(Result.FAILURE, p);
+        r.assertLogContains("No such DSL method 'folderLibVar'", b2);
+        assertThat(r.jenkins.getSystemMessage(), nullValue());
+    }
+
+    @Issue("SECURITY-2463")
+    @Test public void checkoutDirectoriesAreNotReusedByDifferentScms() throws Exception {
+        assumeFalse(Functions.isWindows()); // Checkout hook is not cross-platform.
+        sampleRepo.init();
+        sampleRepo.write("vars/foo.groovy", "def call() { echo('using global lib') }");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        LibraryConfiguration globalLib = new LibraryConfiguration("library",
+                new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
+        globalLib.setDefaultVersion("master");
+        globalLib.setImplicit(true);
+        GlobalLibraries.get().setLibraries(Collections.singletonList(globalLib));
+        // Create a folder library with the same name as the global library so it takes precedence.
+        sampleRepoSvn.init();
+        sampleRepoSvn.write("vars/foo.groovy", "def call() { echo('using folder lib') }");
+        // Copy .git folder from the Git repo for the global library into the SVN repo for the folder library as data.
+        File gitDirInSvnRepo = new File(sampleRepoSvn.wc(), ".git");
+        FileUtils.copyDirectory(new File(sampleRepo.getRoot(), ".git"), gitDirInSvnRepo);
+        String jenkinsRootDir = r.jenkins.getRootDir().toString();
+        // Add a Git post-checkout hook to the .git folder in the SVN repo.
+        Files.write(gitDirInSvnRepo.toPath().resolve("hooks/post-checkout"), ("#!/bin/sh\ntouch '" + jenkinsRootDir + "/hook-executed'\n").getBytes(StandardCharsets.UTF_8));
+        sampleRepoSvn.svnkit("add", sampleRepoSvn.wc() + "/vars");
+        sampleRepoSvn.svnkit("add", sampleRepoSvn.wc() + "/.git");
+        sampleRepoSvn.svnkit("propset", "svn:executable", "ON", sampleRepoSvn.wc() + "/.git/hooks/post-checkout");
+        sampleRepoSvn.svnkit("commit", "--message=init", sampleRepoSvn.wc());
+        LibraryConfiguration folderLib = new LibraryConfiguration("library",
+                new SCMSourceRetriever(new SubversionSCMSource(null, sampleRepoSvn.prjUrl())));
+        folderLib.setDefaultVersion("trunk");
+        folderLib.setImplicit(true);
+        Folder f = r.jenkins.createProject(Folder.class, "folder1");
+        f.getProperties().add(new FolderLibraries(Collections.singletonList(folderLib)));
+        // Run the build using the folder library (which uses the SVN repo).
+        WorkflowJob p = f.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("foo()", true));
+        r.buildAndAssertSuccess(p);
+        // Delete the folder library, and rerun the build so the global library is used.
+        f.getProperties().clear();
+        WorkflowRun b2 = r.buildAndAssertSuccess(p);
+        assertFalse("Git checkout should not execute hooks from SVN repo", new File(r.jenkins.getRootDir(), "hook-executed").exists());
     }
 }
