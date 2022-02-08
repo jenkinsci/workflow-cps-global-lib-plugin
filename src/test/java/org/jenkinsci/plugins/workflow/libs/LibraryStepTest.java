@@ -99,13 +99,15 @@ public class LibraryStepTest {
         r.assertLogContains("ran library", b);
         LibrariesAction action = b.getAction(LibrariesAction.class);
         assertNotNull(action);
-        assertEquals("[LibraryRecord{name=stuff, version=master, variables=[x], trusted=true, changelog=true}]", action.getLibraries().toString());
+        String directoryName = LibraryRecord.directoryNameFor("stuff", "master", String.valueOf(true), GlobalLibraries.ForJob.class.getName());
+        assertEquals("[LibraryRecord{name=stuff, version=master, variables=[x], trusted=true, changelog=true, directoryName=" + directoryName + "}]", action.getLibraries().toString());
         p.setDefinition(new CpsFlowDefinition("library identifier: 'otherstuff@master', retriever: modernSCM([$class: 'GitSCMSource', remote: $/" + sampleRepo + "/$, credentialsId: '']), changelog: false; x()", true));
         b = r.buildAndAssertSuccess(p);
         r.assertLogContains("ran library", b);
         action = b.getAction(LibrariesAction.class);
         assertNotNull(action);
-        assertEquals("[LibraryRecord{name=otherstuff, version=master, variables=[x], trusted=false, changelog=false}]", action.getLibraries().toString());
+        directoryName = LibraryRecord.directoryNameFor("otherstuff", "master", String.valueOf(false), LibraryStep.class.getName() + " " + b.getExternalizableId());
+        assertEquals("[LibraryRecord{name=otherstuff, version=master, variables=[x], trusted=false, changelog=false, directoryName=" + directoryName + "}]", action.getLibraries().toString());
     }
 
     @Test public void classes() throws Exception {

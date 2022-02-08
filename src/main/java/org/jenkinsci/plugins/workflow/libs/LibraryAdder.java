@@ -89,7 +89,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         if (action != null) {
             // Resuming a build, so just look up what we loaded before.
             for (LibraryRecord record : action.getLibraries()) {
-                FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + record.name);
+                FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + record.getDirectoryName());
                 for (String root : new String[] {"src", "vars"}) {
                     FilePath dir = libDir.child(root);
                     if (dir.isDirectory()) {
@@ -120,7 +120,11 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                 }
                 String version = cfg.defaultedVersion(libraryVersions.remove(name));
                 Boolean changelog = cfg.defaultedChangelogs(libraryChangelogs.remove(name));
-                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted, changelog));
+                String source = kind.getClass().getName();
+                if (cfg instanceof LibraryResolver.ResolvedLibraryConfiguration) {
+                    source = ((LibraryResolver.ResolvedLibraryConfiguration) cfg).getSource();
+                }
+                librariesAdded.put(name, new LibraryRecord(name, version, kindTrusted, changelog, source));
                 retrievers.put(name, cfg.getRetriever());
             }
         }
@@ -135,7 +139,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         // Now actually try to retrieve the libraries.
         for (LibraryRecord record : librariesAdded.values()) {
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
-            for (URL u : retrieve(record.name, record.version, retrievers.get(record.name), record.trusted, record.changelog, listener, build, execution, record.variables)) {
+            for (URL u : retrieve(record, retrievers.get(record.name), listener, build, execution)) {
                 additions.add(new Addition(u, record.trusted));
             }
         }
@@ -152,11 +156,16 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
     }
 
     /** Retrieve library files. */
-    static List<URL> retrieve(@Nonnull String name, @Nonnull String version, @Nonnull LibraryRetriever retriever, boolean trusted, Boolean changelog, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution, @Nonnull Set<String> variables) throws Exception {
-        FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + name);
+    static List<URL> retrieve(@Nonnull LibraryRecord record, @Nonnull LibraryRetriever retriever, @Nonnull TaskListener listener, @Nonnull Run<?,?> run, @Nonnull CpsFlowExecution execution) throws Exception {
+        String name = record.name;
+        String version = record.version;
+        boolean changelog = record.changelog;
+        FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + record.getDirectoryName());
         retriever.retrieve(name, version, changelog, libDir, run, listener);
+        // Write the user-provided name to a file as a debugging aid.
+        libDir.withSuffix("-name.txt").write(name, "UTF-8");
         // Replace any classes requested for replay:
-        if (!trusted) {
+        if (!record.trusted) {
             for (String clazz : ReplayAction.replacementsIn(execution)) {
                 for (String root : new String[] {"src", "vars"}) {
                     String rel = root + "/" + clazz.replace('.', '/') + ".groovy";
@@ -180,7 +189,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         if (varsDir.isDirectory()) {
             urls.add(varsDir.toURI().toURL());
             for (FilePath var : varsDir.list("*.groovy")) {
-                variables.add(var.getBaseName());
+                record.variables.add(var.getBaseName());
             }
         }
         if (urls.isEmpty()) {
@@ -204,8 +213,11 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
             if (action != null) {
                 FilePath libs = new FilePath(run.getRootDir()).child("libs");
                 for (LibraryRecord library : action.getLibraries()) {
-                    FilePath f = libs.child(library.name + "/resources/" + name);
-                    if (f.exists()) {
+                    FilePath libResources = libs.child(library.getDirectoryName() + "/resources/");
+                    FilePath f = libResources.child(name);
+                    if (!new File(f.getRemote()).getCanonicalFile().toPath().startsWith(libResources.absolutize().getRemote())) {
+                        throw new AbortException(name + " references a file that is not contained within the library: " + library.name);
+                    } else if (f.exists()) {
                         resources.put(library.name, readResource(f, encoding));
                     }
                 }
@@ -237,7 +249,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
             List<GlobalVariable> vars = new ArrayList<>();
             for (LibraryRecord library : action.getLibraries()) {
                 for (String variable : library.variables) {
-                    vars.add(new UserDefinedGlobalVariable(variable, new File(run.getRootDir(), "libs/" + library.name + "/vars/" + variable + ".txt")));
+                    vars.add(new UserDefinedGlobalVariable(variable, new File(run.getRootDir(), "libs/" + library.getDirectoryName() + "/vars/" + variable + ".txt")));
                 }
             }
             return vars;
@@ -263,7 +275,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                                 continue; // TODO JENKINS-41157 allow replay of trusted libraries if you have RUN_SCRIPTS
                             }
                             for (String rootName : new String[] {"src", "vars"}) {
-                                FilePath root = libs.child(library.name + "/" + rootName);
+                                FilePath root = libs.child(library.getDirectoryName() + "/" + rootName);
                                 if (!root.isDirectory()) {
                                     continue;
                                 }

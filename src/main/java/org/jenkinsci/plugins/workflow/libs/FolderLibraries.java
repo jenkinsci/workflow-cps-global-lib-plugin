@@ -77,7 +77,10 @@ public class FolderLibraries extends AbstractFolderProperty<AbstractFolder<?>> {
                 if (!checkPermission || f.hasPermission(Item.CONFIGURE)) {
                     FolderLibraries prop = f.getProperties().get(FolderLibraries.class);
                     if (prop != null) {
-                        libraries.addAll(prop.getLibraries());
+                        String source = FolderLibraries.ForJob.class.getName() + " " + f.getFullName();
+                        for (LibraryConfiguration library : prop.getLibraries()) {
+                            libraries.add(new ResolvedLibraryConfiguration(library, source));
+                        }
                     }
                 }
             }

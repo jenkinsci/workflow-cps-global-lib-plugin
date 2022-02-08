@@ -51,6 +51,7 @@ public class ResourceStepTest {
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
+    @Rule public GitSampleRepoRule sampleRepo2 = new GitSampleRepoRule();
 
     @Test public void smokes() throws Exception {
         sampleRepo.init();
@@ -112,6 +113,71 @@ public class ResourceStepTest {
         Run run = r.buildAndAssertSuccess(p);
         r.assertLogContains("€", run);
         r.assertLogContains(Base64.encodeBase64String(binaryData), run);
+    }
+
+    @Issue("SECURITY-2479")
+    @Test public void symlinksInLibraryResourcesAreNotAllowedToEscapeWorkspaceContext() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/Stuff.groovy", "class Stuff {static def contents(script) {script.libraryResource 'master.key'}}");
+        Path resourcesDir = Paths.get(sampleRepo.getRoot().getPath(), "resources");
+        Files.createDirectories(resourcesDir);
+        Path symlinkPath = Paths.get(resourcesDir.toString(), "master.key");
+        Files.createSymbolicLink(symlinkPath, Paths.get("../../../../../../../secrets/master.key"));
+
+        sampleRepo.git("add", "src", "resources");
+        sampleRepo.git("commit", "--message=init");
+        LibraryConfiguration libraryConfiguration = new LibraryConfiguration("symlink-stuff", new SCMSourceRetriever(new GitSCMSource(sampleRepo.toString())));
+        GlobalLibraries.get().setLibraries(Collections.singletonList(libraryConfiguration));
+
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('symlink-stuff@master') import Stuff; echo(Stuff.contents(this))", true));
+        r.assertLogContains("master.key references a file that is not contained within the library: symlink-stuff", r.buildAndAssertStatus(Result.FAILURE, p));
+    }
+
+    @Issue("SECURITY-2476")
+    @Test public void libraryResourceNotAllowedToEscapeWorkspaceContext() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/Stuff.groovy", "class Stuff {static def contents(script) {script.libraryResource '../../../../../../../secrets/master.key'}}");
+        Path resourcesDir = Paths.get(sampleRepo.getRoot().getPath(), "resources");
+        Files.createDirectories(resourcesDir);
+
+        sampleRepo.git("add", "src", "resources");
+        sampleRepo.git("commit", "--message=init");
+        LibraryConfiguration libraryConfiguration = new LibraryConfiguration("libres-stuff", new SCMSourceRetriever(new GitSCMSource(sampleRepo.toString())));
+        GlobalLibraries.get().setLibraries(Collections.singletonList(libraryConfiguration));
+
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("@Library('libres-stuff@master') import Stuff; echo(Stuff.contents(this))", true));
+
+        r.assertLogContains("../../../../../../../secrets/master.key references a file that is not contained within the library: libres-stuff", r.buildAndAssertStatus(Result.FAILURE, p));
+    }
+
+    @Test public void findResourcesAttemptsToLoadFromAllIncludedLibraries() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("src/Stuff.groovy", "");
+        sampleRepo.write("resources/foo.txt", "Hello from foo!");
+        sampleRepo.git("add", "src", "resources");
+        sampleRepo.git("commit", "--message=init");
+
+        sampleRepo2.init();
+        sampleRepo2.write("src/Thing.groovy", "");
+        sampleRepo2.write("resources/bar.txt", "Hello from bar!");
+        sampleRepo2.git("add", "src", "resources");
+        sampleRepo2.git("commit", "--message=init");
+
+        LibraryConfiguration libraryConfiguration = new LibraryConfiguration("stuff",
+                new SCMSourceRetriever(new GitSCMSource(sampleRepo.toString())));
+        LibraryConfiguration libraryConfiguration2 = new LibraryConfiguration("thing",
+                new SCMSourceRetriever(new GitSCMSource(sampleRepo2.toString())));
+        GlobalLibraries.get().setLibraries(Arrays.asList(libraryConfiguration, libraryConfiguration2));
+
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition(
+                "@Library(['stuff@master', 'thing@master']) _; echo(libraryResource('foo.txt')); echo(libraryResource('bar.txt'))", true));
+
+        Run run = r.buildAndAssertStatus(Result.SUCCESS, p);
+        r.assertLogContains("Hello from bar!", run);
+        r.assertLogContains("Hello from foo!", run);
     }
 
 }

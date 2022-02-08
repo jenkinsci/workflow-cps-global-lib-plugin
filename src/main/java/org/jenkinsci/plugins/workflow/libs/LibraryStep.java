@@ -165,6 +165,7 @@ public class LibraryStep extends AbstractStepImpl {
             String name = parsed[0], version = parsed[1];
             boolean trusted = false;
             Boolean changelog = step.getChangelog();
+            String source = LibraryStep.class.getName() + " " + run.getExternalizableId();
             LibraryRetriever retriever = step.getRetriever();
             if (retriever == null) {
                 for (LibraryResolver resolver : ExtensionList.lookup(LibraryResolver.class)) {
@@ -174,6 +175,10 @@ public class LibraryStep extends AbstractStepImpl {
                             trusted = resolver.isTrusted();
                             version = cfg.defaultedVersion(version);
                             changelog = cfg.defaultedChangelogs(changelog);
+                            source = resolver.getClass().getName();
+                            if (cfg instanceof LibraryResolver.ResolvedLibraryConfiguration) {
+                                source = ((LibraryResolver.ResolvedLibraryConfiguration) cfg).getSource();
+                            }
                             break;
                         }
                     }
@@ -185,7 +190,7 @@ public class LibraryStep extends AbstractStepImpl {
                 throw new AbortException("Must specify a version for library " + name);
             }
 
-            LibraryRecord record = new LibraryRecord(name, version, trusted, changelog);
+            LibraryRecord record = new LibraryRecord(name, version, trusted, changelog, source);
             LibrariesAction action = run.getAction(LibrariesAction.class);
             if (action == null) {
                 action = new LibrariesAction(Lists.newArrayList(record));
@@ -195,7 +200,7 @@ public class LibraryStep extends AbstractStepImpl {
                 for (LibraryRecord existing : libraries) {
                     if (existing.name.equals(name)) {
                         listener.getLogger().println("Only using first definition of library " + name);
-                        return new LoadedClasses(name, trusted, changelog, run);
+                        return new LoadedClasses(name, existing.getDirectoryName(), trusted, changelog, run);
                     }
                 }
                 List<LibraryRecord> newLibraries = new ArrayList<>(libraries);
@@ -205,11 +210,11 @@ public class LibraryStep extends AbstractStepImpl {
             listener.getLogger().println("Loading library " + record.name + "@" + record.version);
             CpsFlowExecution exec = (CpsFlowExecution) getContext().get(FlowExecution.class);
             GroovyClassLoader loader = (trusted ? exec.getTrustedShell() : exec.getShell()).getClassLoader();
-            for (URL u : LibraryAdder.retrieve(record.name, record.version, retriever, record.trusted, record.changelog, listener, run, (CpsFlowExecution) getContext().get(FlowExecution.class), record.variables)) {
+            for (URL u : LibraryAdder.retrieve(record, retriever, listener, run, (CpsFlowExecution) getContext().get(FlowExecution.class))) {
                 loader.addURL(u);
             }
             run.save(); // persist changes to LibrariesAction.libraries*.variables
-            return new LoadedClasses(name, trusted, changelog, run);
+            return new LoadedClasses(name, record.getDirectoryName(), trusted, changelog, run);
         }
 
     }
@@ -226,8 +231,8 @@ public class LibraryStep extends AbstractStepImpl {
         /** {@code file:/…/libs/NAME/src/} */
         private final @Nonnull String srcUrl;
 
-        LoadedClasses(String library, boolean trusted, Boolean changelog, Run<?,?> run) {
-            this(library, trusted, changelog, "", null, /* cf. LibraryAdder.retrieve */ new File(run.getRootDir(), "libs/" + library + "/src").toURI().toString());
+        LoadedClasses(String library, String libraryDirectoryName, boolean trusted, Boolean changelog, Run<?,?> run) {
+            this(library, trusted, changelog, "", null, /* cf. LibraryAdder.retrieve */ new File(run.getRootDir(), "libs/" + libraryDirectoryName + "/src").toURI().toString());
         }
 
         LoadedClasses(String library, boolean trusted, Boolean changelog, String prefix, String clazz, String srcUrl) {

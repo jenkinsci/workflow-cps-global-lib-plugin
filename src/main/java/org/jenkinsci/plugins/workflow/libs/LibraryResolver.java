@@ -85,4 +85,30 @@ public abstract class LibraryResolver implements ExtensionPoint {
         return Collections.emptySet();
     }
 
+    /**
+     * Used by some implementations of {@link LibraryResolver} to prevent libraries with the same name that are
+     * configured in distinct trust domains from using the same cache directory.
+     *
+     * For example, {@link FolderLibraries.ForJob} may return libraries from different folders, and a user who is able
+     * to configure a library in one folder may not be able to configure a library in another folder. To prevent this
+     * from causing issues, {@link FolderLibraries.ForJob#forGroup} returns instances of this class where {@code source}
+     * includes the full name of the folder where the library is configured.
+     */
+    static class ResolvedLibraryConfiguration extends LibraryConfiguration {
+        private final String source;
+
+        ResolvedLibraryConfiguration(LibraryConfiguration config, @Nonnull String source) {
+            super(config.getName(), config.getRetriever());
+            setDefaultVersion(config.getDefaultVersion());
+            setImplicit(config.isImplicit());
+            setAllowVersionOverride(config.isAllowVersionOverride());
+            setIncludeInChangesets(config.getIncludeInChangesets());
+            this.source = source;
+        }
+
+        @Nonnull String getSource() {
+            return source;
+        }
+    }
+
 }
