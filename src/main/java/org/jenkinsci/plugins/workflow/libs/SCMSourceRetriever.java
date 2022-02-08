@@ -185,7 +185,8 @@ public class SCMSourceRetriever extends LibraryRetriever {
             if (baseWorkspace == null) {
                 throw new IOException(node.getDisplayName() + " may be offline");
             }
-            dir = baseWorkspace.withSuffix(getFilePathSuffix() + "libs").child(name);
+            String checkoutDirName = LibraryRecord.directoryNameFor(scm.getKey());
+            dir = baseWorkspace.withSuffix(getFilePathSuffix() + "libs").child(checkoutDirName);
         } else { // should not happen, but just in case:
             throw new AbortException("Cannot check out in non-top-level build");
         }
@@ -194,6 +195,8 @@ public class SCMSourceRetriever extends LibraryRetriever {
             throw new IOException(node.getDisplayName() + " may be offline");
         }
         try (WorkspaceList.Lease lease = computer.getWorkspaceList().allocate(dir)) {
+            // Write the SCM key to a file as a debugging aid.
+            lease.path.withSuffix("-scm-key.txt").write(scm.getKey(), "UTF-8");
             retrySCMOperation(listener, () -> {
                 delegate.checkout(run, lease.path, listener, node.createLauncher(listener));
                 return null;
