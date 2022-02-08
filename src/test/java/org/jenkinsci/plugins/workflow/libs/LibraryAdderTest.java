@@ -24,6 +24,7 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import com.cloudbees.hudson.plugins.folder.Folder;
 import hudson.FilePath;
 import hudson.model.Job;
 import hudson.model.Result;
@@ -59,12 +60,16 @@ import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
+import org.jvnet.hudson.test.recipes.LocalData;
+
+import static org.hamcrest.Matchers.nullValue;
 
 public class LibraryAdderTest {
 
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
+    @Rule public GitSampleRepoRule sampleRepo2 = new GitSampleRepoRule();
     @Rule public SubversionSampleRepoRule sampleSvnRepo = new SubversionSampleRepoRule();
 
     @Test public void smokes() throws Exception {
@@ -368,6 +373,103 @@ public class LibraryAdderTest {
         WorkflowRun b = r.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0));
         r.assertLogContains("Excluding src/test/ from checkout", b);
         r.assertLogContains("expected to contain at least one of src or vars directories", b);
+    }
+
+    @Issue("SECURITY-2422")
+    @Test public void libraryNamesAreNotUsedAsBuildDirectoryPaths() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("vars/globalLibVar.groovy", "def call() { echo('global library') }");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        sampleRepo2.init();
+        LibraryConfiguration globalLib = new LibraryConfiguration("global",
+                new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
+        globalLib.setDefaultVersion("master");
+        globalLib.setImplicit(true);
+        GlobalLibraries.get().setLibraries(Collections.singletonList(globalLib));
+        // Create a folder library with distinct name, but which if used as a path will match the libs directory for the global library
+        sampleRepo2.write("vars/folderLibVar.groovy", "def call() { jenkins.model.Jenkins.get().setSystemMessage('folder library') }");
+        sampleRepo2.git("add", "vars");
+        sampleRepo2.git("commit", "--message=init");
+        LibraryConfiguration folderLib = new LibraryConfiguration("folder/../global",
+                new SCMSourceRetriever(new GitSCMSource(null, sampleRepo2.toString(), "", "*", "", true)));
+        folderLib.setDefaultVersion("master");
+        folderLib.setImplicit(true);
+        Folder f = r.jenkins.createProject(Folder.class, "folder1");
+        f.getProperties().add(new FolderLibraries(Collections.singletonList(folderLib)));
+        // Create a build that uses both libraries.
+        WorkflowJob p = f.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("globalLibVar(); folderLibVar()", true));
+        // The contents of the folder library should be untrusted and in a distinct libs directory.
+        WorkflowRun b = r.buildAndAssertStatus(Result.FAILURE, p);
+        r.assertLogContains("Scripts not permitted to use staticMethod jenkins.model.Jenkins get", b);
+        assertThat(r.jenkins.getSystemMessage(), nullValue());
+    }
+
+    @Issue("SECURITY-2586")
+    @Test public void libraryNamesAreNotUsedAsCacheDirectories() throws Exception {
+        sampleRepo.init();
+        sampleRepo.write("vars/globalLibVar.groovy", "def call() { echo('global library') }");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        sampleRepo2.init();
+        LibraryConfiguration globalLib = new LibraryConfiguration("library",
+                new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)));
+        globalLib.setDefaultVersion("master");
+        globalLib.setImplicit(true);
+        globalLib.setCachingConfiguration(new LibraryCachingConfiguration(60, ""));
+        GlobalLibraries.get().setLibraries(Collections.singletonList(globalLib));
+        // Create a folder library with the same name and which is also set up to enable caching.
+        sampleRepo2.write("vars/folderLibVar.groovy", "def call() { jenkins.model.Jenkins.get().setSystemMessage('folder library') }");
+        sampleRepo2.git("add", "vars");
+        sampleRepo2.git("commit", "--message=init");
+        LibraryConfiguration folderLib = new LibraryConfiguration("library",
+                new SCMSourceRetriever(new GitSCMSource(null, sampleRepo2.toString(), "", "*", "", true)));
+        folderLib.setDefaultVersion("master");
+        folderLib.setImplicit(true);
+        folderLib.setCachingConfiguration(new LibraryCachingConfiguration(60, ""));
+        Folder f = r.jenkins.createProject(Folder.class, "folder1");
+        f.getProperties().add(new FolderLibraries(Collections.singletonList(folderLib)));
+        // Create a job that uses the folder library, which will take precedence over the global library, since they have the same name.
+        WorkflowJob p = f.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition("folderLibVar()", true));
+        // First build fails as expected since it is not trusted. The folder library gets used and is cached.
+        WorkflowRun b1 = r.buildAndAssertStatus(Result.FAILURE, p);
+        r.assertLogContains("Only using first definition of library library", b1);
+        r.assertLogContains("Scripts not permitted to use staticMethod jenkins.model.Jenkins get", b1);
+        // Attacker deletes the folder library, then reruns the build.
+        // The global library should not use the cached version of the folder library.
+        f.getProperties().clear();
+        WorkflowRun b2 = r.buildAndAssertStatus(Result.FAILURE, p);
+        r.assertLogContains("No such DSL method 'folderLibVar'", b2);
+        assertThat(r.jenkins.getSystemMessage(), nullValue());
+    }
+
+    @LocalData
+    @Test
+    public void correctLibraryDirectoryUsedWhenResumingOldBuild() throws Exception {
+        // LocalData was captured after saving the build in the following snippet:
+        /*
+        sampleRepo.init();
+        sampleRepo.write("vars/foo.groovy", "def call() { echo('called Foo') }");
+        sampleRepo.git("add", "vars");
+        sampleRepo.git("commit", "--message=init");
+        GlobalLibraries.get().setLibraries(Collections.singletonList(
+                new LibraryConfiguration("lib",
+                        new SCMSourceRetriever(new GitSCMSource(null, sampleRepo.toString(), "", "*", "", true)))));
+        WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "p");
+        p.setDefinition(new CpsFlowDefinition(
+                "@Library('lib@master') _\n" +
+                "sleep 100\n" +
+                "foo()", true));
+        WorkflowRun b = p.scheduleBuild2(0).waitForStart();
+        Thread.sleep(2000);
+        b.save();
+        */
+        WorkflowJob p = r.jenkins.getItemByFullName("p", WorkflowJob.class);
+        WorkflowRun b = p.getBuildByNumber(1);
+        r.assertBuildStatus(Result.SUCCESS, r.waitForCompletion(b));
+        r.assertLogContains("called Foo", b);
     }
 
 }
