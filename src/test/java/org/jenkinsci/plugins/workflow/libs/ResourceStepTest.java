@@ -189,6 +189,7 @@ public class ResourceStepTest {
 
     @Issue("SECURITY-2479")
     @Test public void symlinksInLibraryResourcesAreNotAllowedToEscapeWorkspaceContext() throws Exception {
+        assumeFalse(Functions.isWindows()); // On Windows, the symlink is treated as a regular file, so there is no vulnerability, but the behavior is different.
         sampleRepo.init();
         sampleRepo.write("src/Stuff.groovy", "class Stuff {static def contents(script) {script.libraryResource 'master.key'}}");
         Path resourcesDir = Paths.get(sampleRepo.getRoot().getPath(), "resources");
