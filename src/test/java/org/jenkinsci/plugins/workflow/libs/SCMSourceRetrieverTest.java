@@ -39,6 +39,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -382,7 +383,10 @@ public class SCMSourceRetrieverTest {
         FileUtils.copyDirectory(new File(sampleRepo.getRoot(), ".git"), gitDirInSvnRepo);
         String jenkinsRootDir = r.jenkins.getRootDir().toString();
         // Add a Git post-checkout hook to the .git folder in the SVN repo.
-        Files.write(gitDirInSvnRepo.toPath().resolve("hooks/post-checkout"), ("#!/bin/sh\ntouch '" + jenkinsRootDir + "/hook-executed'\n").getBytes(StandardCharsets.UTF_8));
+        Path postCheckoutHook = gitDirInSvnRepo.toPath().resolve("hooks/post-checkout");
+        // Always create hooks directory for compatibility with https://github.com/jenkinsci/git-plugin/pull/1207.
+        Files.createDirectories(postCheckoutHook.getParent());
+        Files.write(postCheckoutHook, ("#!/bin/sh\ntouch '" + jenkinsRootDir + "/hook-executed'\n").getBytes(StandardCharsets.UTF_8));
         sampleRepoSvn.svnkit("add", sampleRepoSvn.wc() + "/vars");
         sampleRepoSvn.svnkit("add", sampleRepoSvn.wc() + "/.git");
         sampleRepoSvn.svnkit("propset", "svn:executable", "ON", sampleRepoSvn.wc() + "/.git/hooks/post-checkout");

@@ -256,7 +256,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                 for (LibraryRecord library : action.getLibraries()) {
                     FilePath libResources = libs.child(library.getDirectoryName() + "/resources/");
                     FilePath f = libResources.child(name);
-                    if (!new File(f.getRemote()).getCanonicalFile().toPath().startsWith(libResources.absolutize().getRemote())) {
+                    if (!new File(f.getRemote()).getCanonicalFile().toPath().startsWith(new File(libResources.getRemote()).getCanonicalPath())) {
                         throw new AbortException(name + " references a file that is not contained within the library: " + library.name);
                     } else if (f.exists()) {
                         resources.put(library.name, readResource(f, encoding));
