@@ -12,7 +12,7 @@ import jenkins.util.SystemProperties;
 
 @Extension public class LibraryCachingCleanup extends AsyncPeriodicWork {
     public static /* non-final for script console */ int EXPIRE_AFTER_READ_DAYS =
-            SystemProperties.getInteger(LibraryCachingCleanup.class.getName() + ".CACHE_EXPIRY_DAYS", 7);
+            SystemProperties.getInteger(LibraryCachingCleanup.class.getName() + ".EXPIRE_AFTER_READ_DAYS", 7);
 
     public LibraryCachingCleanup() {
         super("LibraryCachingCleanup");
