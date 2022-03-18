@@ -190,7 +190,6 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
 
             if(versionCacheDir.exists()) {
                 listener.getLogger().println("Library " + name + "@" + version + " is cached. Copying from home.");
-                lastReadFile.touch(System.currentTimeMillis());
             } else {
                 listener.getLogger().println("Caching library " + name + "@" + version);
                 versionCacheDir.mkdirs();
@@ -198,6 +197,8 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                 retriever.retrieve(name, version, changelog, versionCacheDir, run, listener);
                 retrieveLockFile.delete();
             }
+            lastReadFile.touch(System.currentTimeMillis());
+            versionCacheDir.withSuffix("-name.txt").write(name, "UTF-8");
             versionCacheDir.copyRecursiveTo(libDir);
         } else {
             retriever.retrieve(name, version, changelog, libDir, run, listener);
