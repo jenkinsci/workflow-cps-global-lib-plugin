@@ -53,13 +53,13 @@ public final class LibraryCachingConfiguration extends AbstractDescribableImpl<L
     }
 
     public Boolean isExcluded(String version) {
-        if(version != ""){
+        try{
             for (String it : getExcludedVersions()){
                 if ((version.contains(it)) && (it != "")){
                     return true;
                 }
             }
-        }
+        }finally{}
         return false;
     }
 
