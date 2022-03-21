@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import org.apache.commons.lang.StringUtils;
 
 public final class LibraryCachingConfiguration extends AbstractDescribableImpl<LibraryCachingConfiguration> {
     private int refreshTimeMinutes;
@@ -53,11 +54,16 @@ public final class LibraryCachingConfiguration extends AbstractDescribableImpl<L
     }
 
     public Boolean isExcluded(String version) {
-        if(!version.equals(null)){
-            for (String it : getExcludedVersions()){
-                if (version.contains(it) && !it.equals("") && !it.equals(null)){
-                    return true;
-                }
+        // exit early if the version passed in is null or empty
+        if (StringUtils.isBlank(version)) {
+            return false;
+        }
+        for (String it : getExcludedVersions()) {
+            // confirm that the excluded versions aren't null or empty
+            // and if the version contains the exclusion thus it can be
+            // anywhere in the string.
+            if (StringUtils.isNotBlank(it) && version.contains(it)){
+                return true;
             }
         }
         return false;
