@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.workflow.libs;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.AsyncPeriodicWork;
@@ -11,7 +12,8 @@ import java.util.concurrent.TimeUnit;
 import jenkins.util.SystemProperties;
 
 @Extension public class LibraryCachingCleanup extends AsyncPeriodicWork {
-    public static /* non-final for script console */ int EXPIRE_AFTER_READ_DAYS =
+    @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "non-final for script console access")
+    public static int EXPIRE_AFTER_READ_DAYS =
             SystemProperties.getInteger(LibraryCachingCleanup.class.getName() + ".EXPIRE_AFTER_READ_DAYS", 7);
 
     public LibraryCachingCleanup() {
@@ -40,10 +42,10 @@ import jenkins.util.SystemProperties;
      * @return true if specified directory is a cache directory, regardless of whether it was outdated. Used to detect
      * whether the cache was created before or after the fix for SECURITY-2586.
      */
-    private boolean removeIfOldCacheDirectory(FilePath library, long maxDurationMillis) throws IOException, InterruptedException {
+    private boolean removeIfOldCacheDirectory(FilePath library, long maxDurationSinceLastReadMillis) throws IOException, InterruptedException {
         final FilePath lastReadFile = new FilePath(library, LibraryCachingConfiguration.LAST_READ_FILE);
         if (lastReadFile.exists()) {
-            if ((System.currentTimeMillis() - lastReadFile.lastModified()) > maxDurationMillis) {
+            if ((System.currentTimeMillis() - lastReadFile.lastModified()) > maxDurationSinceLastReadMillis) {
                 library.deleteRecursive();
                 library.withSuffix("-name.txt").delete(); // Harmless if this is a pre-SECURITY-2586 cache directory.
             }
