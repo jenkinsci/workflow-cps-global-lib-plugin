@@ -62,7 +62,7 @@ public final class LibraryCachingConfiguration extends AbstractDescribableImpl<L
             // confirm that the excluded versions aren't null or empty
             // and if the version contains the exclusion thus it can be
             // anywhere in the string.
-            if (StringUtils.contains(it, version)) {
+            if (StringUtils.isNotBlank(it) && version.contains(it)){
                 return true;
             }
         }
