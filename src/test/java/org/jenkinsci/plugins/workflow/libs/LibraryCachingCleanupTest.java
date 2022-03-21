@@ -88,6 +88,7 @@ public class LibraryCachingCleanupTest {
         cache.child(LibraryCachingConfiguration.LAST_READ_FILE).touch(System.currentTimeMillis());
         ExtensionList.lookupSingleton(LibraryCachingCleanup.class).execute(StreamTaskListener.fromStderr());
         assertThat(new File(cache.getRemote()), not(anExistingDirectory()));
+        assertThat(new File(cache.getParent().getRemote()), not(anExistingDirectory()));
     }
 
 }

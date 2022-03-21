@@ -27,27 +27,30 @@ import jenkins.util.SystemProperties;
     @Override protected void execute(TaskListener listener) throws IOException, InterruptedException {
         FilePath globalCacheDir = LibraryCachingConfiguration.getGlobalLibrariesCacheDir();
         for (FilePath library : globalCacheDir.list()) {
-            if (!removeIfOldCacheDirectory(library, TimeUnit.DAYS.toMillis(EXPIRE_AFTER_READ_DAYS))) {
-                // Prior to SECURITY-2586 security fixes, library caches had a two-level directory structure.
+            if (!removeIfExpiredCacheDirectory(library)) {
+                // Prior to the SECURITY-2586 fix, library caches had a two-level directory structure.
                 // These caches will never be used again, so we delete any that we find.
                 for (FilePath version: library.list()) {
-                    removeIfOldCacheDirectory(version, 0);
+                    if (version.child(LibraryCachingConfiguration.LAST_READ_FILE).exists()) {
+                        library.deleteRecursive();
+                        break;
+                    }
                 }
             }
         }
     }
 
     /**
-     * Delete cache directories for the given library if they are outdated.
+     * Delete the specified cache directory if it is outdated.
      * @return true if specified directory is a cache directory, regardless of whether it was outdated. Used to detect
      * whether the cache was created before or after the fix for SECURITY-2586.
      */
-    private boolean removeIfOldCacheDirectory(FilePath library, long maxDurationSinceLastReadMillis) throws IOException, InterruptedException {
+    private boolean removeIfExpiredCacheDirectory(FilePath library) throws IOException, InterruptedException {
         final FilePath lastReadFile = new FilePath(library, LibraryCachingConfiguration.LAST_READ_FILE);
         if (lastReadFile.exists()) {
-            if ((System.currentTimeMillis() - lastReadFile.lastModified()) > maxDurationSinceLastReadMillis) {
+            if (System.currentTimeMillis() - lastReadFile.lastModified() > TimeUnit.DAYS.toMillis(EXPIRE_AFTER_READ_DAYS)) {
                 library.deleteRecursive();
-                library.withSuffix("-name.txt").delete(); // Harmless if this is a pre-SECURITY-2586 cache directory.
+                library.withSuffix("-name.txt").delete();
             }
             return true;
         }
