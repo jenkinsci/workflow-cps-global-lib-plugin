@@ -24,13 +24,6 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
-import hudson.AbortException;
-import hudson.Extension;
-import hudson.ExtensionList;
-import hudson.FilePath;
-import hudson.model.Queue;
-import hudson.model.Run;
-import hudson.model.TaskListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,12 +36,11 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
+
 import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
@@ -58,12 +50,24 @@ import org.jenkinsci.plugins.workflow.cps.replay.OriginalLoadedScripts;
 import org.jenkinsci.plugins.workflow.cps.replay.ReplayAction;
 import org.jenkinsci.plugins.workflow.flow.FlowCopier;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.AbortException;
+import hudson.Extension;
+import hudson.ExtensionList;
+import hudson.FilePath;
+import hudson.model.Queue;
+import hudson.model.Run;
+import hudson.model.TaskListener;
+
 /**
  * Given {@link LibraryResolver}, actually adds to the Groovy classpath.
  */
 @Extension public class LibraryAdder extends ClasspathAdder {
 
     private static final Logger LOGGER = Logger.getLogger(LibraryAdder.class.getName());
+    
+    static Map<String, ReentrantReadWriteLock> cacheRetrieveLock = new HashMap<>();
 
     @Override public List<Addition> add(CpsFlowExecution execution, List<String> libraries, HashMap<String, Boolean> changelogs) throws Exception {
         Queue.Executable executable = execution.getOwner().getExecutable();
@@ -155,6 +159,21 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         }
     }
 
+    private static boolean isCacheValid(LibraryCachingConfiguration cachingConfiguration, final FilePath versionCacheDir)
+          throws IOException, InterruptedException
+    {
+        if (cachingConfiguration.isRefreshEnabled()) {
+            final long cachingMilliseconds = cachingConfiguration.getRefreshTimeMilliseconds();
+
+            if(versionCacheDir.exists() && (versionCacheDir.lastModified() + cachingMilliseconds) > System.currentTimeMillis()) {
+                return true;
+            }
+        } else {
+            return versionCacheDir.exists();
+        }
+        return false;
+    }
+    
     /** Retrieve library files. */
     static List<URL> retrieve(@NonNull LibraryRecord record, @NonNull LibraryRetriever retriever, @NonNull TaskListener listener, @NonNull Run<?,?> run, @NonNull CpsFlowExecution execution) throws Exception {
         String name = record.name;
@@ -164,41 +183,50 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + record.getDirectoryName());
         Boolean shouldCache = cachingConfiguration != null;
         final FilePath versionCacheDir = new FilePath(LibraryCachingConfiguration.getGlobalLibrariesCacheDir(), record.getDirectoryName());
-        final FilePath retrieveLockFile = new FilePath(versionCacheDir, LibraryCachingConfiguration.RETRIEVE_LOCK_FILE);
+        ReentrantReadWriteLock retrieveLock = cacheRetrieveLock.get(record.getDirectoryName());
         final FilePath lastReadFile = new FilePath(versionCacheDir, LibraryCachingConfiguration.LAST_READ_FILE);
+        
 
         if(shouldCache && cachingConfiguration.isExcluded(version)) {
             listener.getLogger().println("Library " + name + "@" + version + " is excluded from caching.");
             shouldCache = false;
         }
-
-        if(shouldCache && retrieveLockFile.exists()) {
-            listener.getLogger().println("Library " + name + "@" + version + " is currently being cached by another job, retrieving without cache.");
-            shouldCache = false;
+        
+        if (retrieveLock == null) {
+            retrieveLock = new ReentrantReadWriteLock(true);
+            cacheRetrieveLock.put(record.getDirectoryName(), retrieveLock);
         }
-
+        
         if(shouldCache) {
-            if (cachingConfiguration.isRefreshEnabled()) {
-                final long cachingMinutes = cachingConfiguration.getRefreshTimeMinutes();
-                final long cachingMilliseconds = cachingConfiguration.getRefreshTimeMilliseconds();
-
-                if(versionCacheDir.exists() && (versionCacheDir.lastModified() + cachingMilliseconds) < System.currentTimeMillis()) {
-                    listener.getLogger().println("Library " + name + "@" + version + " is due for a refresh after " + cachingMinutes + " minutes, clearing.");
-                    versionCacheDir.deleteRecursive();
+            retrieveLock.readLock().lock();
+            try {
+                if (!isCacheValid(cachingConfiguration, versionCacheDir)) {
+                    retrieveLock.readLock().unlock();
+                    retrieveLock.writeLock().lock();
+                    try {
+                        if (!isCacheValid(cachingConfiguration, versionCacheDir)) {
+                            listener.getLogger().println("Caching library " + name + "@" + version);
+                            if (versionCacheDir.exists()) {
+                                versionCacheDir.deleteRecursive();
+                            }
+                            versionCacheDir.mkdirs();
+                            retriever.retrieve(name, version, changelog, versionCacheDir, run, listener);
+                        } else {
+                            listener.getLogger().println("Library " + name + "@" + version + " is cached. Copying from home.");  
+                        }
+                        retrieveLock.readLock().lock();
+                    } finally {
+                        retrieveLock.writeLock().unlock(); 
+                    }
+                } else {
+                    listener.getLogger().println("Library " + name + "@" + version + " is cached. Copying from home.");  
                 }
-            }
-
-            if(versionCacheDir.exists()) {
-                listener.getLogger().println("Library " + name + "@" + version + " is cached. Copying from home.");
+  
                 lastReadFile.touch(System.currentTimeMillis());
-            } else {
-                listener.getLogger().println("Caching library " + name + "@" + version);
-                versionCacheDir.mkdirs();
-                retrieveLockFile.touch(System.currentTimeMillis());
-                retriever.retrieve(name, version, changelog, versionCacheDir, run, listener);
-                retrieveLockFile.delete();
+                versionCacheDir.copyRecursiveTo(libDir);
+            } finally {
+              retrieveLock.readLock().unlock();
             }
-            versionCacheDir.copyRecursiveTo(libDir);
         } else {
             retriever.retrieve(name, version, changelog, libDir, run, listener);
         }

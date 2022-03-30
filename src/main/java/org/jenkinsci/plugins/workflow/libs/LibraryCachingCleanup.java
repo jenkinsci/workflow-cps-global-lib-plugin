@@ -1,12 +1,13 @@
 package org.jenkinsci.plugins.workflow.libs;
 
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.AsyncPeriodicWork;
 import hudson.model.TaskListener;
-
-import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 
 @Extension public class LibraryCachingCleanup extends AsyncPeriodicWork {
     private final Long recurrencePeriod;
@@ -27,8 +28,15 @@ import java.util.concurrent.TimeUnit;
         for (FilePath library: globalCacheDir.list()) {
             for (FilePath version: library.list()) {
                 final FilePath lastReadFile = new FilePath(version, LibraryCachingConfiguration.LAST_READ_FILE);
-                if (lastReadFile.exists() && (lastReadFile.lastModified() + unreadCacheClearTime) < System.currentTimeMillis()) {
-                    version.deleteRecursive();
+                ReentrantReadWriteLock retrieveLock = LibraryAdder.cacheRetrieveLock.get(version.getName());
+                if (retrieveLock.writeLock().tryLock()) {
+                    try {
+                      if (lastReadFile.exists() && (lastReadFile.lastModified() + unreadCacheClearTime) < System.currentTimeMillis()) {
+                          version.deleteRecursive();
+                      }
+                    } finally {
+                        retrieveLock.writeLock().unlock();
+                    }
                 }
             }
         }
