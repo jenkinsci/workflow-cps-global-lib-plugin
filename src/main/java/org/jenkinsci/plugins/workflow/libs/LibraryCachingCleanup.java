@@ -28,16 +28,14 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
         for (FilePath library: globalCacheDir.list()) {
             for (FilePath version: library.list()) {
                 final FilePath lastReadFile = new FilePath(version, LibraryCachingConfiguration.LAST_READ_FILE);
-                ReentrantReadWriteLock retrieveLock = LibraryAdder.getReadWriteLockFor(version.getName());
-                if (retrieveLock.writeLock().tryLock()) {
-                    try {
-                      if (lastReadFile.exists() && (lastReadFile.lastModified() + unreadCacheClearTime) < System.currentTimeMillis()) {
-                          version.deleteRecursive();
-                      }
-                    } finally {
-                	if (retrieveLock != null) {
-                	    retrieveLock.writeLock().unlock();
-                	}
+                if (lastReadFile.exists() && (lastReadFile.lastModified() + unreadCacheClearTime) < System.currentTimeMillis()) {
+                    ReentrantReadWriteLock retrieveLock = LibraryAdder.getReadWriteLockFor(version.getName());
+                    if (retrieveLock.writeLock().tryLock()) {
+                        try {
+                            version.deleteRecursive();
+                        } finally {
+                            retrieveLock.writeLock().unlock();
+                        }
                     }
                 }
             }
