@@ -159,19 +159,35 @@ import hudson.model.TaskListener;
         }
     }
 
-    private static boolean isCacheValid(LibraryCachingConfiguration cachingConfiguration, final FilePath versionCacheDir)
+    /*
+     * Return codes:
+     *   0: cachedir exists and is valid
+     *   1: cachedir does not exist
+     *   2: cachedir exists but is expired
+     */
+    private static int cacheStatus(LibraryCachingConfiguration cachingConfiguration, final FilePath versionCacheDir)
           throws IOException, InterruptedException
     {
         if (cachingConfiguration.isRefreshEnabled()) {
             final long cachingMilliseconds = cachingConfiguration.getRefreshTimeMilliseconds();
 
-            if(versionCacheDir.exists() && (versionCacheDir.lastModified() + cachingMilliseconds) > System.currentTimeMillis()) {
-                return true;
+            if(versionCacheDir.exists()) {
+        	if ((versionCacheDir.lastModified() + cachingMilliseconds) > System.currentTimeMillis()) {
+        	    return 0;
+        	} else {
+        	    return 2;
+        	}
+            } else {
+        	return 1;
             }
         } else {
-            return versionCacheDir.exists();
+            if (versionCacheDir.exists()) {
+        	return 0;
+            } else {
+        	return 1;
+            }
+            
         }
-        return false;
     }
     
     /** Retrieve library files. */
@@ -192,27 +208,42 @@ import hudson.model.TaskListener;
             shouldCache = false;
         }
         
-        if (retrieveLock == null) {
-            retrieveLock = new ReentrantReadWriteLock(true);
-            cacheRetrieveLock.put(record.getDirectoryName(), retrieveLock);
-        }
         
         if(shouldCache) {
+            if (retrieveLock == null) {
+        	retrieveLock = new ReentrantReadWriteLock(true);
+        	cacheRetrieveLock.put(record.getDirectoryName(), retrieveLock);
+            }
+
             retrieveLock.readLock().lock();
             try {
-                if (!isCacheValid(cachingConfiguration, versionCacheDir)) {
+                if (cacheStatus(cachingConfiguration, versionCacheDir) > 0) {
                     retrieveLock.readLock().unlock();
                     retrieveLock.writeLock().lock();
                     try {
-                        if (!isCacheValid(cachingConfiguration, versionCacheDir)) {
-                            listener.getLogger().println("Caching library " + name + "@" + version);
-                            if (versionCacheDir.exists()) {
-                                versionCacheDir.deleteRecursive();
-                            }
+                	boolean retrieve = false;
+                	switch (cacheStatus(cachingConfiguration, versionCacheDir)) {
+            	    	    default:
+                	    case 0: 
+                		listener.getLogger().println("Library " + name + "@" + version + " is cached. Copying from home."); 
+                                break;
+                	    case 1:
+                		retrieve = true;
+                		break;
+                	    case 2:
+                		long cachingMinutes = cachingConfiguration.getRefreshTimeMinutes();
+                		listener.getLogger().println("Library " + name + "@" + version + " is due for a refresh after " + cachingMinutes + " minutes, clearing.");
+                                if (versionCacheDir.exists()) {
+                                    versionCacheDir.deleteRecursive();
+                                }
+                                retrieve = true;
+                		break;
+                	}
+                		    
+                        if (retrieve) {
+                            listener.getLogger().println("Caching library " + name + "@" + version);                            
                             versionCacheDir.mkdirs();
                             retriever.retrieve(name, version, changelog, versionCacheDir, run, listener);
-                        } else {
-                            listener.getLogger().println("Library " + name + "@" + version + " is cached. Copying from home.");  
                         }
                         retrieveLock.readLock().lock();
                     } finally {
