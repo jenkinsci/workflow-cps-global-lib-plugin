@@ -1,20 +1,19 @@
 package org.jenkinsci.plugins.workflow.libs;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.util.FormValidation;
 import jenkins.model.Jenkins;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public final class LibraryCachingConfiguration extends AbstractDescribableImpl<LibraryCachingConfiguration> {
     private int refreshTimeMinutes;
@@ -73,7 +72,7 @@ public final class LibraryCachingConfiguration extends AbstractDescribableImpl<L
             FilePath cacheDir = new FilePath(LibraryCachingConfiguration.getGlobalLibrariesCacheDir(), name);
             try {
                 if (cacheDir.exists()) {
-                    ReentrantReadWriteLock retrieveLock = LibraryAdder.cacheRetrieveLock.get(name);
+                    ReentrantReadWriteLock retrieveLock = LibraryAdder.getReadWriteLockFor(name);
                     retrieveLock.writeLock().lock();
                     try {
                        cacheDir.deleteRecursive();

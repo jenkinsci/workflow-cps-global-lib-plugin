@@ -24,6 +24,13 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import hudson.AbortException;
+import hudson.Extension;
+import hudson.ExtensionList;
+import hudson.FilePath;
+import hudson.model.Queue;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,7 +47,8 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.cps.GlobalVariable;
@@ -50,16 +58,6 @@ import org.jenkinsci.plugins.workflow.cps.replay.OriginalLoadedScripts;
 import org.jenkinsci.plugins.workflow.cps.replay.ReplayAction;
 import org.jenkinsci.plugins.workflow.flow.FlowCopier;
 
-import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
-import hudson.AbortException;
-import hudson.Extension;
-import hudson.ExtensionList;
-import hudson.FilePath;
-import hudson.model.Queue;
-import hudson.model.Run;
-import hudson.model.TaskListener;
-
 /**
  * Given {@link LibraryResolver}, actually adds to the Groovy classpath.
  */
@@ -67,8 +65,18 @@ import hudson.model.TaskListener;
 
     private static final Logger LOGGER = Logger.getLogger(LibraryAdder.class.getName());
     
-    static Map<String, ReentrantReadWriteLock> cacheRetrieveLock = new HashMap<>();
+    private static Map<String, ReentrantReadWriteLock> cacheRetrieveLock = new HashMap<>();
 
+    static @NonNull ReentrantReadWriteLock getReadWriteLockFor(@NonNull String name) {
+	ReentrantReadWriteLock retrieveLock = cacheRetrieveLock.get(name);
+        if (retrieveLock == null) {
+    		retrieveLock = new ReentrantReadWriteLock(true);
+    		cacheRetrieveLock.put(name, retrieveLock);
+        }
+
+	return retrieveLock;
+    }
+    
     @Override public List<Addition> add(CpsFlowExecution execution, List<String> libraries, HashMap<String, Boolean> changelogs) throws Exception {
         Queue.Executable executable = execution.getOwner().getExecutable();
         Run<?,?> build;
@@ -165,7 +173,7 @@ import hudson.model.TaskListener;
      *   1: cachedir does not exist
      *   2: cachedir exists but is expired
      */
-    private static int cacheStatus(LibraryCachingConfiguration cachingConfiguration, final FilePath versionCacheDir)
+    private static int cacheStatus(@NonNull LibraryCachingConfiguration cachingConfiguration, @NonNull final FilePath versionCacheDir)
           throws IOException, InterruptedException
     {
         if (cachingConfiguration.isRefreshEnabled()) {
@@ -199,7 +207,7 @@ import hudson.model.TaskListener;
         FilePath libDir = new FilePath(execution.getOwner().getRootDir()).child("libs/" + record.getDirectoryName());
         Boolean shouldCache = cachingConfiguration != null;
         final FilePath versionCacheDir = new FilePath(LibraryCachingConfiguration.getGlobalLibrariesCacheDir(), record.getDirectoryName());
-        ReentrantReadWriteLock retrieveLock = cacheRetrieveLock.get(record.getDirectoryName());
+        ReentrantReadWriteLock retrieveLock = getReadWriteLockFor(record.getDirectoryName());
         final FilePath lastReadFile = new FilePath(versionCacheDir, LibraryCachingConfiguration.LAST_READ_FILE);
         
 
@@ -210,11 +218,6 @@ import hudson.model.TaskListener;
         
         
         if(shouldCache) {
-            if (retrieveLock == null) {
-        	retrieveLock = new ReentrantReadWriteLock(true);
-        	cacheRetrieveLock.put(record.getDirectoryName(), retrieveLock);
-            }
-
             retrieveLock.readLock().lock();
             try {
                 if (cacheStatus(cachingConfiguration, versionCacheDir) > 0) {
