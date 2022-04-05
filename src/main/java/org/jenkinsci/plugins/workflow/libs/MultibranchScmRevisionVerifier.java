@@ -1,5 +1,6 @@
 package org.jenkinsci.plugins.workflow.libs;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.AbortException;
 import hudson.model.Job;
 import hudson.model.Run;
@@ -17,7 +18,10 @@ import org.jenkinsci.plugins.workflow.multibranch.BranchJobProperty;
 import java.io.IOException;
 
 @OptionalExtension(requirePlugins={"workflow-multibranch"})
-public class MultibranchScmRevisionVerifier implements SCMSourceRetrieverVerifier {
+public class MultibranchScmRevisionVerifier implements LibraryStepRetrieverVerifier {
+
+    @SuppressFBWarnings("MS_SHOULD_BE_FINAL") // For script console and tests.
+    public static boolean DISABLED = Boolean.getBoolean(MultibranchScmRevisionVerifier.class.getName() + ".DISABLED");
 
     /**
      * Abort library retrieval if the specified build is from a Multibranch Pipeline configured to build the library's SCM and the revision being built is untrusted.
@@ -26,6 +30,9 @@ public class MultibranchScmRevisionVerifier implements SCMSourceRetrieverVerifie
      */
     @Override
     public void verify(Run<?, ?> run, TaskListener listener, SCM libraryScm, String name) throws IOException, InterruptedException {
+        if (DISABLED) {
+            return;
+        }
         // Adapted from ReadTrustedStep
         Job<?, ?> job = run.getParent();
         BranchJobProperty property = job.getProperty(BranchJobProperty.class);

@@ -37,6 +37,7 @@ import hudson.model.Item;
 import hudson.model.ItemGroup;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.scm.SCM;
 import hudson.security.AccessControlled;
 import java.io.File;
 import java.io.IOException;
@@ -60,6 +61,7 @@ import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import jenkins.model.Jenkins;
+import jenkins.scm.impl.SingleSCMSource;
 import org.codehaus.groovy.control.MultipleCompilationErrorsException;
 import org.codehaus.groovy.runtime.InvokerHelper;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.whitelists.AbstractWhitelist;
@@ -192,6 +194,18 @@ public class LibraryStep extends AbstractStepImpl {
             } else if (version == null) {
                 throw new AbortException("Must specify a version for library " + name);
             }
+            // When a user specifies a non-null retriever, they may be using SCMVar in its configuration,
+            // so we need to run MultibranchScmRevisionVerifier to prevent unsafe behavior.
+            // SCMVar would typically be used with SCMRetriever, but it is also possible to use it with SCMSourceRetriever and SingleSCMSource.
+            // There may be false-positive rejections if a Multibranch Pipeline for the repo of a Pipeline library
+            // uses the library step with a non-null retriever to check out a static version of the library.
+            // Fixing this would require us being able to detect usage of SCMVar precisely, which is not currently possible.
+            else if (retriever instanceof SCMRetriever) {
+                verifyRevision(((SCMRetriever) retriever).getScm(), name);
+            } else if (retriever instanceof SCMSourceRetriever && ((SCMSourceRetriever) retriever).getScm() instanceof SingleSCMSource) {
+                verifyRevision(((SingleSCMSource) ((SCMSourceRetriever) retriever).getScm()).getScm(), name);
+            }
+
             LibraryRecord record = new LibraryRecord(name, version, trusted, changelog, cachingConfiguration, source);
             LibrariesAction action = run.getAction(LibrariesAction.class);
             if (action == null) {
@@ -217,6 +231,12 @@ public class LibraryStep extends AbstractStepImpl {
             }
             run.save(); // persist changes to LibrariesAction.libraries*.variables
             return new LoadedClasses(name, record.getDirectoryName(), trusted, changelog, run);
+        }
+
+        private void verifyRevision(SCM scm, String name) throws IOException, InterruptedException {
+            for (LibraryStepRetrieverVerifier revisionVerifier : LibraryStepRetrieverVerifier.all()) {
+                revisionVerifier.verify(this.run, listener, scm, name);
+            }
         }
 
     }
