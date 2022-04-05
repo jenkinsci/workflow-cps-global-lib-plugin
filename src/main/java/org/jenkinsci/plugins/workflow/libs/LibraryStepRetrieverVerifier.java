@@ -11,11 +11,11 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 import java.io.IOException;
 
 @Restricted(NoExternalUse.class)
-public interface SCMSourceRetrieverVerifier extends ExtensionPoint {
+public interface LibraryStepRetrieverVerifier extends ExtensionPoint {
 
     void verify(Run<?, ?> run, TaskListener listener, SCM scm, String name) throws IOException, InterruptedException;
 
-    static ExtensionList<SCMSourceRetrieverVerifier> all() {
-        return ExtensionList.lookup(SCMSourceRetrieverVerifier.class);
+    static ExtensionList<LibraryStepRetrieverVerifier> all() {
+        return ExtensionList.lookup(LibraryStepRetrieverVerifier.class);
     }
 }
