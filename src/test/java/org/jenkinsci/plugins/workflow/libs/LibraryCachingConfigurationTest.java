@@ -123,10 +123,12 @@ public class LibraryCachingConfigurationTest {
         assertFalse(nullVersionConfig.isExcluded(""));
         assertFalse(oneVersionConfig.isExcluded(""));
         assertFalse(multiVersionConfig.isExcluded(""));
+        assertFalse(substringVersionConfig.isExcluded(""));
 
         assertFalse(nullVersionConfig.isExcluded(null));
         assertFalse(oneVersionConfig.isExcluded(null));
         assertFalse(multiVersionConfig.isExcluded(null));
+        assertFalse(substringVersionConfig.isExcluded(null));
     }
 
 }
