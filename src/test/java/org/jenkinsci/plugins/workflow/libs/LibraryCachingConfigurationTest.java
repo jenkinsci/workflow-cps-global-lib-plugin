@@ -49,7 +49,7 @@ public class LibraryCachingConfigurationTest {
     private static String MULTIPLE_EXCLUDED_VERSIONS_2 = "branch-2";
     private static String MULTIPLE_EXCLUDED_VERSIONS_3 = "branch-3";
 
-    private static String SUBSTRING_EXCLUDED_VERSIONS_1 = "feature/";
+    private static String SUBSTRING_EXCLUDED_VERSIONS_1 = "feature";
     private static String SUBSTRING_EXCLUDED_VERSIONS_2 = "other-substring";
 
     private static String MULTIPLE_EXCLUDED_VERSIONS =
