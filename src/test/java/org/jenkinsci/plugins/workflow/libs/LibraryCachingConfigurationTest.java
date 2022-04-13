@@ -37,6 +37,7 @@ public class LibraryCachingConfigurationTest {
     private LibraryCachingConfiguration nullVersionConfig;
     private LibraryCachingConfiguration oneVersionConfig;
     private LibraryCachingConfiguration multiVersionConfig;
+    private LibraryCachingConfiguration substringVersionConfig;
 
     private static int REFRESH_TIME_MINUTES = 23;
     private static int NO_REFRESH_TIME_MINUTES = 0;
@@ -48,10 +49,16 @@ public class LibraryCachingConfigurationTest {
     private static String MULTIPLE_EXCLUDED_VERSIONS_2 = "branch-2";
     private static String MULTIPLE_EXCLUDED_VERSIONS_3 = "branch-3";
 
+    private static String SUBSTRING_EXCLUDED_VERSIONS_1 = "feature/test-substring-exclude";
+    private static String SUBSTRING_EXCLUDED_VERSIONS_2 = "test-other-substring-exclude";
+
     private static String MULTIPLE_EXCLUDED_VERSIONS =
         MULTIPLE_EXCLUDED_VERSIONS_1 + " " +
         MULTIPLE_EXCLUDED_VERSIONS_2 + " " +
         MULTIPLE_EXCLUDED_VERSIONS_3;
+
+    private static String SUBSTRING_EXCLUDED_VERSIONS =
+        "feature/ other-substring";
 
     private static String NEVER_EXCLUDED_VERSION = "never-excluded-version";
 
@@ -60,6 +67,7 @@ public class LibraryCachingConfigurationTest {
         nullVersionConfig = new LibraryCachingConfiguration(REFRESH_TIME_MINUTES, NULL_EXCLUDED_VERSION);
         oneVersionConfig = new LibraryCachingConfiguration(NO_REFRESH_TIME_MINUTES, ONE_EXCLUDED_VERSION);
         multiVersionConfig = new LibraryCachingConfiguration(REFRESH_TIME_MINUTES, MULTIPLE_EXCLUDED_VERSIONS);
+        substringVersionConfig = new LibraryCachingConfiguration(REFRESH_TIME_MINUTES, SUBSTRING_EXCLUDED_VERSIONS);
     }
 
     @Issue("JENKINS-66045") // NPE getting excluded versions
@@ -91,6 +99,7 @@ public class LibraryCachingConfigurationTest {
         assertThat(nullVersionConfig.getExcludedVersionsStr(), is(NULL_EXCLUDED_VERSION));
         assertThat(oneVersionConfig.getExcludedVersionsStr(), is(ONE_EXCLUDED_VERSION));
         assertThat(multiVersionConfig.getExcludedVersionsStr(), is(MULTIPLE_EXCLUDED_VERSIONS));
+        assertThat(substringVersionConfig.getExcludedVersionsStr(), is(SUBSTRING_EXCLUDED_VERSIONS));
     }
 
     @Test
@@ -104,6 +113,9 @@ public class LibraryCachingConfigurationTest {
         assertTrue(multiVersionConfig.isExcluded(MULTIPLE_EXCLUDED_VERSIONS_2));
         assertTrue(multiVersionConfig.isExcluded(MULTIPLE_EXCLUDED_VERSIONS_3));
 
+        assertTrue(substringVersionConfig.isExcluded(SUBSTRING_EXCLUDED_VERSIONS_1));
+        assertTrue(substringVersionConfig.isExcluded(SUBSTRING_EXCLUDED_VERSIONS_2));
+
         assertFalse(nullVersionConfig.isExcluded(NEVER_EXCLUDED_VERSION));
         assertFalse(oneVersionConfig.isExcluded(NEVER_EXCLUDED_VERSION));
         assertFalse(multiVersionConfig.isExcluded(NEVER_EXCLUDED_VERSION));
@@ -111,10 +123,12 @@ public class LibraryCachingConfigurationTest {
         assertFalse(nullVersionConfig.isExcluded(""));
         assertFalse(oneVersionConfig.isExcluded(""));
         assertFalse(multiVersionConfig.isExcluded(""));
+        assertFalse(substringVersionConfig.isExcluded(""));
 
         assertFalse(nullVersionConfig.isExcluded(null));
         assertFalse(oneVersionConfig.isExcluded(null));
         assertFalse(multiVersionConfig.isExcluded(null));
+        assertFalse(substringVersionConfig.isExcluded(null));
     }
 
 }
