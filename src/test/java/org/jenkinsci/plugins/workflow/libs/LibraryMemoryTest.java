@@ -82,7 +82,7 @@ public class LibraryMemoryTest {
             clearInvocationCaches.invoke(metaClass);
         }
         for (WeakReference<ClassLoader> loaderRef : LOADERS) {
-            MemoryAssert.assertGC(loaderRef, false);
+            MemoryAssert.assertGC(loaderRef);
         }
     }
 
