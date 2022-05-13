@@ -178,7 +178,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                 if ((versionCacheDir.lastModified() + cachingMilliseconds) > System.currentTimeMillis()) {
                     return CacheStatus.VALID;
                 } else {
-                    return CacheStatus.VALID;
+                    return CacheStatus.EXPIRED;
                 }
             } else {
                 return CacheStatus.DOES_NOT_EXIST;
