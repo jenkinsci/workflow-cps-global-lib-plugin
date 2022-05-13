@@ -65,7 +65,7 @@ public class WorkflowLibRepositoryLocalTest extends Assert {
         assertEquals(cfdd.doCheckScriptCompile(p, "import org.acme.Foo"), CpsFlowDefinitionValidator.CheckStatus.SUCCESS.asJSON());
         assertNotEquals(cfdd.doCheckScriptCompile(p, "import org.acme.NoSuchThing").toString(), CpsFlowDefinitionValidator.CheckStatus.SUCCESS.asJSON().toString()); // control test
         // valid from script-security point of view
-        assertSame(cfdd.doCheckScript("import org.acme.Foo", true), FormValidation.ok());
-        assertSame(cfdd.doCheckScript("import org.acme.NoSuchThing", true), FormValidation.ok());
+        assertSame(cfdd.doCheckScript("import org.acme.Foo", null, true), FormValidation.ok());
+        assertSame(cfdd.doCheckScript("import org.acme.NoSuchThing", null, true), FormValidation.ok());
     }
 }

@@ -63,7 +63,7 @@
     </pluginRepositories>
     <properties>
         <changelist>999999-SNAPSHOT</changelist>
-        <jenkins.version>2.303.1</jenkins.version>
+        <jenkins.version>2.332.1</jenkins.version>
         <java.level>8</java.level>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
     </properties>
@@ -71,8 +71,8 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.303.x</artifactId>
-                <version>1008.vb9e22885c9cf</version>
+                <artifactId>bom-2.332.x</artifactId>
+                <version>1382.v7d694476f340</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -94,6 +94,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-cps</artifactId>
+            <version>2692.v76b_089ccd026</version><!-- remove once this version is included in BOM -->
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
@@ -114,6 +115,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>script-security</artifactId>
+            <version>1172.v35f6a_0b_8207e</version><!-- remove once this version is included in BOM -->
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
