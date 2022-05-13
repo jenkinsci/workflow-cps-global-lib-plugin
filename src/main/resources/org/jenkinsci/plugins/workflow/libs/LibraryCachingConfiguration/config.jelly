@@ -31,5 +31,7 @@ THE SOFTWARE.
     <f:entry title="${%Versions to exclude}" field="excludedVersionsStr">
         <f:textbox />
     </f:entry>
-    <f:validateButton title="${%Clear cache}" progress="${%Clearing...}" method="clearCache" with="name" />
+    <j:if test="${h.hasPermission(app.ADMINISTER)}">
+        <f:validateButton title="${%Clear cache}" progress="${%Clearing...}" method="clearCache" with="name" />
+    </j:if>
 </j:jelly>

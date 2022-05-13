@@ -257,6 +257,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                 }
   
                 lastReadFile.touch(System.currentTimeMillis());
+                versionCacheDir.withSuffix("-name.txt").write(name, "UTF-8");
                 versionCacheDir.copyRecursiveTo(libDir);
             } finally {
               retrieveLock.readLock().unlock();
