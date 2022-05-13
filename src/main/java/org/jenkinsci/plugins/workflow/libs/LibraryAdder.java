@@ -44,6 +44,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -65,16 +66,10 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
 
     private static final Logger LOGGER = Logger.getLogger(LibraryAdder.class.getName());
     
-    private static Map<String, ReentrantReadWriteLock> cacheRetrieveLock = new HashMap<>();
+    private static ConcurrentHashMap<String, ReentrantReadWriteLock> cacheRetrieveLock = new ConcurrentHashMap<>();
 
     static @NonNull ReentrantReadWriteLock getReadWriteLockFor(@NonNull String name) {
-	ReentrantReadWriteLock retrieveLock = cacheRetrieveLock.get(name);
-        if (retrieveLock == null) {
-    		retrieveLock = new ReentrantReadWriteLock(true);
-    		cacheRetrieveLock.put(name, retrieveLock);
-        }
-
-	return retrieveLock;
+        return cacheRetrieveLock.computeIfAbsent(name, s -> new ReentrantReadWriteLock(true));
     }
     
     @Override public List<Addition> add(CpsFlowExecution execution, List<String> libraries, HashMap<String, Boolean> changelogs) throws Exception {
@@ -167,34 +162,33 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         }
     }
 
-    /*
-     * Return codes:
-     *   0: cachedir exists and is valid
-     *   1: cachedir does not exist
-     *   2: cachedir exists but is expired
-     */
-    private static int cacheStatus(@NonNull LibraryCachingConfiguration cachingConfiguration, @NonNull final FilePath versionCacheDir)
+    private enum CacheStatus {
+        VALID,
+        DOES_NOT_EXIST,
+        EXPIRED;
+    }
+    
+    private static CacheStatus getCacheStatus(@NonNull LibraryCachingConfiguration cachingConfiguration, @NonNull final FilePath versionCacheDir)
           throws IOException, InterruptedException
     {
         if (cachingConfiguration.isRefreshEnabled()) {
             final long cachingMilliseconds = cachingConfiguration.getRefreshTimeMilliseconds();
 
             if(versionCacheDir.exists()) {
-        	if ((versionCacheDir.lastModified() + cachingMilliseconds) > System.currentTimeMillis()) {
-        	    return 0;
-        	} else {
-        	    return 2;
-        	}
+                if ((versionCacheDir.lastModified() + cachingMilliseconds) > System.currentTimeMillis()) {
+                    return CacheStatus.VALID;
+                } else {
+                    return CacheStatus.VALID;
+                }
             } else {
-        	return 1;
+                return CacheStatus.DOES_NOT_EXIST;
             }
         } else {
             if (versionCacheDir.exists()) {
-        	return 0;
+                return CacheStatus.VALID;
             } else {
-        	return 1;
+                return CacheStatus.DOES_NOT_EXIST;
             }
-            
         }
     }
     
@@ -209,40 +203,39 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
         final FilePath versionCacheDir = new FilePath(LibraryCachingConfiguration.getGlobalLibrariesCacheDir(), record.getDirectoryName());
         ReentrantReadWriteLock retrieveLock = getReadWriteLockFor(record.getDirectoryName());
         final FilePath lastReadFile = new FilePath(versionCacheDir, LibraryCachingConfiguration.LAST_READ_FILE);
-        
 
         if(shouldCache && cachingConfiguration.isExcluded(version)) {
             listener.getLogger().println("Library " + name + "@" + version + " is excluded from caching.");
             shouldCache = false;
         }
-        
-        
+
         if(shouldCache) {
-            retrieveLock.readLock().lock();
+            retrieveLock.readLock().lockInterruptibly();
             try {
-                if (cacheStatus(cachingConfiguration, versionCacheDir) > 0) {
+                CacheStatus cacheStatus = getCacheStatus(cachingConfiguration, versionCacheDir);
+                if (cacheStatus == CacheStatus.DOES_NOT_EXIST || cacheStatus == CacheStatus.EXPIRED) {
                     retrieveLock.readLock().unlock();
-                    retrieveLock.writeLock().lock();
+                    retrieveLock.writeLock().lockInterruptibly();
                     try {
-                	boolean retrieve = false;
-                	switch (cacheStatus(cachingConfiguration, versionCacheDir)) {
-            	    	    default:
-                	    case 0: 
-                		listener.getLogger().println("Library " + name + "@" + version + " is cached. Copying from home."); 
+                    	boolean retrieve = false;
+                    	switch (getCacheStatus(cachingConfiguration, versionCacheDir)) {
+                    	    case VALID: 
+                    	        listener.getLogger().println("Library " + name + "@" + version + " is cached. Copying from home."); 
                                 break;
-                	    case 1:
-                		retrieve = true;
-                		break;
-                	    case 2:
-                		long cachingMinutes = cachingConfiguration.getRefreshTimeMinutes();
-                		listener.getLogger().println("Library " + name + "@" + version + " is due for a refresh after " + cachingMinutes + " minutes, clearing.");
+                    	    case DOES_NOT_EXIST:
+                    	        retrieve = true;
+                    	        break;
+                    	    case EXPIRED:
+                    	        long cachingMinutes = cachingConfiguration.getRefreshTimeMinutes();
+                    	        listener.getLogger().println("Library " + name + "@" + version + " is due for a refresh after " + cachingMinutes + " minutes, clearing.");
                                 if (versionCacheDir.exists()) {
                                     versionCacheDir.deleteRecursive();
+                                    versionCacheDir.withSuffix("-name.txt").delete();
                                 }
                                 retrieve = true;
-                		break;
-                	}
-                		    
+                                break;
+                    	}
+                    		    
                         if (retrieve) {
                             listener.getLogger().println("Caching library " + name + "@" + version);                            
                             versionCacheDir.mkdirs();

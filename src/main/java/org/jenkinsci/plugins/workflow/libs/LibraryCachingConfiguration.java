@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -97,7 +98,7 @@ public final class LibraryCachingConfiguration extends AbstractDescribableImpl<L
                             FilePath libraryCachePath = LibraryCachingConfiguration.getGlobalLibrariesCacheDir()
                                     .child(libraryNamePath.getName().replace("-name.txt", ""));
                             ReentrantReadWriteLock retrieveLock = LibraryAdder.getReadWriteLockFor(libraryCachePath.getName());
-                            if (retrieveLock.writeLock().tryLock(10, TimeUnit.seconds)) {
+                            if (retrieveLock.writeLock().tryLock(10, TimeUnit.SECONDS)) {
                                 try {
                                     libraryCachePath.deleteRecursive();
                                     libraryNamePath.delete();
