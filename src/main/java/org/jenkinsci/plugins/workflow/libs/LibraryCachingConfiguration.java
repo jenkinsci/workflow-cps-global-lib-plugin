@@ -97,7 +97,7 @@ public final class LibraryCachingConfiguration extends AbstractDescribableImpl<L
                             FilePath libraryCachePath = LibraryCachingConfiguration.getGlobalLibrariesCacheDir()
                                     .child(libraryNamePath.getName().replace("-name.txt", ""));
                             ReentrantReadWriteLock retrieveLock = LibraryAdder.getReadWriteLockFor(libraryCachePath.getName());
-                            if (retrieveLock.writeLock().tryLock()) {
+                            if (retrieveLock.writeLock().tryLock(10, TimeUnit.seconds)) {
                                 try {
                                     libraryCachePath.deleteRecursive();
                                     libraryNamePath.delete();
