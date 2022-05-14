@@ -126,6 +126,9 @@ import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
                             addition.addTo(execution);
                         }
                     }
+
+                    new WorkspaceLibraryAdder().add(execution, libraries, changelogs);
+
                     if (!libraries.isEmpty()) {
                         throw new AbortException(Messages.LibraryDecorator_could_not_find_any_definition_of_librari(libraries));
                     }
