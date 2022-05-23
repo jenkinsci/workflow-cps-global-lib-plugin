@@ -16,7 +16,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 import java.io.File;
 import java.net.URL;
 
-import static org.jenkinsci.plugins.workflow.cps.global.UserDefinedGlobalVariable.PREFIX;
+import static org.jenkinsci.plugins.workflow.cps.global.UserDefinedGlobalVariableList.PREFIX;
 
 /**
  * @author Kohsuke Kawaguchi
@@ -52,7 +52,7 @@ public class UserDefinedGlobalVariableListTest extends Assert {
         src.child("acme.groovy").write("// empty", "UTF-8");
         src.child("acme.txt").write("Plain\ntext<", "UTF-8");
 
-        UserDefinedGlobalVariable acme = new UserDefinedGlobalVariable(repo, "acme");
+        UserDefinedGlobalVariable acme = new UserDefinedGlobalVariable("acme", new File(repo.workspace, PREFIX + "/acme.txt"));
 
         // this variable to become accessible once the new definition is pushed
         git.add().addFilepattern(".").call();

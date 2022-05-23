@@ -106,7 +106,7 @@ public class WorkflowLibRepositoryTest {
     public void userDefinedGlobalVariable() throws Exception {
         story.addStep(new Statement() {
             @Override public void evaluate() throws Throwable {
-                File vars = new File(repo.workspace, UserDefinedGlobalVariable.PREFIX);
+                File vars = new File(repo.workspace, UserDefinedGlobalVariableList.PREFIX);
                 vars.mkdirs();
                 FileUtils.writeStringToFile(new File(vars, "acmeVar.groovy"), StringUtils.join(Arrays.asList(
                         "def hello(name) {echo \"Hello ${name}\"}",
@@ -159,7 +159,7 @@ public class WorkflowLibRepositoryTest {
     @Test public void restartGlobalVar() {
         story.addStep(new Statement() {
             @Override public void evaluate() throws Throwable {
-                File vars = new File(repo.workspace, UserDefinedGlobalVariable.PREFIX);
+                File vars = new File(repo.workspace, UserDefinedGlobalVariableList.PREFIX);
                 vars.mkdirs();
                 FileUtils.writeStringToFile(new File(vars, "block.groovy"), "def call(body) {node {body()}}");
                 uvl.rebuild();
@@ -196,7 +196,7 @@ public class WorkflowLibRepositoryTest {
                     "    body()\n" +
                     "  }\n" +
                     "}");
-                FileUtils.write(new File(new File(repo.workspace, UserDefinedGlobalVariable.PREFIX), "record.groovy"),
+                FileUtils.write(new File(new File(repo.workspace, UserDefinedGlobalVariableList.PREFIX), "record.groovy"),
                     "def call() {new pkg.Privileged().write(jenkins.model.Jenkins.instance.systemMessage)}");
                 WorkflowJob p = jenkins.createProject(WorkflowJob.class, "p");
 
