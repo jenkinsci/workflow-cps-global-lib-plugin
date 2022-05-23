@@ -22,6 +22,9 @@ import java.util.List;
  */
 @Extension
 public class UserDefinedGlobalVariableList extends GlobalVariableSet {
+
+    /*package*/ static final String PREFIX = "vars";
+
     private @Inject WorkflowLibRepository repo;
     
     private volatile CopyOnWriteList<GlobalVariable> ours;
@@ -30,7 +33,7 @@ public class UserDefinedGlobalVariableList extends GlobalVariableSet {
      * Rebuilds the list of {@link UserDefinedGlobalVariable}s and update {@link ExtensionList} accordingly.
      */
     public synchronized void rebuild() {
-        File[] children = new File(repo.workspace,UserDefinedGlobalVariable.PREFIX).listFiles();
+        File[] children = new File(repo.workspace, PREFIX).listFiles();
         if (children==null) children = new File[0];
 
         List<GlobalVariable> list = new ArrayList<GlobalVariable>();
@@ -39,7 +42,8 @@ public class UserDefinedGlobalVariableList extends GlobalVariableSet {
             if (!child.getName().endsWith(".groovy") || child.isDirectory())
                 continue;
 
-            UserDefinedGlobalVariable uv = new UserDefinedGlobalVariable(repo,FilenameUtils.getBaseName(child.getName()));
+            String name = FilenameUtils.getBaseName(child.getName());
+            UserDefinedGlobalVariable uv = new UserDefinedGlobalVariable(name, new File(repo.workspace, PREFIX + "/" + name + ".txt"));
             list.add(uv);
         }
 

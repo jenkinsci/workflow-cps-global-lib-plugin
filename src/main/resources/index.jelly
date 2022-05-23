@@ -1,4 +1,7 @@
 <?jelly escape-by-default='true'?>
 <div>
-  Shared libraries for Pipeline scripts.
+  Hosting of Pipeline Groovy libraries inside a Jenkins Git server.
+  <strong>Deprecated</strong>. Use <b>Pipeline: Groovy Libraries</b> instead.
+  If you see this plugin installed just because you upgraded, you can probably uninstall it now.
+  This plugin should only be used if you have historically <em>pushed</em> libraries to a Git server inside Jenkins.
 </div>
