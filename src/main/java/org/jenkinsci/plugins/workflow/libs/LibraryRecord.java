@@ -24,12 +24,15 @@
 
 package org.jenkinsci.plugins.workflow.libs;
 
+import java.io.File;
 import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
-import jenkins.security.HMACConfidentialKey;
+
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
+
+import jenkins.security.HMACConfidentialKey;
 
 /**
  * Record of a library being used in a particular build.
@@ -62,7 +65,7 @@ public final class LibraryRecord {
         this.trusted = trusted;
         this.changelog = changelog;
         this.cachingConfiguration = cachingConfiguration;
-        this.directoryName = directoryNameFor(name, version, String.valueOf(trusted), source);
+        this.directoryName = directoryNameFor(name, String.valueOf(trusted), source) + File.separator + directoryNameFor(version);
     }
 
     @Exported

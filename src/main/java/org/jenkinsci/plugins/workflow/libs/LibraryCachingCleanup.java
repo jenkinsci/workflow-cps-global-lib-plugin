@@ -27,14 +27,13 @@ import jenkins.util.SystemProperties;
     @Override protected void execute(TaskListener listener) throws IOException, InterruptedException {
         FilePath globalCacheDir = LibraryCachingConfiguration.getGlobalLibrariesCacheDir();
         for (FilePath library : globalCacheDir.list()) {
-            if (!removeIfExpiredCacheDirectory(library)) {
-                // Prior to the SECURITY-2586 fix, library caches had a two-level directory structure.
-                // These caches will never be used again, so we delete any that we find.
-                for (FilePath version: library.list()) {
-                    if (version.child(LibraryCachingConfiguration.LAST_READ_FILE).exists()) {
-                        library.deleteRecursive();
-                        break;
+            for (FilePath versionDir : library.listDirectories()) {
+                if (!removeIfExpiredCacheDirectory(versionDir)) {
+                    FilePath parent = versionDir.getParent();
+                    if (parent != null) {
+                        parent.deleteRecursive();
                     }
+                    break;
                 }
             }
         }
@@ -47,10 +46,12 @@ import jenkins.util.SystemProperties;
      */
     private boolean removeIfExpiredCacheDirectory(FilePath library) throws IOException, InterruptedException {
         final FilePath lastReadFile = new FilePath(library, LibraryCachingConfiguration.LAST_READ_FILE);
-        if (lastReadFile.exists()) {
+        if (lastReadFile.exists() && library.withSuffix("-name.txt").exists()) {
             if (System.currentTimeMillis() - lastReadFile.lastModified() > TimeUnit.DAYS.toMillis(EXPIRE_AFTER_READ_DAYS)) {
-                library.deleteRecursive();
-                library.withSuffix("-name.txt").delete();
+                FilePath parent = library.getParent();
+                if (parent != null) {
+                    parent.deleteRecursive();
+                }
             }
             return true;
         }

@@ -71,14 +71,16 @@ public class LibraryCachingCleanupTest {
         assertThat(new File(cache.getRemote()), anExistingDirectory());
         // Run LibraryCachingCleanup and show that cache is not deleted.
         ExtensionList.lookupSingleton(LibraryCachingCleanup.class).execute(StreamTaskListener.fromStderr());
+        assertThat(new File(cache.getParent().getRemote()), anExistingDirectory());
         assertThat(new File(cache.getRemote()), anExistingDirectory());
         assertThat(new File(cache.withSuffix("-name.txt").getRemote()), anExistingFile());
         // Run LibraryCachingCleanup after modifying LAST_READ_FILE to be an old date and and show that cache is deleted.
         long oldMillis = ZonedDateTime.now().minusDays(LibraryCachingCleanup.EXPIRE_AFTER_READ_DAYS + 1).toInstant().toEpochMilli();
         cache.child(LibraryCachingConfiguration.LAST_READ_FILE).touch(oldMillis);
         ExtensionList.lookupSingleton(LibraryCachingCleanup.class).execute(StreamTaskListener.fromStderr());
-        assertThat(new File(cache.getRemote()), not(anExistingDirectory()));
-        assertThat(new File(cache.withSuffix("-name.txt").getRemote()), not(anExistingDirectory()));
+        assertThat(new File(cache.getParent().getRemote()), not(anExistingDirectory()));
+        assertThat(new File(cache.withSuffix("-name.txt").getRemote()), not(anExistingFile()));
+
     }
 
     @Test

@@ -32,6 +32,9 @@ THE SOFTWARE.
         <f:textbox />
     </f:entry>
     <j:if test="${h.hasPermission(app.ADMINISTER)}">
-        <f:validateButton title="${%Clear cache}" progress="${%Clearing...}" method="clearCache" with="name" />
+        <f:entry title="${%Clear cache for ref}" field="cachedLibraryRef">
+            <f:textbox />
+        </f:entry>
+        <f:validateButton title="${%Clear cache}" progress="${%Clearing...}" method="clearCache" with="name,cachedLibraryRef" />
     </j:if>
 </j:jelly>

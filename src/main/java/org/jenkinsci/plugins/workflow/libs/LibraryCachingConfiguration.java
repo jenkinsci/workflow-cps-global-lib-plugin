@@ -1,23 +1,25 @@
 package org.jenkinsci.plugins.workflow.libs;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
 import hudson.util.FormValidation;
 import jenkins.model.Jenkins;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
 
 public final class LibraryCachingConfiguration extends AbstractDescribableImpl<LibraryCachingConfiguration> {
     private int refreshTimeMinutes;
@@ -83,29 +85,43 @@ public final class LibraryCachingConfiguration extends AbstractDescribableImpl<L
     }
 
     @Extension public static class DescriptorImpl extends Descriptor<LibraryCachingConfiguration> {
-        public FormValidation doClearCache(@QueryParameter String name) throws InterruptedException {
+        public FormValidation doClearCache(@QueryParameter String name, @QueryParameter String cachedLibraryRef) throws InterruptedException {
             Jenkins.get().checkPermission(Jenkins.ADMINISTER);
-
+            String cacheDirName = null;
             try {
                 if (LibraryCachingConfiguration.getGlobalLibrariesCacheDir().exists()) {
-                    for (FilePath libraryNamePath : LibraryCachingConfiguration.getGlobalLibrariesCacheDir().list("*-name.txt")) {
-                        // Libraries configured in distinct locations may have the same name. Since only admins are allowed here, this is not a huge issue, but it is probably unexpected.
-                        String cacheName;
-                        try (InputStream stream = libraryNamePath.read()) {
-                            cacheName = IOUtils.toString(stream, StandardCharsets.UTF_8);
-                        }
-                        if (libraryNamePath.readToString().equals(name)) {
-                            FilePath libraryCachePath = LibraryCachingConfiguration.getGlobalLibrariesCacheDir()
-                                    .child(libraryNamePath.getName().replace("-name.txt", ""));
-                            libraryCachePath.deleteRecursive();
-                            libraryNamePath.delete();
+                    outer: for (FilePath libraryCache : LibraryCachingConfiguration.getGlobalLibrariesCacheDir().listDirectories()) {
+                        for (FilePath libraryNamePath : libraryCache.list("*-name.txt")) {
+                            if (libraryNamePath.readToString().startsWith(name + "@")) {
+                                FilePath libraryCachePath = libraryNamePath.getParent();
+                                if (libraryCachePath != null) {
+                                    FilePath versionCachePath = new FilePath(libraryCachePath, libraryNamePath.getName().replace("-name.txt", ""));
+                                    if (cachedLibraryRef != null && !cachedLibraryRef.equals("")) {
+                                        if (libraryNamePath.readToString().equals(name + "@" + cachedLibraryRef)) {
+                                            cacheDirName = name + "@" + cachedLibraryRef;
+                                            libraryNamePath.delete();
+                                            versionCachePath.deleteRecursive();
+                                            break outer;
+                                        }
+                                    } else {
+                                        cacheDirName = name;
+                                        libraryCachePath.deleteRecursive();
+                                        break outer;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             } catch (IOException ex) {
-                return FormValidation.error(ex, "The cache dir was not deleted successfully");
+                return FormValidation.error(ex, String.format("The cache dir %s was not deleted successfully", cacheDirName));
             }
-            return FormValidation.ok("The cache dir was deleted successfully.");
+            
+            if (cacheDirName == null) {
+                return FormValidation.ok(String.format("The version %s was not found for library %s.", cachedLibraryRef, name));
+            } else {
+                return FormValidation.ok(String.format("The cache dir %s was deleted successfully.", cacheDirName));
+            }
         }
 
     }

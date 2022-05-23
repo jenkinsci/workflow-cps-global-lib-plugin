@@ -270,8 +270,9 @@ public class ResourceStepTest {
     }
 
     public void modifyCacheTimestamp(String name, String version, long timestamp) throws Exception {
-        String cacheDirName = LibraryRecord.directoryNameFor(name, version, String.valueOf(true), GlobalLibraries.ForJob.class.getName());
-        FilePath cacheDir = new FilePath(LibraryCachingConfiguration.getGlobalLibrariesCacheDir(), cacheDirName);
+        String cacheDirName = LibraryRecord.directoryNameFor(name, String.valueOf(true), GlobalLibraries.ForJob.class.getName());
+        FilePath libraryDir = new FilePath(LibraryCachingConfiguration.getGlobalLibrariesCacheDir(), cacheDirName);
+        FilePath cacheDir = new FilePath(libraryDir, LibraryRecord.directoryNameFor(version));
         if (cacheDir.exists()) {
             cacheDir.touch(timestamp);
         }

@@ -198,7 +198,7 @@ import org.jenkinsci.plugins.workflow.flow.FlowCopier;
                 retrieveLockFile.delete();
             }
             lastReadFile.touch(System.currentTimeMillis());
-            versionCacheDir.withSuffix("-name.txt").write(name, "UTF-8");
+            versionCacheDir.withSuffix("-name.txt").write(name + "@" + version, "UTF-8");
             versionCacheDir.copyRecursiveTo(libDir);
         } else {
             retriever.retrieve(name, version, changelog, libDir, run, listener);
