@@ -1,7 +1,6 @@
 package org.jenkinsci.plugins.workflow.cps.global;
 
 import com.google.inject.Inject;
-import hudson.util.FormValidation;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
@@ -64,8 +63,5 @@ public class WorkflowLibRepositoryLocalTest extends Assert {
         WorkflowJob p = j.createProject(WorkflowJob.class);
         assertEquals(cfdd.doCheckScriptCompile(p, "import org.acme.Foo"), CpsFlowDefinitionValidator.CheckStatus.SUCCESS.asJSON());
         assertNotEquals(cfdd.doCheckScriptCompile(p, "import org.acme.NoSuchThing").toString(), CpsFlowDefinitionValidator.CheckStatus.SUCCESS.asJSON().toString()); // control test
-        // valid from script-security point of view
-        assertSame(cfdd.doCheckScript("import org.acme.Foo", true), FormValidation.ok());
-        assertSame(cfdd.doCheckScript("import org.acme.NoSuchThing", true), FormValidation.ok());
     }
 }
