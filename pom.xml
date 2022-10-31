@@ -63,7 +63,7 @@
     </pluginRepositories>
     <properties>
         <changelist>999999-SNAPSHOT</changelist>
-        <jenkins.version>2.303.1</jenkins.version>
+        <jenkins.version>2.303.3</jenkins.version>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
     </properties>
     <dependencyManagement>
@@ -71,7 +71,7 @@
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
                 <artifactId>bom-2.303.x</artifactId>
-                <version>1008.vb9e22885c9cf</version>
+                <version>1500.ve4d05cd32975</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -89,7 +89,6 @@
         <dependency>
             <groupId>io.jenkins.plugins</groupId>
             <artifactId>pipeline-groovy-lib</artifactId>
-            <version>589.vb_a_b_4a_a_8c443c</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
