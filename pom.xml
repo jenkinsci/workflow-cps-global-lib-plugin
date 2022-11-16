@@ -78,13 +78,6 @@
         </dependencies>
     </dependencyManagement>
     <dependencies>
-        <!-- libraries -->
-        <dependency>
-            <groupId>org.apache.ivy</groupId>
-            <artifactId>ivy</artifactId>
-            <version>2.5.0</version>
-        </dependency>
-
         <!-- required plugins -->
         <dependency>
             <groupId>io.jenkins.plugins</groupId>
