@@ -24,7 +24,7 @@
 package org.jenkinsci.plugins.workflow.cps.global;
 
 import hudson.Extension;
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 

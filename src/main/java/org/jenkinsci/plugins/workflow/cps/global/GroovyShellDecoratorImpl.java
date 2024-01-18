@@ -6,7 +6,7 @@ import hudson.Extension;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution;
 import org.jenkinsci.plugins.workflow.cps.GroovyShellDecorator;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import java.io.File;
 import java.net.MalformedURLException;
 
