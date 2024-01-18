@@ -14,7 +14,7 @@ import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.RestartableJenkinsRule;
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import org.apache.commons.io.FileUtils;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.ClassRule;
