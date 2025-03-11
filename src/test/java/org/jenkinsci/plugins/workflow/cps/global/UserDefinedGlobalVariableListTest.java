@@ -52,7 +52,7 @@ public class UserDefinedGlobalVariableListTest extends Assert {
         src.child("acme.groovy").write("// empty", "UTF-8");
         src.child("acme.txt").write("Plain\ntext<", "UTF-8");
 
-        UserDefinedGlobalVariable acme = new UserDefinedGlobalVariable("acme", new File(repo.workspace, PREFIX + "/acme.txt"));
+        UserDefinedGlobalVariable acme = new UserDefinedGlobalVariable("acme", repo.workspace.resolve(PREFIX).resolve("acme.txt").toFile());
 
         // this variable to become accessible once the new definition is pushed
         git.add().addFilepattern(".").call();

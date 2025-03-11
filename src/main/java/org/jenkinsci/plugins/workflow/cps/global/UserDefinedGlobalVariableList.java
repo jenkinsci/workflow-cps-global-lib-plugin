@@ -33,7 +33,7 @@ public class UserDefinedGlobalVariableList extends GlobalVariableSet {
      * Rebuilds the list of {@link UserDefinedGlobalVariable}s and update {@link ExtensionList} accordingly.
      */
     public synchronized void rebuild() {
-        File[] children = new File(repo.workspace, PREFIX).listFiles();
+        File[] children = repo.workspace.resolve(PREFIX).toFile().listFiles();
         if (children==null) children = new File[0];
 
         List<GlobalVariable> list = new ArrayList<GlobalVariable>();
@@ -43,7 +43,7 @@ public class UserDefinedGlobalVariableList extends GlobalVariableSet {
                 continue;
 
             String name = FilenameUtils.getBaseName(child.getName());
-            UserDefinedGlobalVariable uv = new UserDefinedGlobalVariable(name, new File(repo.workspace, PREFIX + "/" + name + ".txt"));
+            UserDefinedGlobalVariable uv = new UserDefinedGlobalVariable(name, repo.workspace.resolve(PREFIX).resolve(name + ".txt").toFile());
             list.add(uv);
         }
 
