@@ -49,7 +49,7 @@ public class WorkflowLibRepositoryTest {
     public void globalLib() throws Exception {
         story.addStep(new Statement() {
             @Override public void evaluate() throws Throwable {
-                File dir = new File(repo.workspace,"src/foo");
+                File dir = repo.workspace.resolve("src/foo").toFile();
                 dir.mkdirs();
 
                 FileUtils.write(new File(dir, "Foo.groovy"),
@@ -106,7 +106,7 @@ public class WorkflowLibRepositoryTest {
     public void userDefinedGlobalVariable() throws Exception {
         story.addStep(new Statement() {
             @Override public void evaluate() throws Throwable {
-                File vars = new File(repo.workspace, UserDefinedGlobalVariableList.PREFIX);
+                File vars = repo.workspace.resolve(UserDefinedGlobalVariableList.PREFIX).toFile();
                 vars.mkdirs();
                 FileUtils.writeStringToFile(new File(vars, "acmeVar.groovy"), StringUtils.join(Arrays.asList(
                         "def hello(name) {echo \"Hello ${name}\"}",
@@ -159,7 +159,7 @@ public class WorkflowLibRepositoryTest {
     @Test public void restartGlobalVar() {
         story.addStep(new Statement() {
             @Override public void evaluate() throws Throwable {
-                File vars = new File(repo.workspace, UserDefinedGlobalVariableList.PREFIX);
+                File vars = repo.workspace.resolve(UserDefinedGlobalVariableList.PREFIX).toFile();
                 vars.mkdirs();
                 FileUtils.writeStringToFile(new File(vars, "block.groovy"), "def call(body) {node {body()}}");
                 uvl.rebuild();
@@ -186,7 +186,7 @@ public class WorkflowLibRepositoryTest {
             @Override public void evaluate() throws Throwable {
                 File f = new File(jenkins.getRootDir(), "f");   // marker file to write from Pipeline Script
 
-                FileUtils.write(new File(new File(repo.workspace, "src/pkg"), "Privileged.groovy"),
+                FileUtils.write(repo.workspace.resolve("src/pkg").resolve("Privileged.groovy").toFile(),
                     "package pkg\n" +
                     "class Privileged implements Serializable {\n" +
                     "  void write(String content) {\n" +
@@ -196,7 +196,7 @@ public class WorkflowLibRepositoryTest {
                     "    body()\n" +
                     "  }\n" +
                     "}");
-                FileUtils.write(new File(new File(repo.workspace, UserDefinedGlobalVariableList.PREFIX), "record.groovy"),
+                FileUtils.write(repo.workspace.resolve(UserDefinedGlobalVariableList.PREFIX).resolve("record.groovy").toFile(),
                     "def call() {new pkg.Privileged().write(jenkins.model.Jenkins.instance.systemMessage)}");
                 WorkflowJob p = jenkins.createProject(WorkflowJob.class, "p");
 
