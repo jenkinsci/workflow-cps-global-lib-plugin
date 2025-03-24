@@ -73,15 +73,9 @@
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
                 <artifactId>bom-${jenkins.baseline}.x</artifactId>
-                <version>4228.v0a_71308d905b_</version>
+                <version>4488.v7fe26526366e</version>
                 <scope>import</scope>
                 <type>pom</type>
-            </dependency>
-            <!-- TODO until in BOM -->
-            <dependency>
-                <groupId>org.jenkins-ci.plugins</groupId>
-                <artifactId>git-server</artifactId>
-                <version>137.ve0060b_432302</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
